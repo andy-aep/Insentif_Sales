@@ -1,0 +1,50 @@
+name: sales_incentive_web
+description: "Frontend Flutter Web - Sistem Perhitungan Insentif Sales"
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management & Dependency Injection
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Routing & Navigation
+  go_router: ^14.8.0
+
+  # Networking & HTTP
+  dio: ^5.7.0
+  http_parser: ^4.1.2
+
+  # Local Persistence
+  shared_preferences: ^2.3.5
+
+  # Design, Icons, & Typography
+  google_fonts: ^6.2.1
+  lucide_icons: ^0.257.0
+  intl: ^0.20.2
+  fl_chart: ^0.70.2
+  collection: ^1.18.0
+
+  # File Picker & Web Download
+  file_picker: ^8.1.7
+  universal_html: ^2.2.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  build_runner: ^2.4.14
+  riverpod_generator: ^2.6.3
+  json_serializable: ^6.9.3
+  json_annotation: ^4.9.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
