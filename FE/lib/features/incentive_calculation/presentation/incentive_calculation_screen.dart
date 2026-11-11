@@ -378,6 +378,11 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                               prefixIcon: Icon(LucideIcons.calendar, size: 15, color: colors.textSecondary),
                               prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                             ),
+                            onChanged: (val) {
+                              if (val.trim().length == 6 && val.trim() != state.selectedPeriod) {
+                                notifier.setPeriod(val.trim());
+                              }
+                            },
                             onSubmitted: (val) {
                               if (val.trim().isNotEmpty) notifier.setPeriod(val.trim());
                             },
@@ -417,7 +422,14 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                           ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                           : const Icon(LucideIcons.calculator, size: 16),
                       label: Text(state.isCalculating ? 'Memproses...' : 'Hitung Insentif'),
-                      onPressed: state.isCalculating ? null : () => notifier.calculate(),
+                      onPressed: state.isCalculating
+                          ? null
+                          : () {
+                              if (_periodController.text.trim().isNotEmpty && _periodController.text.trim() != state.selectedPeriod) {
+                                notifier.setPeriod(_periodController.text.trim());
+                              }
+                              notifier.calculate();
+                            },
                     ),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
@@ -431,7 +443,14 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                           ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                           : const Icon(LucideIcons.fileSpreadsheet, size: 16),
                       label: Text(state.isExporting ? 'Mengunduh...' : 'Save to Excel'),
-                      onPressed: state.isExporting ? null : () => notifier.exportExcel(),
+                      onPressed: state.isExporting
+                          ? null
+                          : () {
+                              if (_periodController.text.trim().isNotEmpty && _periodController.text.trim() != state.selectedPeriod) {
+                                notifier.setPeriod(_periodController.text.trim());
+                              }
+                              notifier.exportExcel();
+                            },
                     ),
                   ],
                 ),

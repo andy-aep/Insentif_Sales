@@ -704,6 +704,9 @@ class BatchImportService
             $username = $row['username'] ?? $row['sales_username'] ?? null;
             if (! $userId && ! empty($username)) {
                 $cleanUname = strtolower(trim((string) $username));
+                if ($cleanUname === 'sulistyo') {
+                    $cleanUname = 'sulis';
+                }
                 if ($cleanUname !== 'vacant') {
                     $userId = $userMap[$cleanUname] ?? null;
                     if (! $userId) {
