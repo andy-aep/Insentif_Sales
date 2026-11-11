@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'core/network/dio_client.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'features/auth/presentation/login_screen.dart';
@@ -41,7 +42,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/login',
-        builder: (context, state) => const LoginScreen(),
+        pageBuilder: (context, state) => const NoTransitionPage(child: LoginScreen()),
       ),
       ShellRoute(
         builder: (context, state, child) {
@@ -51,62 +52,77 @@ final routerProvider = Provider<GoRouter>((ref) {
           // 1. Dashboard
           GoRoute(
             path: '/dashboard',
-            builder: (context, state) => const DashboardHomeScreen(),
+            pageBuilder: (context, state) => const NoTransitionPage(child: DashboardHomeScreen()),
           ),
           // 2. Setting Insentif 3-Level
           GoRoute(
             path: '/settings/incentives',
-            builder: (context, state) => const IncentiveSchemeScreen(),
+            pageBuilder: (context, state) => const NoTransitionPage(child: IncentiveSchemeScreen()),
           ),
           // 3. Master Distributor (Hierarki Distributor -> Depo -> Area & Brand)
           GoRoute(
             path: '/master/distributor',
-            builder: (context, state) => const MasterDistributorScreen(),
+            pageBuilder: (context, state) => const NoTransitionPage(child: MasterDistributorScreen()),
           ),
           // 4. Master Realisasi (Sell-In / Sell-Out SAP & Upload)
           GoRoute(
             path: '/master/realisasi',
-            builder: (context, state) => const MasterRealisasiScreen(),
+            pageBuilder: (context, state) => const NoTransitionPage(child: MasterRealisasiScreen()),
           ),
           // 5. Master Sales (Assign Distributor & Surabaya)
           GoRoute(
             path: '/master/surabaya',
-            builder: (context, state) => const MasterSurabayaScreen(),
+            pageBuilder: (context, state) => const NoTransitionPage(child: MasterSurabayaScreen()),
           ),
           // 6. Master Target Kuota (Distributor, Industri, Surabaya)
           GoRoute(
             path: '/master/target',
-            builder: (context, state) => const MasterTargetScreen(),
+            pageBuilder: (context, state) => const NoTransitionPage(child: MasterTargetScreen()),
           ),
           // 7. Insentif Distributor (Konsumsi)
           GoRoute(
             path: '/incentives/distributor',
-            builder: (context, state) => const IncentiveCalculationScreen(initialKategori: 'KONSUMSI'),
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: IncentiveCalculationScreen(
+                key: ValueKey('KONSUMSI'),
+                initialKategori: 'KONSUMSI',
+              ),
+            ),
           ),
           // 8. Insentif Industri
           GoRoute(
             path: '/incentives/industri',
-            builder: (context, state) => const IncentiveCalculationScreen(initialKategori: 'INDUSTRI'),
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: IncentiveCalculationScreen(
+                key: ValueKey('INDUSTRI'),
+                initialKategori: 'INDUSTRI',
+              ),
+            ),
           ),
           // 9. Insentif Surabaya
           GoRoute(
             path: '/incentives/surabaya',
-            builder: (context, state) => const IncentiveCalculationScreen(initialKategori: 'SURABAYA'),
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: IncentiveCalculationScreen(
+                key: ValueKey('SURABAYA'),
+                initialKategori: 'SURABAYA',
+              ),
+            ),
           ),
           // 10. Bulk Upload & Rollback Center
           GoRoute(
             path: '/bulk-upload',
-            builder: (context, state) => const BulkUploadScreen(),
+            pageBuilder: (context, state) => const NoTransitionPage(child: BulkUploadScreen()),
           ),
           // 11. Users & Hak Akses (User CRUD, Role, Posisi & Menu)
           GoRoute(
             path: '/users',
-            builder: (context, state) => const UserManagementScreen(),
+            pageBuilder: (context, state) => const NoTransitionPage(child: UserManagementScreen()),
           ),
           // Backwards compatibility alias
           GoRoute(
             path: '/incentives/calculate',
-            builder: (context, state) => const IncentiveCalculationScreen(),
+            pageBuilder: (context, state) => const NoTransitionPage(child: IncentiveCalculationScreen()),
           ),
         ],
       ),
@@ -131,12 +147,15 @@ class SalesIncentiveApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final router = ref.watch(routerProvider);
+    DioClient.onUnauthorized = () {
+      ref.read(authProvider.notifier).logout(remote: false);
+    };
 
+    final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeProvider);
 
     return MaterialApp.router(
-      title: 'Sistem Insentif Sales',
+      title: 'Sales Insentif',
       debugShowCheckedModeBanner: false,
       scrollBehavior: const AppScrollBehavior(),
       theme: AppTheme.lightTheme,

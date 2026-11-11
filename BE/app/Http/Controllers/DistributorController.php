@@ -11,9 +11,25 @@ use Illuminate\Support\Facades\DB;
 
 class DistributorController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        return response()->json(Distributor::with(['region', 'depos.areas'])->latest()->get());
+        $limit = $request->integer('limit', 150);
+        $search = $request->string('search')->trim();
+
+        $query = Distributor::withCount(['depos', 'areas'])
+            ->with([
+                'region:id,code,name',
+                'depos:id,distributor_id,code,name',
+            ]);
+
+        if ($search->isNotEmpty()) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%");
+            });
+        }
+
+        return response()->json($query->latest('id')->limit($limit)->get());
     }
 
     public function store(Request $request): JsonResponse

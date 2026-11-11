@@ -8,6 +8,7 @@ use App\Services\BatchImportService;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -17,6 +18,8 @@ class BatchUploadController extends Controller
         'sellout_distributor',
         'distributor',
         'master_target_distributor',
+        'master_target_depo',
+        'master_target_area',
         'sellin_distributor',
         'sellin_industri',
         'sellout_sales_surabaya',
@@ -28,7 +31,7 @@ class BatchUploadController extends Controller
         protected BatchImportService $batchImportService
     ) {}
 
-    public function downloadTemplate(string $entity): BinaryFileResponse|JsonResponse
+    public function downloadTemplate(Request $request, string $entity): BinaryFileResponse|JsonResponse
     {
         $normalized = BatchImportService::normalizeEntity($entity);
 
@@ -38,10 +41,15 @@ class BatchUploadController extends Controller
             ], 422);
         }
 
-        $fileName = "template_{$normalized}.xlsx";
+        $withData = filter_var($request->query('with_data'), FILTER_VALIDATE_BOOLEAN);
+        $period = $request->query('period');
+
+        $prefix = $withData ? 'data_export' : 'template';
+        $periodSuffix = ($period && $period !== 'ALL') ? "_{$period}" : '';
+        $fileName = "{$prefix}_{$normalized}{$periodSuffix}.xlsx";
 
         return Excel::download(
-            new BulkUploadTemplateExport($normalized),
+            new BulkUploadTemplateExport($normalized, $withData, $period),
             $fileName
         );
     }
@@ -56,8 +64,14 @@ class BatchUploadController extends Controller
             ], 422);
         }
 
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(0);
+        }
+        @ini_set('max_execution_time', '0');
+        @ini_set('memory_limit', '2048M');
+
         $request->validate([
-            'file' => 'required|file|extensions:xlsx,xls,csv,txt|max:20480', // max 20MB
+            'file' => 'required|file|extensions:xlsx,xls,csv,txt|max:204800', // max 200MB
         ]);
 
         $file = $request->file('file');
@@ -65,6 +79,13 @@ class BatchUploadController extends Controller
         $userId = $request->user()->id;
 
         $batch = $this->batchImportService->createBatch($normalized, $fileName, $userId);
+
+        try {
+            $storedPath = $file->storeAs('uploads/batches', $batch->id . '_' . $fileName);
+            $batch->update(['file_path' => $storedPath]);
+        } catch (Exception $e) {
+            // Abaikan jika store gagal, proses tetap lanjut
+        }
 
         try {
             $processedBatch = $this->batchImportService->processFile($batch, $file);
@@ -77,6 +98,62 @@ class BatchUploadController extends Controller
             return response()->json([
                 'message' => 'Gagal memproses batch: '.$e->getMessage(),
                 'batch_id' => $batch->id,
+            ], 500);
+        }
+    }
+
+    public function downloadBatchFile(string $batchId): BinaryFileResponse|JsonResponse
+    {
+        $batch = UploadBatch::findOrFail($batchId);
+
+        $filePath = null;
+        if ($batch->file_path && Storage::exists($batch->file_path)) {
+            $filePath = Storage::path($batch->file_path);
+        } elseif ($batch->file_path && file_exists(storage_path('app/' . $batch->file_path))) {
+            $filePath = storage_path('app/' . $batch->file_path);
+        } else {
+            $fallback = storage_path('app/uploads/batches/' . $batch->id . '_' . $batch->file_name);
+            if (file_exists($fallback)) {
+                $filePath = $fallback;
+            }
+        }
+
+        if (! $filePath || ! file_exists($filePath)) {
+            return response()->json([
+                'message' => 'File spreadsheet untuk batch ini tidak ditemukan pada penyimpanan server.',
+            ], 404);
+        }
+
+        return response()->download($filePath, $batch->file_name);
+    }
+
+    public function destroy(string $batchId): JsonResponse
+    {
+        try {
+            $batch = UploadBatch::findOrFail($batchId);
+
+            // Jika belum di-rollback, hapus seluruh data terkait di database
+            if ($batch->status !== 'ROLLED_BACK') {
+                $this->batchImportService->rollback($batchId);
+            }
+
+            // Hapus file fisik jika tersimpan
+            if ($batch->file_path && Storage::exists($batch->file_path)) {
+                Storage::delete($batch->file_path);
+            }
+            $fallback = storage_path('app/uploads/batches/' . $batch->id . '_' . $batch->file_name);
+            if (file_exists($fallback)) {
+                @unlink($fallback);
+            }
+
+            $batch->delete();
+
+            return response()->json([
+                'message' => "Batch {$batchId} berhasil dihapus permanen.",
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Gagal menghapus batch: ' . $e->getMessage(),
             ], 500);
         }
     }

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 
 class ApiException implements Exception {
@@ -17,7 +18,17 @@ class ApiException implements Exception {
     Map<String, dynamic>? errors;
 
     if (dioException.response != null && dioException.response?.data != null) {
-      final data = dioException.response?.data;
+      var data = dioException.response?.data;
+      if (data is List<int>) {
+        try {
+          data = jsonDecode(utf8.decode(data));
+        } catch (_) {}
+      } else if (data is String) {
+        try {
+          data = jsonDecode(data);
+        } catch (_) {}
+      }
+
       if (data is Map<String, dynamic>) {
         if (data.containsKey('message') && data['message'] != null) {
           message = data['message'].toString();
@@ -33,6 +44,8 @@ class ApiException implements Exception {
             message = '$message: ${firstError.first}';
           }
         }
+      } else if (data is String && data.trim().isNotEmpty) {
+        message = data.trim();
       }
     } else {
       switch (dioException.type) {

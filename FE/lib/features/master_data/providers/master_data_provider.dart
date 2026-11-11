@@ -55,7 +55,10 @@ class MasterDataNotifier extends StateNotifier<MasterDataState> {
     fetchAllMasterData();
   }
 
-  Future<void> fetchAllMasterData() async {
+  Future<void> fetchAllMasterData({bool force = false}) async {
+    if (state.isLoading) return;
+    if (!force && state.distributors.isNotEmpty) return;
+
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final responses = await Future.wait([
@@ -105,7 +108,7 @@ class MasterDataNotifier extends StateNotifier<MasterDataState> {
       } else {
         await DioClient.instance.post(ApiEndpoints.distributors, data: payload);
       }
-      await fetchAllMasterData();
+      await fetchAllMasterData(force: true);
       state = state.copyWith(
         isLoading: false,
         successMessage: id != null ? 'Distributor berhasil diperbarui' : 'Distributor berhasil ditambahkan',
@@ -135,7 +138,7 @@ class MasterDataNotifier extends StateNotifier<MasterDataState> {
       } else {
         await DioClient.instance.post(ApiEndpoints.regions, data: payload);
       }
-      await fetchAllMasterData();
+      await fetchAllMasterData(force: true);
       state = state.copyWith(
         isLoading: false,
         successMessage: id != null ? 'Region berhasil diperbarui' : 'Region berhasil ditambahkan',
@@ -151,7 +154,7 @@ class MasterDataNotifier extends StateNotifier<MasterDataState> {
     state = state.copyWith(isLoading: true, clearError: true, clearSuccess: true);
     try {
       await DioClient.instance.delete('${ApiEndpoints.regions}/$id');
-      await fetchAllMasterData();
+      await fetchAllMasterData(force: true);
       state = state.copyWith(isLoading: false, successMessage: 'Region berhasil dihapus');
       return true;
     } catch (e) {
@@ -164,7 +167,7 @@ class MasterDataNotifier extends StateNotifier<MasterDataState> {
     state = state.copyWith(isLoading: true, clearError: true, clearSuccess: true);
     try {
       await DioClient.instance.delete('${ApiEndpoints.distributors}/$id');
-      await fetchAllMasterData();
+      await fetchAllMasterData(force: true);
       state = state.copyWith(isLoading: false, successMessage: 'Distributor berhasil dihapus');
       return true;
     } catch (e) {
@@ -193,7 +196,7 @@ class MasterDataNotifier extends StateNotifier<MasterDataState> {
       } else {
         await DioClient.instance.post(ApiEndpoints.depos, data: payload);
       }
-      await fetchAllMasterData();
+      await fetchAllMasterData(force: true);
       state = state.copyWith(
         isLoading: false,
         successMessage: id != null ? 'Depo berhasil diperbarui' : 'Depo berhasil ditambahkan',
@@ -209,7 +212,7 @@ class MasterDataNotifier extends StateNotifier<MasterDataState> {
     state = state.copyWith(isLoading: true, clearError: true, clearSuccess: true);
     try {
       await DioClient.instance.delete('${ApiEndpoints.depos}/$id');
-      await fetchAllMasterData();
+      await fetchAllMasterData(force: true);
       state = state.copyWith(isLoading: false, successMessage: 'Depo berhasil dihapus');
       return true;
     } catch (e) {
@@ -236,7 +239,7 @@ class MasterDataNotifier extends StateNotifier<MasterDataState> {
       } else {
         await DioClient.instance.post(ApiEndpoints.areas, data: payload);
       }
-      await fetchAllMasterData();
+      await fetchAllMasterData(force: true);
       state = state.copyWith(
         isLoading: false,
         successMessage: id != null ? 'Area berhasil diperbarui' : 'Area berhasil ditambahkan',
@@ -252,7 +255,7 @@ class MasterDataNotifier extends StateNotifier<MasterDataState> {
     state = state.copyWith(isLoading: true, clearError: true, clearSuccess: true);
     try {
       await DioClient.instance.delete('${ApiEndpoints.areas}/$id');
-      await fetchAllMasterData();
+      await fetchAllMasterData(force: true);
       state = state.copyWith(isLoading: false, successMessage: 'Area berhasil dihapus');
       return true;
     } catch (e) {
@@ -274,7 +277,7 @@ class MasterDataNotifier extends StateNotifier<MasterDataState> {
       } else {
         await DioClient.instance.post(ApiEndpoints.brands, data: payload);
       }
-      await fetchAllMasterData();
+      await fetchAllMasterData(force: true);
       state = state.copyWith(
         isLoading: false,
         successMessage: id != null ? 'Brand berhasil diperbarui' : 'Brand berhasil ditambahkan',
@@ -290,7 +293,7 @@ class MasterDataNotifier extends StateNotifier<MasterDataState> {
     state = state.copyWith(isLoading: true, clearError: true, clearSuccess: true);
     try {
       await DioClient.instance.delete('${ApiEndpoints.brands}/$id');
-      await fetchAllMasterData();
+      await fetchAllMasterData(force: true);
       state = state.copyWith(isLoading: false, successMessage: 'Brand berhasil dihapus');
       return true;
     } catch (e) {

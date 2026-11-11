@@ -258,6 +258,8 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
       minWidth: 880,
       child: DataTable(
         headingRowColor: WidgetStateProperty.all(context.colors.bgTableHead),
+        dataRowMinHeight: 52,
+        dataRowMaxHeight: 68,
         columns: [
           DataColumn(label: Text('Periode', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
           DataColumn(label: Text('Kode / Doc No', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),

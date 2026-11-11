@@ -43,7 +43,10 @@ class SalesAssignmentNotifier extends StateNotifier<SalesAssignmentState> {
     fetchAllAssignments();
   }
 
-  Future<void> fetchAllAssignments() async {
+  Future<void> fetchAllAssignments({bool force = false}) async {
+    if (state.isLoading) return;
+    if (!force && (state.distributorAssignments.isNotEmpty || state.surabayaAssignments.isNotEmpty)) return;
+
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final resDist = await DioClient.instance.get(ApiEndpoints.salesDistributorAssignments);
@@ -92,7 +95,7 @@ class SalesAssignmentNotifier extends StateNotifier<SalesAssignmentState> {
       };
 
       await DioClient.instance.post(ApiEndpoints.salesDistributorAssignments, data: payload);
-      await fetchAllAssignments();
+      await fetchAllAssignments(force: true);
 
       state = state.copyWith(
         isLoading: false,
@@ -113,7 +116,7 @@ class SalesAssignmentNotifier extends StateNotifier<SalesAssignmentState> {
     state = state.copyWith(isLoading: true, clearError: true, clearSuccess: true);
     try {
       await DioClient.instance.delete('${ApiEndpoints.salesDistributorAssignments}/$id');
-      await fetchAllAssignments();
+      await fetchAllAssignments(force: true);
       state = state.copyWith(
         isLoading: false,
         successMessage: 'Penugasan Distributor berhasil dihapus',
@@ -141,7 +144,7 @@ class SalesAssignmentNotifier extends StateNotifier<SalesAssignmentState> {
       };
 
       await DioClient.instance.post(ApiEndpoints.salesSurabayaAssignments, data: payload);
-      await fetchAllAssignments();
+      await fetchAllAssignments(force: true);
 
       state = state.copyWith(
         isLoading: false,
@@ -158,7 +161,7 @@ class SalesAssignmentNotifier extends StateNotifier<SalesAssignmentState> {
     state = state.copyWith(isLoading: true, clearError: true, clearSuccess: true);
     try {
       await DioClient.instance.delete('${ApiEndpoints.salesSurabayaAssignments}/$id');
-      await fetchAllAssignments();
+      await fetchAllAssignments(force: true);
       state = state.copyWith(
         isLoading: false,
         successMessage: 'Penugasan Surabaya berhasil dihapus',

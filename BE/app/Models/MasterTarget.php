@@ -11,6 +11,7 @@ class MasterTarget extends Model
     use HasFactory;
 
     protected $fillable = [
+        'batch_id',
         'user_id',
         'distributor_id',
         'depo_id',

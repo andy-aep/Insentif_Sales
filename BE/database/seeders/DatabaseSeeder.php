@@ -181,9 +181,8 @@ class DatabaseSeeder extends Seeder
         $brand1 = Brand::create(['code' => 'BRD01', 'name' => 'Indoprima Dairy']);
         $brand2 = Brand::create(['code' => 'BRD02', 'name' => 'Indoprima Sweet']);
 
-        $reg1 = Region::create(['code' => 'REG01', 'name' => 'Jawa Timur & Bali', 'description' => 'Wilayah Jatim, Madura, dan Bali']);
-        $reg2 = Region::create(['code' => 'REG02', 'name' => 'Jawa Tengah & DIY', 'description' => 'Wilayah Jateng dan DIY']);
-        $reg3 = Region::create(['code' => 'REG03', 'name' => 'Jawa Barat & DKI', 'description' => 'Wilayah Jabar, DKI, dan Banten']);
+        $reg1 = Region::create(['code' => 'EAST', 'name' => 'East', 'description' => 'Region Timur']);
+        $reg2 = Region::create(['code' => 'WEST', 'name' => 'West', 'description' => 'Region Barat']);
 
         $dist1 = Distributor::create(['code' => 'DST01', 'name' => 'PT Sumber Rejeki Utama', 'region_id' => $reg1->id]);
         $depo1 = Depo::create(['distributor_id' => $dist1->id, 'code' => 'DP01', 'name' => 'Depo Surabaya Timur']);

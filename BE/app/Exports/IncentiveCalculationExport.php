@@ -12,7 +12,9 @@ class IncentiveCalculationExport implements FromCollection, WithHeadings, WithMa
 {
     public function __construct(
         protected ?string $kategoriSkema = null,
-        protected ?string $period = null
+        protected ?string $period = null,
+        protected ?int $positionId = null,
+        protected ?int $userId = null
     ) {}
 
     public function collection(): Enumerable
@@ -20,6 +22,10 @@ class IncentiveCalculationExport implements FromCollection, WithHeadings, WithMa
         return IncentiveCalculation::with(['user.position', 'targetHeader', 'grade', 'gradeBobot', 'calculatedBy'])
             ->when($this->kategoriSkema, fn ($q) => $q->where('kategori_skema', $this->kategoriSkema))
             ->when($this->period, fn ($q) => $q->where('period', $this->period))
+            ->when($this->positionId, fn ($q) => $q->whereHas('user', fn ($u) => $u->where('position_id', $this->positionId)))
+            ->when($this->userId, fn ($q) => $q->where('user_id', $this->userId))
+            ->orderBy('user_id')
+            ->orderBy('target_header_id')
             ->get();
     }
 

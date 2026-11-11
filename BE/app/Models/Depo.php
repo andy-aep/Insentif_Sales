@@ -12,6 +12,7 @@ class Depo extends Model
     use HasFactory;
 
     protected $fillable = [
+        'batch_id',
         'distributor_id',
         'code',
         'name',

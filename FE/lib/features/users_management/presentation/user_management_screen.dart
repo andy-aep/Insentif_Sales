@@ -79,6 +79,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
     bool isKonsumsi = user?.isEligibleKonsumsi ?? true;
     bool isIndustri = user?.isEligibleIndustri ?? false;
     bool isSurabaya = user?.isEligibleSurabaya ?? false;
+    bool obscurePassword = true;
 
     showDialog(
       context: context,
@@ -122,9 +123,30 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                       const SizedBox(height: 12),
                       TextField(
                         controller: passwordCtrl,
-                        obscureText: true,
+                        obscureText: obscurePassword,
                         style: TextStyle(color: colors.textPrimary),
-                        decoration: const InputDecoration(labelText: 'Kata Sandi Default'),
+                        decoration: InputDecoration(
+                          labelText: 'Kata Sandi Default (Min. 6 karakter)',
+                          suffixIcon: IconButton(
+                            icon: Icon(obscurePassword ? LucideIcons.eyeOff : LucideIcons.eye, size: 18),
+                            onPressed: () => setDialogState(() => obscurePassword = !obscurePassword),
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: passwordCtrl,
+                        obscureText: obscurePassword,
+                        style: TextStyle(color: colors.textPrimary),
+                        decoration: InputDecoration(
+                          labelText: 'Kata Sandi Baru (Kosongkan jika tidak diubah)',
+                          hintText: 'Min. 6 karakter',
+                          suffixIcon: IconButton(
+                            icon: Icon(obscurePassword ? LucideIcons.eyeOff : LucideIcons.eye, size: 18),
+                            onPressed: () => setDialogState(() => obscurePassword = !obscurePassword),
+                          ),
+                        ),
                       ),
                     ],
                     const SizedBox(height: 14),
@@ -358,50 +380,157 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
 
   void _showChangePasswordDialog(UserModel user) {
     final colors = context.colors;
-    final passCtrl = TextEditingController();
+    final newPassCtrl = TextEditingController();
+    final confirmPassCtrl = TextEditingController();
+    bool obscureNew = true;
+    bool obscureConfirm = true;
+    String? errorText;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: colors.bgDialog,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: colors.border),
-        ),
-        title: Row(
-          children: [
-            const Icon(LucideIcons.key, color: AppColors.warning, size: 20),
-            const SizedBox(width: 10),
-            Text('Ubah Kata Sandi: ${user.name}', style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 17)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Masukkan kata sandi baru untuk akun @${user.username}:', style: TextStyle(color: colors.textSecondary, fontSize: 13)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: passCtrl,
-              obscureText: true,
-              style: TextStyle(color: colors.textPrimary),
-              decoration: const InputDecoration(labelText: 'Kata Sandi Baru'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: colors.bgDialog,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: colors.border),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(LucideIcons.key, color: AppColors.primary, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ubah Kata Sandi',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      '${user.name} (@${user.username})',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: colors.textSecondary,
+                        fontSize: 12.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (errorText != null) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.danger.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(LucideIcons.alertCircle, color: AppColors.danger, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            errorText!,
+                            style: GoogleFonts.plusJakartaSans(color: AppColors.danger, fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                TextField(
+                  controller: newPassCtrl,
+                  obscureText: obscureNew,
+                  style: TextStyle(color: colors.textPrimary),
+                  decoration: InputDecoration(
+                    labelText: 'Kata Sandi Baru',
+                    hintText: 'Minimal 6 karakter',
+                    suffixIcon: IconButton(
+                      icon: Icon(obscureNew ? LucideIcons.eyeOff : LucideIcons.eye, size: 18),
+                      onPressed: () => setDialogState(() => obscureNew = !obscureNew),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: confirmPassCtrl,
+                  obscureText: obscureConfirm,
+                  style: TextStyle(color: colors.textPrimary),
+                  decoration: InputDecoration(
+                    labelText: 'Konfirmasi Kata Sandi',
+                    hintText: 'Ketik ulang kata sandi baru',
+                    suffixIcon: IconButton(
+                      icon: Icon(obscureConfirm ? LucideIcons.eyeOff : LucideIcons.eye, size: 18),
+                      onPressed: () => setDialogState(() => obscureConfirm = !obscureConfirm),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Batal', style: GoogleFonts.plusJakartaSans(color: colors.textSecondary)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () async {
+                final newPass = newPassCtrl.text.trim();
+                final confirmPass = confirmPassCtrl.text.trim();
+
+                if (newPass.length < 6) {
+                  setDialogState(() => errorText = 'Kata sandi minimal 6 karakter');
+                  return;
+                }
+                if (newPass != confirmPass) {
+                  setDialogState(() => errorText = 'Konfirmasi kata sandi tidak cocok');
+                  return;
+                }
+
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
+                final nav = Navigator.of(ctx);
+                nav.pop();
+                final ok = await ref.read(userManagementProvider.notifier).changePassword(user.id, newPass);
+                if (!mounted) return;
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      ok ? 'Kata sandi untuk ${user.name} berhasil diperbarui' : 'Gagal memperbarui kata sandi',
+                    ),
+                    backgroundColor: ok ? AppColors.success : AppColors.danger,
+                  ),
+                );
+              },
+              child: Text('Simpan Sandi', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
             ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: TextStyle(color: colors.textSecondary))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.warning),
-            onPressed: () {
-              if (passCtrl.text.isNotEmpty) {
-                ref.read(userManagementProvider.notifier).changePassword(user.id, passCtrl.text);
-              }
-              Navigator.pop(ctx);
-            },
-            child: const Text('Simpan Sandi', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-          ),
-        ],
       ),
     );
   }
@@ -701,6 +830,8 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
         headingRowColor: WidgetStateProperty.all(colors.bgTableHead),
         columnSpacing: 16,
         horizontalMargin: 12,
+        dataRowMinHeight: 56,
+        dataRowMaxHeight: 74,
         columns: [
           DataColumn(label: Text('Nama & Username', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
           DataColumn(label: Text('Role', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
@@ -987,7 +1118,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
               TextField(
                 controller: codeCtrl,
                 style: TextStyle(color: colors.textPrimary),
-                decoration: const InputDecoration(labelText: 'Kode Region (Contoh: REG01)'),
+                decoration: const InputDecoration(labelText: 'Kode Region (Contoh: EAST)'),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -1537,6 +1668,8 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
               headingRowColor: WidgetStateProperty.all(colors.bgTableHead),
               columnSpacing: 16,
               horizontalMargin: 14,
+              dataRowMinHeight: 52,
+              dataRowMaxHeight: 68,
               columns: [
                 DataColumn(
                   label: Text('Menu Sistem & Route', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold)),

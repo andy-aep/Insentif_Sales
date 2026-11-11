@@ -11,9 +11,13 @@ class IncentiveCalculationState {
   final bool isCalculating;
   final bool isExporting;
   final List<IncentiveCalculationModel> results;
+  final List<DistributorBreakdownCardModel> breakdownCards;
+  final bool isBreakdownView;
   final IncentiveSummaryMeta summary;
   final String selectedKategori;
   final String selectedPeriod;
+  final int? selectedPositionId;
+  final int? selectedUserId;
   final String searchQuery;
   final String? errorMessage;
   final String? successMessage;
@@ -23,9 +27,13 @@ class IncentiveCalculationState {
     this.isCalculating = false,
     this.isExporting = false,
     this.results = const [],
+    this.breakdownCards = const [],
+    this.isBreakdownView = true,
     required this.summary,
     this.selectedKategori = 'KONSUMSI',
     this.selectedPeriod = '202610',
+    this.selectedPositionId,
+    this.selectedUserId,
     this.searchQuery = '',
     this.errorMessage,
     this.successMessage,
@@ -36,12 +44,18 @@ class IncentiveCalculationState {
     bool? isCalculating,
     bool? isExporting,
     List<IncentiveCalculationModel>? results,
+    List<DistributorBreakdownCardModel>? breakdownCards,
+    bool? isBreakdownView,
     IncentiveSummaryMeta? summary,
     String? selectedKategori,
     String? selectedPeriod,
+    int? selectedPositionId,
+    int? selectedUserId,
     String? searchQuery,
     String? errorMessage,
     String? successMessage,
+    bool clearPosition = false,
+    bool clearUser = false,
     bool clearError = false,
     bool clearSuccess = false,
   }) {
@@ -50,9 +64,13 @@ class IncentiveCalculationState {
       isCalculating: isCalculating ?? this.isCalculating,
       isExporting: isExporting ?? this.isExporting,
       results: results ?? this.results,
+      breakdownCards: breakdownCards ?? this.breakdownCards,
+      isBreakdownView: isBreakdownView ?? this.isBreakdownView,
       summary: summary ?? this.summary,
       selectedKategori: selectedKategori ?? this.selectedKategori,
       selectedPeriod: selectedPeriod ?? this.selectedPeriod,
+      selectedPositionId: clearPosition ? null : (selectedPositionId ?? this.selectedPositionId),
+      selectedUserId: clearUser ? null : (selectedUserId ?? this.selectedUserId),
       searchQuery: searchQuery ?? this.searchQuery,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       successMessage: clearSuccess ? null : (successMessage ?? this.successMessage),
@@ -75,7 +93,29 @@ class IncentiveCalculationNotifier extends StateNotifier<IncentiveCalculationSta
   }
 
   void setKategori(String kategori) {
-    state = state.copyWith(selectedKategori: kategori);
+    final normalized = kategori.toUpperCase() == 'DISTRIBUTOR' ? 'KONSUMSI' : kategori.toUpperCase();
+    state = state.copyWith(
+      selectedKategori: normalized,
+      clearPosition: true,
+      clearUser: true,
+    );
+    fetchResults();
+  }
+
+  void setPosition(int? positionId) {
+    state = state.copyWith(
+      selectedPositionId: positionId,
+      clearPosition: positionId == null,
+      clearUser: true,
+    );
+    fetchResults();
+  }
+
+  void setUser(int? userId) {
+    state = state.copyWith(
+      selectedUserId: userId,
+      clearUser: userId == null,
+    );
     fetchResults();
   }
 
@@ -88,15 +128,29 @@ class IncentiveCalculationNotifier extends StateNotifier<IncentiveCalculationSta
     state = state.copyWith(searchQuery: query);
   }
 
+  void toggleViewMode() {
+    state = state.copyWith(isBreakdownView: !state.isBreakdownView);
+  }
+
+  void setBreakdownView(bool val) {
+    state = state.copyWith(isBreakdownView: val);
+  }
+
   Future<void> fetchResults() async {
     state = state.copyWith(isLoading: true, clearError: true, clearSuccess: true);
     try {
+      final queryParams = <String, dynamic>{
+        'kategori_skema': state.selectedKategori,
+        'period': state.selectedPeriod,
+        if (state.selectedPositionId != null) 'position_id': state.selectedPositionId,
+        if (state.selectedUserId != null) 'user_id': state.selectedUserId,
+        'per_page': 200,
+      };
+
+      // 1. Fetch Summary rows
       final response = await DioClient.instance.get(
         ApiEndpoints.incentiveResults,
-        queryParameters: {
-          'kategori_skema': state.selectedKategori,
-          'period': state.selectedPeriod,
-        },
+        queryParameters: queryParams,
       );
 
       final data = response.data;
@@ -108,9 +162,30 @@ class IncentiveCalculationNotifier extends StateNotifier<IncentiveCalculationSta
       }
 
       final summary = IncentiveSummaryMeta.fromCalculations(items);
+
+      // 2. Fetch Hierarchical Distributor Breakdown Cards if KONSUMSI
+      List<DistributorBreakdownCardModel> breakdownCards = [];
+      if (state.selectedKategori == 'KONSUMSI') {
+        try {
+          final breakdownRes = await DioClient.instance.get(
+            ApiEndpoints.incentiveDistributorBreakdown,
+            queryParameters: {
+              'period': state.selectedPeriod,
+              if (state.selectedPositionId != null) 'position_id': state.selectedPositionId,
+              if (state.selectedUserId != null) 'user_id': state.selectedUserId,
+            },
+          );
+          final rawCards = breakdownRes.data?['data'] as List? ?? [];
+          breakdownCards = rawCards
+              .map((c) => DistributorBreakdownCardModel.fromJson(c as Map<String, dynamic>))
+              .toList();
+        } catch (_) {}
+      }
+
       state = state.copyWith(
         isLoading: false,
         results: items,
+        breakdownCards: breakdownCards,
         summary: summary,
       );
     } on DioException catch (dioErr) {
@@ -129,6 +204,8 @@ class IncentiveCalculationNotifier extends StateNotifier<IncentiveCalculationSta
         data: {
           'kategori_skema': state.selectedKategori,
           'period': state.selectedPeriod,
+          if (state.selectedPositionId != null) 'position_id': state.selectedPositionId,
+          if (state.selectedUserId != null) 'user_id': state.selectedUserId,
         },
       );
 
@@ -156,6 +233,8 @@ class IncentiveCalculationNotifier extends StateNotifier<IncentiveCalculationSta
         queryParameters: {
           'kategori_skema': state.selectedKategori,
           'period': state.selectedPeriod,
+          if (state.selectedPositionId != null) 'position_id': state.selectedPositionId.toString(),
+          if (state.selectedUserId != null) 'user_id': state.selectedUserId.toString(),
         },
       );
       state = state.copyWith(

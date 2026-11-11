@@ -19,7 +19,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
   final Map<String, String> _entityOptions = {
     'sellout_distributor': 'Transaksi: Sell-Out Distributor',
     'distributor': 'Master: Distributor, Depo & Area',
-    'master_target_distributor': 'Master: Target Distributor',
+    'master_target_distributor': 'Master: Target Distributor (Depo & Area)',
   };
 
   final Map<String, List<Map<String, String>>> _entityColumnGuides = {
@@ -31,24 +31,24 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
       {'col': 'active_outlet_count', 'req': 'WAJIB', 'ex': '45', 'desc': 'Jumlah Active Outlet (AO)'},
     ],
     'distributor': [
-      {'col': 'region_code', 'req': 'OPSIONAL', 'ex': 'REG01', 'desc': 'Kode Region (REG01, REG02, REG03)'},
+      {'col': 'region_code', 'req': 'OPSIONAL', 'ex': 'EAST', 'desc': 'Kode Region (EAST / WEST)'},
       {'col': 'distributor_code', 'req': 'WAJIB', 'ex': 'DST01', 'desc': 'Kode Distributor (ulangi jika banyak Depo)'},
       {'col': 'distributor_name', 'req': 'WAJIB', 'ex': 'PT Sumber Rejeki Utama', 'desc': 'Nama Perusahaan Distributor'},
       {'col': 'depo_code', 'req': 'WAJIB', 'ex': 'DP01', 'desc': 'Kode Depo berelasi ke distributor_code'},
       {'col': 'depo_name', 'req': 'WAJIB', 'ex': 'Depo Surabaya Timur', 'desc': 'Nama Cabang Depo'},
       {'col': 'area_code', 'req': 'WAJIB', 'ex': 'AR01', 'desc': 'Kode Area berelasi ke depo_code'},
-      {'col': 'area_name', 'req': 'WAJIB', 'ex': 'Rungkut & Sekitarnya', 'desc': 'Nama Area Operasional'},
+      {'col': 'area_name', 'req': 'WAJIB', 'desc': 'Nama Area Operasional', 'ex': 'Rungkut & Sekitarnya'},
     ],
     'master_target_distributor': [
       {'col': 'period', 'req': 'WAJIB', 'ex': '202610 / 2026', 'desc': 'Periode YYYYMM (atau YYYY untuk 12 bulan)'},
       {'col': 'distributor_code', 'req': 'WAJIB', 'ex': 'DST01', 'desc': 'Kode Distributor sesuai Master'},
       {'col': 'depo_code', 'req': 'WAJIB', 'ex': 'DP01', 'desc': 'Kode Depo sesuai Master'},
-      {'col': 'area_code', 'req': 'OPSIONAL', 'ex': 'AR01', 'desc': 'Kosong = Level Depo (ASM), Isi = Level Area (SPV)'},
+      {'col': 'area_code', 'req': 'OPSIONAL', 'ex': 'AR01 / (kosong)', 'desc': 'Kosongkan = Target Depo (ASM); Isi = Target Area (SPV)'},
       {'col': 'brand_code', 'req': 'WAJIB', 'ex': 'BRD01', 'desc': 'Kode Brand produk'},
       {'col': 'metrik_target', 'req': 'WAJIB', 'ex': 'SELL_OUT', 'desc': 'SELL_OUT, SELL_IN, atau AO'},
-      {'col': 'target_quota', 'req': 'WAJIB', 'ex': '3000', 'desc': 'Besaran kuota target (Kg/Box/Toko)'},
-      {'col': 'target_outlet', 'req': 'OPSIONAL', 'ex': '50', 'desc': 'Target jumlah toko Active Outlet (AO)'},
-      {'col': 'username', 'req': 'OPSIONAL', 'ex': 'budi_asm', 'desc': 'Username sales (otomatis jika dikosongkan)'},
+      {'col': 'target_quota', 'req': 'WAJIB', 'ex': '5000 / 1500', 'desc': 'Besaran kuota Target Depo atau Area'},
+      {'col': 'target_outlet', 'req': 'OPSIONAL', 'ex': '50 / 25', 'desc': 'Target jumlah toko Active Outlet (AO)'},
+      {'col': 'username', 'req': 'OPSIONAL', 'ex': 'budi_asm / rian_spv', 'desc': 'Username ASM/SPV (otomatis jika kosong)'},
     ],
   };
 
@@ -63,6 +63,9 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
       'sellout_sales_surabaya': 'Transaksi: Sell-Out Surabaya',
       'sell_out_surabaya': 'Transaksi: Sell-Out Surabaya',
       'distributors': 'Master: Distributor, Depo & Area',
+      'distributor': 'Master: Distributor, Depo & Area',
+      'master_target_depo': 'Master: Target Depo (ASM)',
+      'master_target_area': 'Master: Target Area (SPV)',
       'depo': 'Master: Depo',
       'depos': 'Master: Depo',
       'area': 'Master: Area',
@@ -71,19 +74,6 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
       'target_distributor': 'Master: Target Distributor',
     };
     return mapLegacy[rawEntity] ?? rawEntity;
-  }
-
-  bool _isRollbackSupported(String rawEntity) {
-    return const {
-      'sellin_distributor',
-      'sellout_distributor',
-      'sellin_industri',
-      'sellout_sales_surabaya',
-      'sell_in_distributor',
-      'sell_out_distributor',
-      'sell_in_industri',
-      'sell_out_surabaya',
-    }.contains(rawEntity);
   }
 
   Future<void> _pickFile() async {
@@ -130,7 +120,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Apakah Anda yakin ingin membatalkan (rollback) seluruh transaksi dari batch ini?',
+              'Apakah Anda yakin ingin membatalkan (rollback) seluruh data yang di-import dari batch ini?',
               style: GoogleFonts.inter(color: colors.textSecondary, fontSize: 13.5),
             ),
             const SizedBox(height: 14),
@@ -145,15 +135,16 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                 children: [
                   Text('ID Batch: ${batch.id}', style: TextStyle(color: colors.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  Text('Entitas: ${batch.entity}', style: TextStyle(color: colors.textSecondary, fontSize: 12)),
+                  Text('Entitas: ${_formatEntityLabel(batch.entity)}', style: TextStyle(color: colors.textSecondary, fontSize: 12)),
+                  Text('File Asli: ${batch.originalFilename ?? '-'}', style: TextStyle(color: colors.textSecondary, fontSize: 12)),
                   Text('Total Baris: ${batch.totalRows} baris (${batch.successRows} berhasil)', style: TextStyle(color: colors.textSecondary, fontSize: 12)),
                 ],
               ),
             ),
             const SizedBox(height: 14),
             Text(
-              'Perhatian: Seluruh record yang telah tersimpan dari file ini akan dihapus dari database secara permanen.',
-              style: GoogleFonts.inter(color: const Color(0xFFFCA5A5), fontSize: 11.5),
+              'Perhatian: Seluruh record yang telah tersimpan dari file ini akan dihapus dari database.',
+              style: GoogleFonts.inter(color: const Color(0xFFD9534F), fontSize: 11.5),
             ),
           ],
         ),
@@ -175,6 +166,76 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
     );
   }
 
+  void _showDeleteBatchConfirmation(UploadBatchModel batch) {
+    final colors = context.colors;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: colors.bgDialog,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: colors.border),
+        ),
+        title: Row(
+          children: [
+            const Icon(LucideIcons.trash2, color: AppColors.danger, size: 22),
+            const SizedBox(width: 10),
+            Text(
+              'Hapus Riwayat & Data Batch',
+              style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Apakah Anda yakin ingin menghapus permanen riwayat batch ini?',
+              style: GoogleFonts.inter(color: colors.textSecondary, fontSize: 13.5),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colors.bgSubtle,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('ID Batch: ${batch.id}', style: TextStyle(color: colors.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text('Entitas: ${_formatEntityLabel(batch.entity)}', style: TextStyle(color: colors.textSecondary, fontSize: 12)),
+                  Text('File Asli: ${batch.originalFilename ?? '-'}', style: TextStyle(color: colors.textSecondary, fontSize: 12)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'Perhatian: Jika batch belum di-rollback, data yang telah di-import akan otomatis dihapus dari database bersama riwayatnya.',
+              style: GoogleFonts.inter(color: const Color(0xFFD9534F), fontSize: 11.5),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Batal', style: GoogleFonts.inter(color: colors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger, foregroundColor: Colors.white),
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref.read(bulkUploadProvider.notifier).deleteBatch(batch.id);
+            },
+            child: Text('Ya, Hapus Permanen', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatusBadge(BuildContext context, String status) {
     final colors = context.colors;
     Color bg;
@@ -185,17 +246,17 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
       case 'COMPLETED':
       case 'SUCCESS':
         bg = AppColors.success.withValues(alpha: 0.15);
-        text = const Color(0xFF34D399);
+        text = const Color(0xFF24968B);
         icon = LucideIcons.checkCircle2;
         break;
       case 'ROLLED_BACK':
         bg = AppColors.danger.withValues(alpha: 0.15);
-        text = const Color(0xFFF87171);
+        text = const Color(0xFFD9534F);
         icon = LucideIcons.rotateCcw;
         break;
       case 'PROCESSING':
         bg = AppColors.warning.withValues(alpha: 0.15);
-        text = const Color(0xFFFBBF24);
+        text = const Color(0xFFF47A60);
         icon = LucideIcons.clock;
         break;
       default:
@@ -289,7 +350,15 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                   Expanded(
                     child: Text(
                       state.errorMessage!,
-                      style: GoogleFonts.inter(color: const Color(0xFFFCA5A5), fontSize: 13),
+                      style: GoogleFonts.inter(color: const Color(0xFFD9534F), fontSize: 13),
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => notifier.clearError(),
+                    borderRadius: BorderRadius.circular(6),
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(LucideIcons.x, color: Color(0xFFD9534F), size: 16),
                     ),
                   ),
                 ],
@@ -312,7 +381,15 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                   Expanded(
                     child: Text(
                       state.successMessage!,
-                      style: GoogleFonts.inter(color: const Color(0xFF6EE7B7), fontSize: 13),
+                      style: GoogleFonts.inter(color: const Color(0xFF24968B), fontSize: 13),
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => notifier.clearSuccess(),
+                    borderRadius: BorderRadius.circular(6),
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(LucideIcons.x, color: Color(0xFF24968B), size: 16),
                     ),
                   ),
                 ],
@@ -345,27 +422,49 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                         ),
                       ),
                     ),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.success,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      icon: state.isDownloadingTemplate
-                          ? const SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            )
-                          : const Icon(LucideIcons.download, size: 15),
-                      label: Text(
-                        state.isDownloadingTemplate
-                            ? 'Mengunduh...'
-                            : 'Unduh Template Excel (.xlsx)',
-                        style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600),
-                      ),
-                      onPressed: state.isDownloadingTemplate ? null : () => notifier.downloadTemplate(),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: colors.textPrimary,
+                            side: BorderSide(color: colors.borderMuted),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          icon: const Icon(LucideIcons.fileSpreadsheet, size: 15),
+                          label: Text(
+                            'Tarik Template + Data Eksisting',
+                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                          onPressed: state.isDownloadingTemplate
+                              ? null
+                              : () => notifier.downloadTemplate(withData: true),
+                        ),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.success,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          icon: state.isDownloadingTemplate
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(LucideIcons.download, size: 15),
+                          label: Text(
+                            state.isDownloadingTemplate
+                                ? 'Mengunduh...'
+                                : 'Unduh Template Kosong',
+                            style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600),
+                          ),
+                          onPressed: state.isDownloadingTemplate ? null : () => notifier.downloadTemplate(),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -548,7 +647,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                         Text(
                           state.selectedFileSize != null
                               ? 'Ukuran: ${_formatFileSize(state.selectedFileSize!)} • Format Didukung: .xlsx, .xls, .csv'
-                              : 'Format didukung: Microsoft Excel (.xlsx, .xls) atau CSV (Max 25MB)',
+                              : 'Format didukung: Microsoft Excel (.xlsx, .xls) atau CSV (Hingga 500.000+ Baris • Max 200MB)',
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             color: colors.textMuted,
@@ -558,6 +657,26 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                     ),
                   ),
                 ),
+
+                if (state.isUploading) ...[
+                  const SizedBox(height: 16),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: state.uploadProgress > 0 && state.uploadProgress < 0.95 ? state.uploadProgress : null,
+                      minHeight: 8,
+                      backgroundColor: colors.bgSubtle,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    state.uploadProgress < 0.9
+                        ? 'Mengunggah file ke server (${(state.uploadProgress * 100).toStringAsFixed(0)}%)...'
+                        : 'Memproses & menyimpan ratusan ribu baris ke database secara bulk (Streaming Engine)...',
+                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.primaryLight, fontWeight: FontWeight.w500),
+                  ),
+                ],
 
                 // Action Bar if File Selected
                 if (state.selectedFileName != null) ...[
@@ -667,9 +786,11 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                   )
                 else
                   ResponsiveTableCard(
-                    minWidth: 880,
+                    minWidth: 1000,
                     child: DataTable(
                       headingRowColor: WidgetStateProperty.all(colors.bgTableHead),
+                      dataRowMinHeight: 52,
+                      dataRowMaxHeight: 70,
                       columns: [
                         DataColumn(label: Text('ID Batch', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.w600))),
                         DataColumn(label: Text('Entitas', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.w600))),
@@ -703,9 +824,17 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                             ),
                             // File Asli
                             DataCell(
-                              Text(
-                                batch.originalFilename ?? '-',
-                                style: GoogleFonts.inter(color: colors.textSecondary, fontSize: 12.5),
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 180),
+                                child: Tooltip(
+                                  message: batch.originalFilename ?? '-',
+                                  child: Text(
+                                    batch.originalFilename ?? '-',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.inter(color: colors.textSecondary, fontSize: 12.5),
+                                  ),
+                                ),
                               ),
                             ),
                             // Row statistics
@@ -724,22 +853,51 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                             DataCell(
                               Text(batch.createdAt, style: GoogleFonts.inter(color: colors.textMuted, fontSize: 12)),
                             ),
-                            // Rollback Action
+                            // Action: Unduh Excel, Rollback, Hapus
                             DataCell(
-                              !_isRollbackSupported(batch.entity)
-                                  ? Text('Master Data', style: GoogleFonts.inter(color: colors.textMuted, fontSize: 12))
-                                  : isAlreadyRolledBack
-                                      ? Text('Di-rollback', style: GoogleFonts.inter(color: colors.textMuted, fontSize: 12))
-                                      : OutlinedButton.icon(
-                                          style: OutlinedButton.styleFrom(
-                                            foregroundColor: AppColors.danger,
-                                            side: BorderSide(color: AppColors.danger.withValues(alpha: 0.5)),
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                          ),
-                                          icon: const Icon(LucideIcons.rotateCcw, size: 13),
-                                          label: const Text('Rollback', style: TextStyle(fontSize: 12)),
-                                          onPressed: () => _showRollbackConfirmation(batch),
-                                        ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // 1. Unduh Excel File Batch Ini
+                                  IconButton(
+                                    icon: const Icon(LucideIcons.download, size: 16, color: AppColors.primaryLight),
+                                    tooltip: 'Unduh Excel Batch Ini (${batch.originalFilename ?? 'file.xlsx'})',
+                                    onPressed: () => ref.read(bulkUploadProvider.notifier).downloadBatchFile(
+                                      batch.id,
+                                      batch.originalFilename ?? 'batch_${batch.id}.xlsx',
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  // 2. Rollback Data Batch
+                                  if (!isAlreadyRolledBack)
+                                    OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: AppColors.danger,
+                                        side: BorderSide(color: AppColors.danger.withValues(alpha: 0.5)),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      ),
+                                      icon: const Icon(LucideIcons.rotateCcw, size: 13),
+                                      label: const Text('Rollback', style: TextStyle(fontSize: 12)),
+                                      onPressed: () => _showRollbackConfirmation(batch),
+                                    )
+                                  else
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: colors.bgSubtle,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text('Di-rollback', style: GoogleFonts.inter(color: colors.textMuted, fontSize: 11.5)),
+                                    ),
+                                  const SizedBox(width: 4),
+                                  // 3. Hapus Batch Permanen
+                                  IconButton(
+                                    icon: Icon(LucideIcons.trash2, size: 15, color: AppColors.danger.withValues(alpha: 0.8)),
+                                    tooltip: 'Hapus Riwayat & Data Batch Ini',
+                                    onPressed: () => _showDeleteBatchConfirmation(batch),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         );

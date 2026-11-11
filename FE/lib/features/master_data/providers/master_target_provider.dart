@@ -9,6 +9,13 @@ class MasterTargetState {
   final List<MasterTargetModel> targets;
   final List<String> availablePeriods;
   final String selectedPeriod;
+  final String? activeLevel;
+  final String? activeKategori;
+  final int? activeDistributorId;
+  final int? activeDepoId;
+  final int? activeBrandId;
+  final String? activeMetric;
+  final String? activeSearch;
   final int currentPage;
   final int lastPage;
   final int perPage;
@@ -24,6 +31,13 @@ class MasterTargetState {
     this.targets = const [],
     this.availablePeriods = const ['202610'],
     this.selectedPeriod = '202610',
+    this.activeLevel,
+    this.activeKategori,
+    this.activeDistributorId,
+    this.activeDepoId,
+    this.activeBrandId,
+    this.activeMetric,
+    this.activeSearch,
     this.currentPage = 1,
     this.lastPage = 1,
     this.perPage = 50,
@@ -40,6 +54,20 @@ class MasterTargetState {
     List<MasterTargetModel>? targets,
     List<String>? availablePeriods,
     String? selectedPeriod,
+    String? activeLevel,
+    bool clearActiveLevel = false,
+    String? activeKategori,
+    bool clearActiveKategori = false,
+    int? activeDistributorId,
+    bool clearActiveDistributorId = false,
+    int? activeDepoId,
+    bool clearActiveDepoId = false,
+    int? activeBrandId,
+    bool clearActiveBrandId = false,
+    String? activeMetric,
+    bool clearActiveMetric = false,
+    String? activeSearch,
+    bool clearActiveSearch = false,
     int? currentPage,
     int? lastPage,
     int? perPage,
@@ -57,6 +85,13 @@ class MasterTargetState {
       targets: targets ?? this.targets,
       availablePeriods: availablePeriods ?? this.availablePeriods,
       selectedPeriod: selectedPeriod ?? this.selectedPeriod,
+      activeLevel: clearActiveLevel ? null : (activeLevel ?? this.activeLevel),
+      activeKategori: clearActiveKategori ? null : (activeKategori ?? this.activeKategori),
+      activeDistributorId: clearActiveDistributorId ? null : (activeDistributorId ?? this.activeDistributorId),
+      activeDepoId: clearActiveDepoId ? null : (activeDepoId ?? this.activeDepoId),
+      activeBrandId: clearActiveBrandId ? null : (activeBrandId ?? this.activeBrandId),
+      activeMetric: clearActiveMetric ? null : (activeMetric ?? this.activeMetric),
+      activeSearch: clearActiveSearch ? null : (activeSearch ?? this.activeSearch),
       currentPage: currentPage ?? this.currentPage,
       lastPage: lastPage ?? this.lastPage,
       perPage: perPage ?? this.perPage,
@@ -103,24 +138,45 @@ class MasterTargetNotifier extends StateNotifier<MasterTargetState> {
   void setPeriod(String period) {
     if (state.selectedPeriod != period) {
       state = state.copyWith(selectedPeriod: period, currentPage: 1);
-      fetchTargets(period: period, page: 1);
+      fetchTargets(period: period, page: 1, force: true);
     }
   }
 
   Future<void> fetchTargets({
     String? period,
     String? kategori,
+    bool clearKategori = false,
     int? distributorId,
+    bool clearDistributor = false,
+    int? depoId,
+    bool clearDepo = false,
+    int? brandId,
+    bool clearBrand = false,
+    String? level,
+    bool clearLevel = false,
+    String? metrikTarget,
+    bool clearMetric = false,
     int? page,
     int? perPage,
     String? search,
+    bool clearSearch = false,
+    bool force = false,
   }) async {
+    if (state.isLoading) return;
+
+    final targetLevel = clearLevel ? null : (level ?? state.activeLevel);
+    final targetKategori = clearKategori ? null : (kategori ?? state.activeKategori);
+    final targetDist = clearDistributor ? null : (distributorId ?? state.activeDistributorId);
+    final targetDepo = clearDepo ? null : (depoId ?? state.activeDepoId);
+    final targetBrand = clearBrand ? null : (brandId ?? state.activeBrandId);
+    final targetMetric = clearMetric ? null : (metrikTarget ?? state.activeMetric);
+    final targetSearch = clearSearch ? null : (search ?? state.activeSearch);
+    final targetPeriod = period ?? state.selectedPeriod;
+    final targetPage = page ?? (level != null && level != state.activeLevel ? 1 : state.currentPage);
+    final targetPerPage = perPage ?? state.perPage;
+
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final targetPeriod = period ?? state.selectedPeriod;
-      final targetPage = page ?? state.currentPage;
-      final targetPerPage = perPage ?? state.perPage;
-
       final queryParams = <String, dynamic>{
         'page': targetPage,
         'per_page': targetPerPage,
@@ -129,14 +185,26 @@ class MasterTargetNotifier extends StateNotifier<MasterTargetState> {
       if (targetPeriod.isNotEmpty && targetPeriod != 'ALL') {
         queryParams['period'] = targetPeriod;
       }
-      if (kategori != null && kategori.isNotEmpty && kategori != 'ALL') {
-        queryParams['kategori_skema'] = kategori;
+      if (targetKategori != null && targetKategori.isNotEmpty && targetKategori != 'ALL') {
+        queryParams['kategori_skema'] = targetKategori;
       }
-      if (distributorId != null) {
-        queryParams['distributor_id'] = distributorId;
+      if (targetDist != null) {
+        queryParams['distributor_id'] = targetDist;
       }
-      if (search != null && search.trim().isNotEmpty) {
-        queryParams['search'] = search.trim();
+      if (targetDepo != null) {
+        queryParams['depo_id'] = targetDepo;
+      }
+      if (targetBrand != null) {
+        queryParams['brand_id'] = targetBrand;
+      }
+      if (targetLevel != null && targetLevel.isNotEmpty && targetLevel != 'ALL') {
+        queryParams['level'] = targetLevel;
+      }
+      if (targetMetric != null && targetMetric.isNotEmpty && targetMetric != 'ALL') {
+        queryParams['metrik_target'] = targetMetric;
+      }
+      if (targetSearch != null && targetSearch.trim().isNotEmpty) {
+        queryParams['search'] = targetSearch.trim();
       }
 
       final res = await DioClient.instance.get(
@@ -159,6 +227,20 @@ class MasterTargetNotifier extends StateNotifier<MasterTargetState> {
         isLoading: false,
         targets: targets,
         selectedPeriod: targetPeriod,
+        activeLevel: targetLevel,
+        clearActiveLevel: clearLevel,
+        activeKategori: targetKategori,
+        clearActiveKategori: clearKategori,
+        activeDistributorId: targetDist,
+        clearActiveDistributorId: clearDistributor,
+        activeDepoId: targetDepo,
+        clearActiveDepoId: clearDepo,
+        activeBrandId: targetBrand,
+        clearActiveBrandId: clearBrand,
+        activeMetric: targetMetric,
+        clearActiveMetric: clearMetric,
+        activeSearch: targetSearch,
+        clearActiveSearch: clearSearch,
         currentPage: curPage,
         lastPage: lastPg,
         perPage: targetPerPage,
@@ -179,13 +261,13 @@ class MasterTargetNotifier extends StateNotifier<MasterTargetState> {
 
   void goToPage(int page) {
     if (page >= 1 && page <= state.lastPage && page != state.currentPage) {
-      fetchTargets(page: page);
+      fetchTargets(page: page, force: true);
     }
   }
 
   void setPerPage(int perPage) {
     if (state.perPage != perPage) {
-      fetchTargets(page: 1, perPage: perPage);
+      fetchTargets(page: 1, perPage: perPage, force: true);
     }
   }
 
@@ -203,6 +285,10 @@ class MasterTargetNotifier extends StateNotifier<MasterTargetState> {
     String? year,
     required double targetQuota,
     int? targetOutlet,
+    double? targetQuotaDepo,
+    int? targetOutletDepo,
+    double? targetQuotaArea,
+    int? targetOutletArea,
   }) async {
     state = state.copyWith(isLoading: true, clearError: true, clearSuccess: true);
     try {
@@ -224,10 +310,14 @@ class MasterTargetNotifier extends StateNotifier<MasterTargetState> {
       if (brandId != null) payload['brand_id'] = brandId;
       if (level != null) payload['level'] = level;
       if (targetOutlet != null) payload['target_outlet'] = targetOutlet;
+      if (targetQuotaDepo != null) payload['target_quota_depo'] = targetQuotaDepo;
+      if (targetOutletDepo != null) payload['target_outlet_depo'] = targetOutletDepo;
+      if (targetQuotaArea != null) payload['target_quota_area'] = targetQuotaArea;
+      if (targetOutletArea != null) payload['target_outlet_area'] = targetOutletArea;
 
       final res = await DioClient.instance.post(ApiEndpoints.masterTargets, data: payload);
       await fetchPeriods();
-      await fetchTargets();
+      await fetchTargets(force: true);
 
       state = state.copyWith(
         isLoading: false,
@@ -278,7 +368,7 @@ class MasterTargetNotifier extends StateNotifier<MasterTargetState> {
 
       await DioClient.instance.put('${ApiEndpoints.masterTargets}/$id', data: payload);
       await fetchPeriods();
-      await fetchTargets();
+      await fetchTargets(force: true);
 
       state = state.copyWith(
         isLoading: false,
@@ -302,7 +392,7 @@ class MasterTargetNotifier extends StateNotifier<MasterTargetState> {
     try {
       await DioClient.instance.delete('${ApiEndpoints.masterTargets}/$id');
       await fetchPeriods();
-      await fetchTargets();
+      await fetchTargets(force: true);
       state = state.copyWith(isLoading: false, successMessage: 'Target berhasil dihapus');
       return true;
     } on DioException catch (e) {

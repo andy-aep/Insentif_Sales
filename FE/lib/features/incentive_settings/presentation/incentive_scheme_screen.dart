@@ -50,7 +50,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 decoration: const BoxDecoration(
-                  color: Color(0xFF5C6BC0),
+                  color: Color(0xFFF47A60),
                   borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                 ),
                 child: Row(
@@ -119,13 +119,13 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFE1F5FE),
+                                    color: const Color(0xFFE3EFF2),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
                                     header.type.toUpperCase(),
                                     style: const TextStyle(
-                                      color: Color(0xFF0288D1),
+                                      color: Color(0xFF316879),
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
                                     ),
@@ -135,13 +135,13 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFEDE7F6),
+                                    color: const Color(0xFFFDECE8),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
                                     header.displaySalesType.toUpperCase(),
                                     style: const TextStyle(
-                                      color: Color(0xFF5E35B1),
+                                      color: Color(0xFF316879),
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
                                     ),
@@ -186,13 +186,13 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFE8F5E9),
+                                        color: const Color(0xFFDDF9F6),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Text(
                                         header.aktif ? 'Aktif' : 'Non-Aktif',
                                         style: const TextStyle(
-                                          color: Color(0xFF2E7D32),
+                                          color: Color(0xFF24968B),
                                           fontWeight: FontWeight.bold,
                                           fontSize: 12,
                                         ),
@@ -240,7 +240,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                             decoration: BoxDecoration(
                               color: colors.bgCard,
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFD6D9F5), width: 1.5),
+                              border: Border.all(color: const Color(0xFFCED7D8), width: 1.5),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -250,7 +250,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                                     Text(
                                       'Grade: ${grade.gradeName}',
                                       style: const TextStyle(
-                                        color: Color(0xFF5C6BC0),
+                                        color: Color(0xFFF47A60),
                                         fontWeight: FontWeight.bold,
                                         fontSize: 15,
                                       ),
@@ -259,13 +259,13 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFE8F5E9),
+                                        color: const Color(0xFFDDF9F6),
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: const Text(
                                         'Aktif',
                                         style: TextStyle(
-                                          color: Color(0xFF2E7D32),
+                                          color: Color(0xFF24968B),
                                           fontWeight: FontWeight.bold,
                                           fontSize: 11,
                                         ),
@@ -341,7 +341,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                                                     padding: const EdgeInsets.symmetric(vertical: 8),
                                                     child: Center(
                                                       child: b.pengali
-                                                          ? const Icon(LucideIcons.checkCircle2, color: Color(0xFF4CAF50), size: 18)
+                                                          ? const Icon(LucideIcons.checkCircle2, color: Color(0xFF24968B), size: 18)
                                                           : Icon(LucideIcons.minus, color: colors.textMuted, size: 16),
                                                     ),
                                                   ),
@@ -375,12 +375,12 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                   children: [
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF0288D1),
-                        side: const BorderSide(color: Color(0xFF0288D1)),
+                        foregroundColor: const Color(0xFF316879),
+                        side: const BorderSide(color: Color(0xFF316879)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                       ),
-                      icon: const Icon(LucideIcons.copy, size: 16, color: Color(0xFF0288D1)),
+                      icon: const Icon(LucideIcons.copy, size: 16, color: Color(0xFF316879)),
                       label: const Text('Duplikat Setting', style: TextStyle(fontWeight: FontWeight.w600)),
                       onPressed: () async {
                         Navigator.pop(ctx);
@@ -395,12 +395,12 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                     const SizedBox(width: 10),
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF5C6BC0),
-                        side: const BorderSide(color: Color(0xFF5C6BC0)),
+                        foregroundColor: const Color(0xFFF47A60),
+                        side: const BorderSide(color: Color(0xFFF47A60)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                       ),
-                      icon: const Icon(LucideIcons.pencil, size: 16, color: Color(0xFF5C6BC0)),
+                      icon: const Icon(LucideIcons.pencil, size: 16, color: Color(0xFFF47A60)),
                       label: const Text('Edit Setting', style: TextStyle(fontWeight: FontWeight.w600)),
                       onPressed: () {
                         Navigator.pop(ctx);
@@ -410,7 +410,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                     const SizedBox(width: 10),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF5C6BC0),
+                        backgroundColor: const Color(0xFFF47A60),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 10),
@@ -543,7 +543,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                     decoration: const BoxDecoration(
-                      color: Color(0xFF5C6BC0),
+                      color: Color(0xFFF47A60),
                       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                     ),
                     child: Row(
@@ -579,10 +579,10 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF5C6BC0).withValues(alpha: 0.15),
+                                  color: const Color(0xFFF47A60).withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: const Text('HEADER', style: TextStyle(color: Color(0xFF5C6BC0), fontWeight: FontWeight.bold, fontSize: 11)),
+                                child: const Text('HEADER', style: TextStyle(color: Color(0xFFF47A60), fontWeight: FontWeight.bold, fontSize: 11)),
                               ),
                               const SizedBox(width: 8),
                               Text('Informasi Skema Insentif', style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: colors.textPrimary)),
@@ -726,7 +726,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                               const Spacer(),
                               ElevatedButton.icon(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF5C6BC0),
+                                  backgroundColor: const Color(0xFFF47A60),
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                 ),
@@ -773,7 +773,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                                 decoration: BoxDecoration(
                                   color: colors.bgCard,
                                   borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: const Color(0xFFD6D9F5), width: 1.5),
+                                  border: Border.all(color: const Color(0xFFCED7D8), width: 1.5),
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -836,8 +836,8 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                                               const Spacer(),
                                               TextButton.icon(
                                                 style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4)),
-                                                icon: const Icon(LucideIcons.plus, size: 14, color: Color(0xFF5C6BC0)),
-                                                label: const Text('Tambah Tier Bobot', style: TextStyle(color: Color(0xFF5C6BC0), fontSize: 12, fontWeight: FontWeight.w600)),
+                                                icon: const Icon(LucideIcons.plus, size: 14, color: Color(0xFFF47A60)),
+                                                label: const Text('Tambah Tier Bobot', style: TextStyle(color: Color(0xFFF47A60), fontSize: 12, fontWeight: FontWeight.w600)),
                                                 onPressed: () {
                                                   setDialogState(() {
                                                     gradeDraft.bobots.add(
@@ -934,7 +934,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                                                         const Text('Pengali', style: TextStyle(fontSize: 10, color: Colors.grey)),
                                                         Checkbox(
                                                           value: bDraft.pengali,
-                                                          activeColor: const Color(0xFF4CAF50),
+                                                          activeColor: const Color(0xFF24968B),
                                                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                                           onChanged: (val) {
                                                             setDialogState(() {
@@ -992,7 +992,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                         const SizedBox(width: 12),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF5C6BC0),
+                            backgroundColor: const Color(0xFFF47A60),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
@@ -1308,7 +1308,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
 
               final actionButton = ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF5C6BC0),
+                  backgroundColor: const Color(0xFFF47A60),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
@@ -1453,10 +1453,10 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                           Container(
                             padding: const EdgeInsets.all(7),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF5C6BC0).withValues(alpha: 0.12),
+                              color: const Color(0xFFF47A60).withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Icon(LucideIcons.award, size: 18, color: Color(0xFF5C6BC0)),
+                            child: const Icon(LucideIcons.award, size: 18, color: Color(0xFFF47A60)),
                           ),
                           const SizedBox(width: 10),
                           Flexible(
@@ -1511,23 +1511,23 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                   children: [
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF5C6BC0),
-                        side: const BorderSide(color: Color(0xFF5C6BC0)),
+                        foregroundColor: const Color(0xFFF47A60),
+                        side: const BorderSide(color: Color(0xFFF47A60)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                       ),
-                      icon: const Icon(LucideIcons.info, size: 14, color: Color(0xFF5C6BC0)),
+                      icon: const Icon(LucideIcons.info, size: 14, color: Color(0xFFF47A60)),
                       label: const Text('Detail', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
                       onPressed: () => _showSettingDetailDialog(header),
                     ),
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF0288D1),
-                        side: const BorderSide(color: Color(0xFF0288D1)),
+                        foregroundColor: const Color(0xFF316879),
+                        side: const BorderSide(color: Color(0xFF316879)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                       ),
-                      icon: const Icon(LucideIcons.copy, size: 14, color: Color(0xFF0288D1)),
+                      icon: const Icon(LucideIcons.copy, size: 14, color: Color(0xFF316879)),
                       label: const Text('Duplikat', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
                       onPressed: () async {
                         await ref.read(incentiveSchemeProvider.notifier).duplicateTargetHeader(header.id);
@@ -1570,7 +1570,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                     ),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF5C6BC0),
+                        backgroundColor: const Color(0xFFF47A60),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -1641,18 +1641,18 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF5C6BC0).withValues(alpha: 0.12),
+                                        color: const Color(0xFFF47A60).withValues(alpha: 0.12),
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          const Icon(LucideIcons.layers, size: 14, color: Color(0xFF5C6BC0)),
+                                          const Icon(LucideIcons.layers, size: 14, color: Color(0xFFF47A60)),
                                           const SizedBox(width: 6),
                                           Text(
                                             'Grade ${grade.gradeName}',
                                             style: const TextStyle(
-                                              color: Color(0xFF5C6BC0),
+                                              color: Color(0xFFF47A60),
                                               fontWeight: FontWeight.bold,
                                               fontSize: 13,
                                             ),
@@ -1705,8 +1705,8 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                                     ),
                                     OutlinedButton.icon(
                                       style: OutlinedButton.styleFrom(
-                                        foregroundColor: const Color(0xFF5C6BC0),
-                                        side: const BorderSide(color: Color(0xFF5C6BC0)),
+                                        foregroundColor: const Color(0xFFF47A60),
+                                        side: const BorderSide(color: Color(0xFFF47A60)),
                                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                       ),
                                       icon: const Icon(LucideIcons.plus, size: 13),
@@ -1815,13 +1815,13 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                                               child: Container(
                                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                                 decoration: BoxDecoration(
-                                                  color: b.pengali ? const Color(0xFFE1F5FE) : const Color(0xFFE8F5E9),
+                                                  color: b.pengali ? const Color(0xFFE3EFF2) : const Color(0xFFDDF9F6),
                                                   borderRadius: BorderRadius.circular(6),
                                                 ),
                                                 child: Text(
                                                   b.pengali ? 'Rate per Satuan' : 'Nominal Flat',
                                                   style: TextStyle(
-                                                    color: b.pengali ? const Color(0xFF0288D1) : const Color(0xFF2E7D32),
+                                                    color: b.pengali ? const Color(0xFF316879) : const Color(0xFF24968B),
                                                     fontSize: 11,
                                                     fontWeight: FontWeight.bold,
                                                   ),
@@ -1857,7 +1857,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                                               mainAxisAlignment: MainAxisAlignment.center,
                                               children: [
                                                 IconButton(
-                                                  icon: const Icon(LucideIcons.pencil, size: 15, color: Color(0xFF5C6BC0)),
+                                                  icon: const Icon(LucideIcons.pencil, size: 15, color: Color(0xFFF47A60)),
                                                   tooltip: 'Edit Tier',
                                                   padding: const EdgeInsets.all(4),
                                                   constraints: const BoxConstraints(),

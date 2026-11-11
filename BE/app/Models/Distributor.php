@@ -12,6 +12,7 @@ class Distributor extends Model
     use HasFactory;
 
     protected $fillable = [
+        'batch_id',
         'code',
         'name',
         'region_id',
@@ -25,6 +26,11 @@ class Distributor extends Model
     public function depos(): HasMany
     {
         return $this->hasMany(Depo::class);
+    }
+
+    public function areas(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
+    {
+        return $this->hasManyThrough(Area::class, Depo::class);
     }
 
     public function sellinDistributors(): HasMany

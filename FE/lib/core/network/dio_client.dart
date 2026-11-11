@@ -13,8 +13,9 @@ class DioClient {
     _dio = Dio(
       BaseOptions(
         baseUrl: ApiEndpoints.baseUrl,
-        connectTimeout: const Duration(seconds: 60),
-        receiveTimeout: const Duration(seconds: 60),
+        connectTimeout: const Duration(minutes: 10),
+        sendTimeout: const Duration(minutes: 15),
+        receiveTimeout: const Duration(minutes: 15),
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
@@ -34,11 +35,25 @@ class DioClient {
         },
         onError: (DioException error, handler) async {
           if (error.response?.statusCode == 401) {
+            final path = error.requestOptions.path;
+            final isAuthRoute = path.contains(ApiEndpoints.login) || path.contains(ApiEndpoints.logout);
+
             final prefs = await SharedPreferences.getInstance();
             await prefs.remove('auth_token');
             await prefs.remove('user_data');
-            if (onUnauthorized != null) {
-              onUnauthorized!();
+
+            // Hanya panggil onUnauthorized jika bukan request login/logout
+            if (!isAuthRoute && onUnauthorized != null) {
+              final callback = onUnauthorized;
+              onUnauthorized = null; // Cegah rekursif loop
+              try {
+                callback!();
+              } finally {
+                // Pulihkan kembali setelah delay singkat
+                Future.delayed(const Duration(seconds: 2), () {
+                  onUnauthorized = callback;
+                });
+              }
             }
           }
           return handler.next(error);

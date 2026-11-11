@@ -12,10 +12,23 @@ class DepoController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $depos = Depo::with(['distributor', 'areas'])
-            ->when($request->distributor_id, fn ($q) => $q->where('distributor_id', $request->distributor_id))
-            ->latest()
-            ->get();
+        $limit = $request->integer('limit', 150);
+        $search = $request->string('search')->trim();
+
+        $query = Depo::with([
+            'distributor:id,code,name',
+            'areas:id,depo_id,code,name',
+        ])
+            ->when($request->distributor_id, fn ($q) => $q->where('distributor_id', $request->distributor_id));
+
+        if ($search->isNotEmpty()) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%");
+            });
+        }
+
+        $depos = $query->latest('id')->limit($limit)->get();
 
         return response()->json($depos);
     }

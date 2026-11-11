@@ -52,7 +52,10 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
     fetchAll();
   }
 
-  Future<void> fetchAll() async {
+  Future<void> fetchAll({bool force = false}) async {
+    if (state.isLoading) return;
+    if (!force && state.users.isNotEmpty) return;
+
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final responses = await Future.wait([
@@ -183,7 +186,7 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
         await DioClient.instance.put('${ApiEndpoints.users}/$id', data: data);
         state = state.copyWith(isLoading: false, successMessage: 'Data user berhasil diperbarui');
       }
-      await fetchAll();
+      await fetchAll(force: true);
       return true;
     } on DioException catch (e) {
       final err = ApiException.fromDioException(e);
@@ -252,7 +255,7 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
     try {
       await DioClient.instance.delete('${ApiEndpoints.users}/$id');
       state = state.copyWith(isLoading: false, successMessage: 'User berhasil dihapus');
-      await fetchAll();
+      await fetchAll(force: true);
       return true;
     } catch (_) {
       state = state.copyWith(
@@ -267,15 +270,24 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
   Future<bool> changePassword(int userId, String newPassword) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      await DioClient.instance.put(
+      final res = await DioClient.instance.put(
         ApiEndpoints.userPassword(userId),
         data: {'password': newPassword},
       );
-      state = state.copyWith(isLoading: false, successMessage: 'Kata sandi berhasil diperbarui');
+      final msg = res.data is Map && res.data['message'] != null
+          ? res.data['message'].toString()
+          : 'Kata sandi berhasil diperbarui';
+      state = state.copyWith(isLoading: false, successMessage: msg);
       return true;
-    } catch (_) {
-      state = state.copyWith(isLoading: false, successMessage: 'Kata sandi pengguna berhasil diperbarui');
-      return true;
+    } on DioException catch (err) {
+      final errMsg = err.response?.data is Map && err.response?.data['message'] != null
+          ? err.response?.data['message'].toString()
+          : 'Gagal memperbarui kata sandi: ${err.message}';
+      state = state.copyWith(isLoading: false, errorMessage: errMsg);
+      return false;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: 'Terjadi kesalahan: $e');
+      return false;
     }
   }
 
@@ -285,7 +297,7 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await DioClient.instance.post(ApiEndpoints.positions, data: {'name': name, 'code': code});
-      await fetchAll();
+      await fetchAll(force: true);
       return true;
     } catch (_) {
       final newPos = PositionModel(
@@ -306,7 +318,7 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await DioClient.instance.delete('${ApiEndpoints.positions}/$id');
-      await fetchAll();
+      await fetchAll(force: true);
       return true;
     } catch (_) {
       state = state.copyWith(
@@ -324,7 +336,7 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await DioClient.instance.post(ApiEndpoints.roles, data: {'name': name, 'display_name': displayName});
-      await fetchAll();
+      await fetchAll(force: true);
       return true;
     } catch (_) {
       final newRole = RoleModel(
@@ -345,7 +357,7 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await DioClient.instance.delete('${ApiEndpoints.roles}/$id');
-      await fetchAll();
+      await fetchAll(force: true);
       return true;
     } catch (_) {
       state = state.copyWith(
@@ -373,7 +385,7 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
           'permissions': permissions,
         },
       );
-      await fetchAll();
+      await fetchAll(force: true);
       state = state.copyWith(
         isLoading: false,
         successMessage: 'Hak akses untuk role "${role.displayName}" berhasil disimpan',
@@ -429,7 +441,7 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await DioClient.instance.post(ApiEndpoints.menus, data: {'name': name, 'route': route, 'order': order});
-      await fetchAll();
+      await fetchAll(force: true);
       return true;
     } catch (_) {
       final newMenu = MenuModel(
@@ -451,7 +463,7 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await DioClient.instance.delete('${ApiEndpoints.menus}/$id');
-      await fetchAll();
+      await fetchAll(force: true);
       return true;
     } catch (_) {
       state = state.copyWith(

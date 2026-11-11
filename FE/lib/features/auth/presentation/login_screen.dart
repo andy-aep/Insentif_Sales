@@ -17,7 +17,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController(text: 'admin');
-  final _passwordController = TextEditingController(text: 'password');
+  final _passwordController = TextEditingController(text: 'admin123');
   bool _obscurePassword = true;
 
   @override
@@ -49,52 +49,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       backgroundColor: context.colors.bgScaffold,
       body: Stack(
         children: [
-          // Background Gradient with ambient glow
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: isDark
-                    ? [const Color(0xFF0F172A), const Color(0xFF1E1B4B), const Color(0xFF0F172A)]
-                    : [const Color(0xFFF8FAFC), const Color(0xFFEEF2FF), const Color(0xFFF1F5F9)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-          ),
-          Positioned(
-            top: -120,
-            left: -120,
-            child: Container(
-              width: 450,
-              height: 450,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppColors.primary.withValues(alpha: isDark ? 0.35 : 0.12),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -150,
-            right: -100,
-            child: Container(
-              width: 500,
-              height: 500,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    const Color(0xFF8B5CF6).withValues(alpha: isDark ? 0.25 : 0.08),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
+          // Warm natural background surface
+          Container(color: context.colors.bgScaffold),
 
           // Floating Theme Toggle in top-right corner
           Positioned(
@@ -102,18 +58,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             right: 24,
             child: Container(
               decoration: BoxDecoration(
-                color: context.colors.bgCard.withValues(alpha: 0.9),
-                borderRadius: BorderRadius.circular(12),
+                color: context.colors.bgCard,
+                shape: BoxShape.circle,
                 border: Border.all(color: context.colors.border),
-                boxShadow: context.colors.cardShadows,
               ),
               child: IconButton(
                 icon: Icon(
                   isDark ? LucideIcons.sun : LucideIcons.moon,
-                  color: isDark ? AppColors.warning : AppColors.primary,
-                  size: 20,
+                  color: isDark ? AppColors.primaryLight : context.colors.textPrimary,
+                  size: 19,
                 ),
-                tooltip: isDark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap',
+                tooltip: isDark ? 'Mode Terang' : 'Mode Gelap',
                 onPressed: () {
                   ref.read(themeProvider.notifier).toggleTheme();
                 },
@@ -126,18 +81,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Container(
-                constraints: const BoxConstraints(maxWidth: 460),
+                constraints: const BoxConstraints(maxWidth: 440),
                 decoration: BoxDecoration(
-                  color: context.colors.bgCard.withValues(alpha: isDark ? 0.85 : 0.95),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: context.colors.border, width: 1.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: isDark ? Colors.black.withValues(alpha: 0.4) : AppColors.slate900.withValues(alpha: 0.08),
-                      blurRadius: 32,
-                      offset: const Offset(0, 16),
-                    ),
-                  ],
+                  color: context.colors.bgCard,
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(color: context.colors.border),
+                  boxShadow: context.colors.cardShadows,
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(36),
@@ -150,23 +99,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         // App Brand Icon
                         Center(
                           child: Container(
-                            width: 64,
-                            height: 64,
+                            width: 56,
+                            height: 56,
                             decoration: BoxDecoration(
-                              gradient: AppColors.primaryGradient,
-                              borderRadius: BorderRadius.circular(18),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.primary.withValues(alpha: 0.4),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(16),
                             ),
                             child: const Icon(
-                              LucideIcons.trendingUp,
+                              LucideIcons.layoutGrid,
                               color: Colors.white,
-                              size: 32,
+                              size: 28,
                             ),
                           ),
                         ),
@@ -174,10 +116,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                         // Title & Subtitle
                         Text(
-                          'Sistem Insentif Sales',
+                          'Sales Insentif',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.outfit(
-                            fontSize: 26,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 25,
                             fontWeight: FontWeight.w700,
                             color: context.colors.textPrimary,
                             letterSpacing: -0.5,
@@ -185,10 +127,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Kalkulasi & Monitoring Performa Tim Penjualan',
+                          'Masuk untuk mengelola target dan insentif penjualan',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13.5,
                             color: context.colors.textMuted,
                           ),
                         ),
@@ -295,16 +237,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                         // Submit Button
                         SizedBox(
-                          height: 48,
+                          height: 50,
                           child: ElevatedButton(
                             onPressed: authState.isLoading ? null : _handleLogin,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 4,
-                              shadowColor: AppColors.primary.withValues(alpha: 0.4),
+                              foregroundColor: Colors.white,
+                              shape: const StadiumBorder(),
+                              elevation: 0,
                             ),
                             child: authState.isLoading
                                 ? const SizedBox(
@@ -319,8 +259,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text(
-                                        'Masuk ke Sistem',
-                                        style: GoogleFonts.inter(
+                                        'Masuk',
+                                        style: GoogleFonts.plusJakartaSans(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 15,
                                         ),
@@ -329,39 +269,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       const Icon(LucideIcons.arrowRight, size: 18),
                                     ],
                                   ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-                        // Server Connection Info
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: context.colors.bgElevated,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: context.colors.border),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: AppColors.success,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  'Terhubung ke Backend Laravel 13 (API: 8000)',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11.5,
-                                    color: context.colors.textMuted,
-                                  ),
-                                ),
-                              ),
-                            ],
                           ),
                         ),
                       ],

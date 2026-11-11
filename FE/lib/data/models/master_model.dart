@@ -59,6 +59,11 @@ class DistributorModel {
   final int? regionId;
   final RegionModel? region;
   final List<DepoModel> depos;
+  final int? deposCount;
+  final int? areasCount;
+
+  int get totalDeposCount => deposCount ?? depos.length;
+  int get totalAreasCount => areasCount ?? depos.fold<int>(0, (sum, dp) => sum + dp.areas.length);
 
   DistributorModel({
     required this.id,
@@ -68,6 +73,8 @@ class DistributorModel {
     this.regionId,
     this.region,
     this.depos = const [],
+    this.deposCount,
+    this.areasCount,
   });
 
   factory DistributorModel.fromJson(Map<String, dynamic> json) {
@@ -80,6 +87,8 @@ class DistributorModel {
       regionId: json['region_id'] != null ? int.tryParse(json['region_id'].toString()) : null,
       region: json['region'] != null ? RegionModel.fromJson(json['region']) : null,
       depos: depList.map((d) => DepoModel.fromJson(d as Map<String, dynamic>)).toList(),
+      deposCount: json['depos_count'] != null ? int.tryParse(json['depos_count'].toString()) : null,
+      areasCount: json['areas_count'] != null ? int.tryParse(json['areas_count'].toString()) : null,
     );
   }
 

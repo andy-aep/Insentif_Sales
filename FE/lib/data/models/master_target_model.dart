@@ -14,6 +14,11 @@ class MasterTargetModel {
   final String targetType; // 'SELL_IN', 'SELL_OUT', 'AO', 'NOO'
   final double targetQuota; // Volume (Kg / Box) atau kuota angka
   final int? targetOutlet; // AO atau NOO target count
+  final double? depoTargetQuota; // Referensi target depo induk
+  final int? depoTargetOutlet;
+  final int areaTargetsCount;
+  final double areaTargetsTotal;
+  final double areaTargetsAvg;
   final UserModel? user;
   final DistributorModel? distributor;
   final DepoModel? depo;
@@ -33,6 +38,11 @@ class MasterTargetModel {
     required this.targetType,
     required this.targetQuota,
     this.targetOutlet,
+    this.depoTargetQuota,
+    this.depoTargetOutlet,
+    this.areaTargetsCount = 0,
+    this.areaTargetsTotal = 0.0,
+    this.areaTargetsAvg = 0.0,
     this.user,
     this.distributor,
     this.depo,
@@ -54,6 +64,11 @@ class MasterTargetModel {
       targetType: json['metrik_target'] ?? json['target_type'] ?? 'SELL_IN',
       targetQuota: double.tryParse(json['target_quota']?.toString() ?? json['quota']?.toString() ?? '0') ?? 0.0,
       targetOutlet: json['target_outlet'] != null ? int.tryParse(json['target_outlet'].toString()) : null,
+      depoTargetQuota: json['depo_target_quota'] != null ? double.tryParse(json['depo_target_quota'].toString()) : null,
+      depoTargetOutlet: json['depo_target_outlet'] != null ? int.tryParse(json['depo_target_outlet'].toString()) : null,
+      areaTargetsCount: json['area_targets_count'] is int ? json['area_targets_count'] : (int.tryParse(json['area_targets_count']?.toString() ?? '0') ?? 0),
+      areaTargetsTotal: double.tryParse(json['area_targets_total']?.toString() ?? '0') ?? 0.0,
+      areaTargetsAvg: double.tryParse(json['area_targets_avg']?.toString() ?? '0') ?? 0.0,
       user: json['user'] != null ? UserModel.fromJson(json['user']) : null,
       distributor: json['distributor'] != null ? DistributorModel.fromJson(json['distributor']) : null,
       depo: json['depo'] != null ? DepoModel.fromJson(json['depo']) : null,

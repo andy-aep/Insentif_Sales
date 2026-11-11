@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Area;
 use App\Models\Depo;
 use App\Models\Distributor;
+use App\Models\MasterTarget;
 use App\Models\SalesDistributorAssignment;
 use App\Models\SalesSurabayaAssignment;
 use App\Models\User;
@@ -257,6 +258,21 @@ class SalesAssignmentController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
+        // Sinkronisasi otomatis ke Master Target (PIC Depo = ASM, PIC Area = SPV)
+        if ($posCode === 'ASM' && $distributorId) {
+            MasterTarget::where('distributor_id', $distributorId)
+                ->where('level', 'DEPO')
+                ->where('kategori_skema', 'KONSUMSI')
+                ->when($period, fn ($q) => $q->where('period', $period))
+                ->update(['user_id' => $user->id]);
+        } elseif ($posCode === 'SPV' && $areaId) {
+            MasterTarget::where('area_id', $areaId)
+                ->where('level', 'AREA')
+                ->where('kategori_skema', 'KONSUMSI')
+                ->when($period, fn ($q) => $q->where('period', $period))
+                ->update(['user_id' => $user->id]);
+        }
+
         return response()->json([
             'message' => 'Penugasan Sales Distributor berhasil disimpan',
             'data' => $assignment->load([
@@ -278,7 +294,41 @@ class SalesAssignmentController extends Controller
     public function destroyDistributor(int $id): JsonResponse
     {
         $assignment = SalesDistributorAssignment::findOrFail($id);
+        $userId = $assignment->user_id;
+        $distId = $assignment->distributor_id;
+        $areaId = $assignment->area_id;
+        $period = $assignment->period;
+
         $assignment->delete();
+
+        // Re-sinkronisasi Master Target ke penugasan lain atau null jika sudah tidak ada
+        if ($distId) {
+            $otherAsm = SalesDistributorAssignment::where('distributor_id', $distId)
+                ->where('is_active', true)
+                ->whereHas('user.position', fn ($q) => $q->where('code', 'ASM'))
+                ->when($period, fn ($q) => $q->where('period', $period))
+                ->first();
+
+            MasterTarget::where('distributor_id', $distId)
+                ->where('level', 'DEPO')
+                ->where('user_id', $userId)
+                ->when($period, fn ($q) => $q->where('period', $period))
+                ->update(['user_id' => $otherAsm?->user_id]);
+        }
+
+        if ($areaId) {
+            $otherSpv = SalesDistributorAssignment::where('area_id', $areaId)
+                ->where('is_active', true)
+                ->whereHas('user.position', fn ($q) => $q->where('code', 'SPV'))
+                ->when($period, fn ($q) => $q->where('period', $period))
+                ->first();
+
+            MasterTarget::where('area_id', $areaId)
+                ->where('level', 'AREA')
+                ->where('user_id', $userId)
+                ->when($period, fn ($q) => $q->where('period', $period))
+                ->update(['user_id' => $otherSpv?->user_id]);
+        }
 
         return response()->json([
             'message' => 'Penugasan Sales Distributor berhasil dihapus',

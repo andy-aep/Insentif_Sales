@@ -2,17 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../../../core/constants/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/network/dio_client.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../../../core/widgets/responsive_table.dart';
 import '../../../data/models/auth_user_model.dart';
 import '../../../data/models/master_model.dart';
 import '../../../data/models/master_target_model.dart';
+import '../../bulk_upload/providers/bulk_upload_provider.dart';
 import '../../users_management/providers/user_management_provider.dart';
 import '../providers/master_data_provider.dart';
 import '../providers/master_target_provider.dart';
 import '../providers/sales_assignment_provider.dart';
+import 'widgets/target_distributor_hierarchy_view.dart';
 
 class MasterTargetScreen extends ConsumerStatefulWidget {
   const MasterTargetScreen({super.key});
@@ -26,10 +30,10 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
   final _searchController = TextEditingController();
   String _searchQuery = '';
   int _activeTabIndex = 0;
+  final GlobalKey<TargetDistributorHierarchyViewState> _hierarchyKey = GlobalKey<TargetDistributorHierarchyViewState>();
 
-  // Filter state for Tab 0: Target Distributor
+  // Filter state
   int? _filterDistributorId;
-  String _filterLevel = 'ALL'; // 'ALL', 'DEPO', 'AREA'
   String _filterMetric = 'ALL'; // 'ALL', 'SELL_IN', 'SELL_OUT', 'AO'
   int? _filterBrandId;
 
@@ -38,17 +42,64 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
-      if (!_tabController.indexIsChanging && _tabController.index != _activeTabIndex) {
-        setState(() => _activeTabIndex = _tabController.index);
+      final mapped = _tabToInternal(_tabController.index);
+      if (!_tabController.indexIsChanging && mapped != _activeTabIndex) {
+        setState(() => _activeTabIndex = mapped);
+        _fetchActiveTabTargets(force: true);
       }
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(masterTargetProvider.notifier).fetchTargets();
-      ref.read(masterDataProvider.notifier).fetchAllMasterData();
-      ref.read(userManagementProvider.notifier).fetchAll();
-      ref.read(salesAssignmentProvider.notifier).fetchAllAssignments();
+      _fetchActiveTabTargets(force: true);
+      if (ref.read(masterDataProvider).distributors.isEmpty) {
+        ref.read(masterDataProvider.notifier).fetchAllMasterData();
+      }
+      if (ref.read(userManagementProvider).users.isEmpty) {
+        ref.read(userManagementProvider.notifier).fetchAll();
+      }
+      if (ref.read(salesAssignmentProvider).distributorAssignments.isEmpty) {
+        ref.read(salesAssignmentProvider.notifier).fetchAllAssignments();
+      }
     });
+  }
+
+  void _fetchActiveTabTargets({bool force = false, int page = 1}) {
+    String? level;
+    String? kategori;
+
+    switch (_activeTabIndex) {
+      case 0:
+        level = 'DEPO';
+        kategori = 'DISTRIBUTOR';
+        break;
+      case 1:
+        level = 'AREA';
+        kategori = 'DISTRIBUTOR';
+        break;
+      case 2:
+        kategori = 'INDUSTRI';
+        break;
+      case 3:
+        kategori = 'SURABAYA';
+        break;
+    }
+
+    ref.read(masterTargetProvider.notifier).fetchTargets(
+      force: force,
+      page: page,
+      level: level,
+      clearLevel: level == null,
+      kategori: kategori,
+      clearKategori: kategori == null,
+      distributorId: _filterDistributorId,
+      clearDistributor: _filterDistributorId == null,
+      brandId: _filterBrandId,
+      clearBrand: _filterBrandId == null,
+      metrikTarget: _filterMetric != 'ALL' ? _filterMetric : null,
+      clearMetric: _filterMetric == 'ALL',
+      search: _searchQuery.isNotEmpty ? _searchQuery : null,
+      clearSearch: _searchQuery.isEmpty,
+    );
   }
 
   @override
@@ -59,7 +110,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
   }
 
   // =========================================================================
-  // DIALOG: Tambah & Edit Master Target Kuota
+  // DIALOG: Ganti Periode Kustom
   // =========================================================================
   void _showCustomPeriodDialog() {
     final colors = context.colors;
@@ -119,30 +170,37 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
 
   void _showAddTargetDialog() => _showTargetFormDialog();
 
+  // =========================================================================
+  // DIALOG: Tambah & Edit Master Target (Terpisah: Target Depo / Target Area / Industri / Surabaya)
+  // =========================================================================
   void _showTargetFormDialog({MasterTargetModel? targetToEdit}) {
     final colors = context.colors;
     final userState = ref.read(userManagementProvider);
     final masterState = ref.read(masterDataProvider);
     final assignState = ref.read(salesAssignmentProvider);
+    final targetState = ref.read(masterTargetProvider);
     final isEdit = targetToEdit != null;
 
-    String selectedKategori = 'DISTRIBUTOR';
+    // Skema terpisah: 'TARGET_DEPO', 'TARGET_AREA', 'INDUSTRI', 'SURABAYA'
+    String selectedScheme = 'TARGET_DEPO';
     int? selectedDistributorId;
-    String selectedLevel = 'DEPO';
     int? selectedDepoId;
     int? selectedAreaId;
     int? selectedBrandId;
     int? selectedUserId;
     String selectedTargetType = 'SELL_OUT';
-    String defaultQuota = '3000';
+    String defaultQuota = '5000';
     String defaultOutlet = '50';
-    final activeFilterPeriod = ref.read(masterTargetProvider).selectedPeriod;
+    final activeFilterPeriod = targetState.selectedPeriod;
     String defaultPeriod = activeFilterPeriod != 'ALL' && activeFilterPeriod.isNotEmpty ? activeFilterPeriod : '202610';
 
     if (targetToEdit != null) {
-      selectedKategori = targetToEdit.kategoriSkema == 'KONSUMSI' ? 'DISTRIBUTOR' : targetToEdit.kategoriSkema;
+      if (targetToEdit.kategoriSkema == 'KONSUMSI' || targetToEdit.kategoriSkema == 'DISTRIBUTOR') {
+        selectedScheme = targetToEdit.level == 'AREA' ? 'TARGET_AREA' : 'TARGET_DEPO';
+      } else {
+        selectedScheme = targetToEdit.kategoriSkema;
+      }
       selectedDistributorId = targetToEdit.distributorId;
-      selectedLevel = targetToEdit.level;
       selectedBrandId = targetToEdit.brandId;
       selectedUserId = targetToEdit.userId;
       selectedTargetType = targetToEdit.targetType;
@@ -150,34 +208,54 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
       defaultOutlet = targetToEdit.targetOutlet?.toString() ?? targetToEdit.targetQuota.toInt().toString();
       defaultPeriod = targetToEdit.period;
     } else {
-      selectedKategori = _activeTabIndex == 0
-          ? 'DISTRIBUTOR'
-          : (_activeTabIndex == 1 ? 'INDUSTRI' : 'SURABAYA');
+      selectedScheme = switch (_activeTabIndex) {
+        0 => 'TARGET_DEPO',
+        1 => 'TARGET_AREA',
+        2 => 'INDUSTRI',
+        _ => 'SURABAYA',
+      };
       selectedDistributorId = masterState.distributors.isNotEmpty ? masterState.distributors.first.id : null;
-      selectedLevel = 'DEPO';
       selectedBrandId = masterState.brands.isNotEmpty ? masterState.brands.first.id : null;
       selectedUserId = userState.users.isNotEmpty ? userState.users.first.id : null;
-      selectedTargetType = selectedKategori == 'DISTRIBUTOR' ? 'SELL_OUT' : (selectedKategori == 'INDUSTRI' ? 'SELL_IN' : 'SELL_OUT');
+      selectedTargetType = selectedScheme == 'INDUSTRI' ? 'SELL_IN' : 'SELL_OUT';
+      defaultQuota = selectedScheme == 'TARGET_AREA' ? '1500' : '5000';
+      defaultOutlet = selectedScheme == 'TARGET_AREA' ? '25' : '50';
     }
 
     DistributorModel? currentDist = selectedDistributorId != null
         ? masterState.distributors.where((d) => d.id == selectedDistributorId).firstOrNull
         : (masterState.distributors.isNotEmpty ? masterState.distributors.first : null);
 
+    List<DepoModel> dialogDepos = masterState.depos.where((dp) => dp.distributorId == selectedDistributorId).toList();
+    if (dialogDepos.isEmpty && currentDist != null && currentDist.depos.isNotEmpty) {
+      dialogDepos = List<DepoModel>.from(currentDist.depos);
+    }
+    if (targetToEdit?.depo != null && !dialogDepos.any((d) => d.id == targetToEdit!.depo!.id)) {
+      dialogDepos.insert(0, targetToEdit!.depo!);
+    }
+
     if (targetToEdit != null && targetToEdit.depoId != null) {
       selectedDepoId = targetToEdit.depoId;
     } else {
-      selectedDepoId = (currentDist != null && currentDist.depos.isNotEmpty) ? currentDist.depos.first.id : null;
+      selectedDepoId = dialogDepos.isNotEmpty ? dialogDepos.first.id : null;
     }
 
-    DepoModel? currentDepo = (currentDist != null && selectedDepoId != null)
-        ? currentDist.depos.where((dp) => dp.id == selectedDepoId).firstOrNull
-        : ((currentDist != null && currentDist.depos.isNotEmpty) ? currentDist.depos.first : null);
+    DepoModel? currentDepo = selectedDepoId != null
+        ? dialogDepos.where((dp) => dp.id == selectedDepoId).firstOrNull
+        : (dialogDepos.isNotEmpty ? dialogDepos.first : null);
+
+    List<AreaModel> dialogAreas = masterState.areas.where((ar) => ar.depoId == selectedDepoId).toList();
+    if (dialogAreas.isEmpty && currentDepo != null && currentDepo.areas.isNotEmpty) {
+      dialogAreas = List<AreaModel>.from(currentDepo.areas);
+    }
+    if (targetToEdit?.area != null && !dialogAreas.any((a) => a.id == targetToEdit!.area!.id)) {
+      dialogAreas.insert(0, targetToEdit!.area!);
+    }
 
     if (targetToEdit != null && targetToEdit.areaId != null) {
       selectedAreaId = targetToEdit.areaId;
     } else {
-      selectedAreaId = (currentDepo != null && currentDepo.areas.isNotEmpty) ? currentDepo.areas.first.id : null;
+      selectedAreaId = dialogAreas.isNotEmpty ? dialogAreas.first.id : null;
     }
 
     if (targetToEdit != null && targetToEdit.brandId != null) {
@@ -193,32 +271,102 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
       text: defaultPeriod.length >= 4 ? defaultPeriod.substring(0, 4) : DateTime.now().year.toString(),
     );
     bool isFullYearMode = false;
+    bool isLoadingDepos = false;
+    bool isLoadingAreas = false;
+    bool didInitialFetch = false;
+
+    Future<void> loadAreasForDepo(int? depoId, StateSetter setDialogState) async {
+      if (depoId == null) {
+        setDialogState(() {
+          dialogAreas = [];
+          selectedAreaId = null;
+        });
+        return;
+      }
+      setDialogState(() => isLoadingAreas = true);
+      try {
+        final res = await DioClient.instance.get(
+          ApiEndpoints.areas,
+          queryParameters: {'depo_id': depoId, 'limit': 500},
+        );
+        final List raw = res.data['data'] ?? (res.data is List ? res.data : []);
+        final fetched = raw.map((e) => AreaModel.fromJson(e)).toList();
+        setDialogState(() {
+          dialogAreas = fetched;
+          if (selectedAreaId == null || !dialogAreas.any((a) => a.id == selectedAreaId)) {
+            selectedAreaId = dialogAreas.isNotEmpty ? dialogAreas.first.id : null;
+          }
+          isLoadingAreas = false;
+        });
+      } catch (_) {
+        setDialogState(() => isLoadingAreas = false);
+      }
+    }
+
+    Future<void> loadDeposForDistributor(int? distId, StateSetter setDialogState) async {
+      if (distId == null) {
+        setDialogState(() {
+          dialogDepos = [];
+          selectedDepoId = null;
+          dialogAreas = [];
+          selectedAreaId = null;
+        });
+        return;
+      }
+      setDialogState(() => isLoadingDepos = true);
+      try {
+        final res = await DioClient.instance.get(
+          ApiEndpoints.depos,
+          queryParameters: {'distributor_id': distId, 'limit': 500},
+        );
+        final List raw = res.data['data'] ?? (res.data is List ? res.data : []);
+        final fetched = raw.map((e) => DepoModel.fromJson(e)).toList();
+        int? nextDepoId = selectedDepoId;
+        if (nextDepoId == null || !fetched.any((d) => d.id == nextDepoId)) {
+          nextDepoId = fetched.isNotEmpty ? fetched.first.id : null;
+        }
+        setDialogState(() {
+          dialogDepos = fetched;
+          selectedDepoId = nextDepoId;
+          currentDepo = fetched.where((d) => d.id == nextDepoId).firstOrNull;
+          isLoadingDepos = false;
+        });
+        await loadAreasForDepo(nextDepoId, setDialogState);
+      } catch (_) {
+        setDialogState(() => isLoadingDepos = false);
+      }
+    }
 
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) {
-          final isDistributor = selectedKategori == 'DISTRIBUTOR';
+          if (!didInitialFetch && selectedDistributorId != null) {
+            didInitialFetch = true;
+            Future.microtask(() => loadDeposForDistributor(selectedDistributorId, setDialogState));
+          }
+
+          final isTargetDepo = selectedScheme == 'TARGET_DEPO';
+          final isTargetArea = selectedScheme == 'TARGET_AREA';
+          final isDistributor = isTargetDepo || isTargetArea;
           final isOutletMetric = selectedTargetType == 'AO' || selectedTargetType == 'NOO';
 
-          // Auto-detect sales personil for Distributor based on assignment
+          // Auto-detect sales personil
           UserModel? detectedSales;
           String detectedRoleText = '';
-          if (isDistributor) {
-            if (selectedLevel == 'AREA' && selectedAreaId != null) {
-              final spvAssign = assignState.distributorAssignments.where((a) => a.areaId == selectedAreaId && a.isActive).firstOrNull;
-              if (spvAssign != null) {
-                detectedSales = spvAssign.user;
-                detectedRoleText = 'SPV Area Penanggung Jawab';
-              }
-            } else if (selectedDistributorId != null) {
-              final asmAssign = assignState.distributorAssignments.where((a) => a.distributorId == selectedDistributorId && (a.user?.position?.code.toUpperCase() == 'ASM') && a.isActive).firstOrNull;
-              if (asmAssign != null) {
-                detectedSales = asmAssign.user;
-                detectedRoleText = 'ASM Distributor Penanggung Jawab';
-              }
-            }
+          if (isTargetDepo && selectedDistributorId != null) {
+            final asmAssign = assignState.distributorAssignments
+                .where((a) => a.distributorId == selectedDistributorId && (a.user?.position?.code.toUpperCase() == 'ASM') && a.isActive)
+                .firstOrNull;
+            detectedSales = asmAssign?.user;
+            detectedRoleText = 'ASM Penanggung Jawab Depo';
+          } else if (isTargetArea && selectedAreaId != null) {
+            final spvAssign = assignState.distributorAssignments
+                .where((a) => a.areaId == selectedAreaId && a.isActive)
+                .firstOrNull;
+            detectedSales = spvAssign?.user;
+            detectedRoleText = 'SPV Penanggung Jawab Area';
           }
 
           return AlertDialog(
@@ -240,13 +388,17 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isEdit ? 'Ubah Target Kuota Penjualan' : 'Tetapkan Target Kuota Penjualan',
+                        isEdit
+                            ? 'Ubah ${isTargetArea ? 'Target Area (SPV)' : (isTargetDepo ? 'Target Depo (ASM)' : 'Target Kuota')}'
+                            : 'Input ${isTargetArea ? 'Target Area (SPV)' : (isTargetDepo ? 'Target Depo (ASM)' : 'Target Kuota')}',
                         style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 18),
                       ),
                       Text(
-                        isEdit
-                            ? 'Perbarui besaran kuota atau alokasi target untuk periode ${targetToEdit.period}'
-                            : (isDistributor ? 'Set target per Distributor, Depo, atau Area per Brand' : 'Tetapkan kuota penjualan per personil sales'),
+                        isTargetDepo
+                            ? 'Setting kuota mandiri untuk tingkat Depo (ASM)'
+                            : (isTargetArea
+                                ? 'Setting kuota mandiri untuk tingkat Area (SPV)'
+                                : 'Tetapkan kuota penjualan per personil sales'),
                         style: GoogleFonts.inter(color: colors.textMuted, fontSize: 12),
                       ),
                     ],
@@ -261,11 +413,11 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 1. Skema Kategori
-                    Text('Skema Target *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+                    // 1. Pilih Jenis Target (Terpisah: Target Depo sendiri, Target Area sendiri)
+                    Text('Jenis Target *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
-                      initialValue: selectedKategori,
+                      initialValue: selectedScheme,
                       dropdownColor: colors.bgElevated,
                       isExpanded: true,
                       style: TextStyle(color: colors.textPrimary, fontSize: 14),
@@ -276,26 +428,36 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'DISTRIBUTOR', child: Text('Target Distributor (Konsumsi: Depo / Area / Brand)')),
+                        DropdownMenuItem(value: 'TARGET_DEPO', child: Text('Target Depo (ASM)')),
+                        DropdownMenuItem(value: 'TARGET_AREA', child: Text('Target Area (SPV)')),
                         DropdownMenuItem(value: 'INDUSTRI', child: Text('Target Industri (B2B)')),
                         DropdownMenuItem(value: 'SURABAYA', child: Text('Target Sales Surabaya (TO / Canvasing)')),
                       ],
-                      onChanged: (val) {
-                        if (val != null) {
-                          setDialogState(() {
-                            selectedKategori = val;
-                            if (val == 'DISTRIBUTOR') selectedTargetType = 'SELL_OUT';
-                            if (val == 'INDUSTRI') selectedTargetType = 'SELL_IN';
-                            if (val == 'SURABAYA') selectedTargetType = 'SELL_OUT';
-                          });
-                        }
-                      },
+                      onChanged: isEdit
+                          ? null
+                          : (val) {
+                              if (val != null) {
+                                setDialogState(() {
+                                  selectedScheme = val;
+                                  if (val == 'TARGET_DEPO') {
+                                    selectedTargetType = 'SELL_OUT';
+                                    quotaCtrl.text = '5000';
+                                    outletCtrl.text = '50';
+                                  } else if (val == 'TARGET_AREA') {
+                                    selectedTargetType = 'SELL_OUT';
+                                    quotaCtrl.text = '1500';
+                                    outletCtrl.text = '25';
+                                  } else if (val == 'INDUSTRI') {
+                                    selectedTargetType = 'SELL_IN';
+                                  } else if (val == 'SURABAYA') {
+                                    selectedTargetType = 'SELL_OUT';
+                                  }
+                                });
+                              }
+                            },
                     ),
                     const SizedBox(height: 14),
 
-                    // ========================================================
-                    // HIERARKI DISTRIBUTOR: DEPO / AREA PER BRAND
-                    // ========================================================
                     if (isDistributor) ...[
                       // Pilih Distributor
                       Text('Pilih Distributor *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
@@ -323,103 +485,30 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                             setDialogState(() {
                               selectedDistributorId = val;
                               currentDist = masterState.distributors.where((d) => d.id == val).firstOrNull;
-                              selectedDepoId = (currentDist != null && currentDist!.depos.isNotEmpty) ? currentDist!.depos.first.id : null;
-                              currentDepo = (currentDist != null && currentDist!.depos.isNotEmpty) ? currentDist!.depos.first : null;
-                              selectedAreaId = (currentDepo != null && currentDepo!.areas.isNotEmpty) ? currentDepo!.areas.first.id : null;
                             });
+                            loadDeposForDistributor(val, setDialogState);
                           }
                         },
                       ),
                       const SizedBox(height: 14),
 
-                      // Tingkat Target: Depo (ASM) vs Area (SPV)
-                      Text('Tingkat Target Kuota *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
+                      // Pilih Depo
                       Row(
                         children: [
-                          Expanded(
-                            child: InkWell(
-                              onTap: () => setDialogState(() => selectedLevel = 'DEPO'),
-                              borderRadius: BorderRadius.circular(10),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: selectedLevel == 'DEPO' ? AppColors.primary.withValues(alpha: 0.15) : colors.bgElevated,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: selectedLevel == 'DEPO' ? AppColors.primary : colors.border,
-                                    width: selectedLevel == 'DEPO' ? 1.8 : 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      selectedLevel == 'DEPO' ? LucideIcons.checkCircle2 : LucideIcons.circle,
-                                      size: 16,
-                                      color: selectedLevel == 'DEPO' ? AppColors.primary : colors.textMuted,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text('Target per Depo', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: colors.textPrimary)),
-                                          Text('Penanggung Jawab: ASM', style: TextStyle(fontSize: 11, color: colors.textMuted)),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                          Text(
+                            isTargetArea ? 'Pilih Depo Induk *' : 'Pilih Depo *',
+                            style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: InkWell(
-                              onTap: () => setDialogState(() => selectedLevel = 'AREA'),
-                              borderRadius: BorderRadius.circular(10),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: selectedLevel == 'AREA' ? AppColors.warning.withValues(alpha: 0.15) : colors.bgElevated,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: selectedLevel == 'AREA' ? AppColors.warning : colors.border,
-                                    width: selectedLevel == 'AREA' ? 1.8 : 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      selectedLevel == 'AREA' ? LucideIcons.checkCircle2 : LucideIcons.circle,
-                                      size: 16,
-                                      color: selectedLevel == 'AREA' ? AppColors.warning : colors.textMuted,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text('Target per Area', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: colors.textPrimary)),
-                                          Text('Penanggung Jawab: SPV', style: TextStyle(fontSize: 11, color: colors.textMuted)),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
+                          if (isLoadingDepos) ...[
+                            const SizedBox(width: 8),
+                            const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2)),
+                          ],
                         ],
                       ),
-                      const SizedBox(height: 14),
-
-                      // Pilih Depo
-                      Text('Pilih Depo Distributor *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 6),
                       DropdownButtonFormField<int>(
-                        key: ValueKey('dialog_depo_${selectedDistributorId}_$selectedDepoId'),
-                        initialValue: selectedDepoId,
+                        key: ValueKey('dialog_depo_${selectedDistributorId}_${selectedDepoId}_${dialogDepos.length}'),
+                        initialValue: dialogDepos.any((d) => d.id == selectedDepoId) ? selectedDepoId : null,
                         dropdownColor: colors.bgElevated,
                         isExpanded: true,
                         style: TextStyle(color: colors.textPrimary, fontSize: 14),
@@ -430,7 +519,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                           fillColor: colors.bgElevated,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         ),
-                        items: (currentDist?.depos ?? []).map((d) {
+                        items: dialogDepos.map((d) {
                           return DropdownMenuItem<int>(
                             value: d.id,
                             child: Text('${d.name} (${d.code})', overflow: TextOverflow.ellipsis),
@@ -440,21 +529,29 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                           if (val != null) {
                             setDialogState(() {
                               selectedDepoId = val;
-                              currentDepo = currentDist?.depos.where((d) => d.id == val).firstOrNull;
-                              selectedAreaId = (currentDepo != null && currentDepo!.areas.isNotEmpty) ? currentDepo!.areas.first.id : null;
+                              currentDepo = dialogDepos.where((d) => d.id == val).firstOrNull;
                             });
+                            loadAreasForDepo(val, setDialogState);
                           }
                         },
                       ),
                       const SizedBox(height: 14),
 
-                      // Jika Level Area: Pilih Area
-                      if (selectedLevel == 'AREA') ...[
-                        Text('Pilih Area Operasional (SPV) *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+                      // Khusus Target Area: Pilih Area
+                      if (isTargetArea) ...[
+                        Row(
+                          children: [
+                            Text('Pilih Area (SPV) *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+                            if (isLoadingAreas) ...[
+                              const SizedBox(width: 8),
+                              const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2)),
+                            ],
+                          ],
+                        ),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<int>(
-                          key: ValueKey('dialog_area_${selectedDepoId}_$selectedAreaId'),
-                          initialValue: selectedAreaId,
+                          key: ValueKey('dialog_area_${selectedDepoId}_${selectedAreaId}_${dialogAreas.length}'),
+                          initialValue: dialogAreas.any((a) => a.id == selectedAreaId) ? selectedAreaId : null,
                           dropdownColor: colors.bgElevated,
                           isExpanded: true,
                           style: TextStyle(color: colors.textPrimary, fontSize: 14),
@@ -465,7 +562,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                             fillColor: colors.bgElevated,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           ),
-                          items: (currentDepo?.areas ?? []).map((a) {
+                          items: dialogAreas.map((a) {
                             return DropdownMenuItem<int>(
                               value: a.id,
                               child: Text('${a.name} (${a.code})', overflow: TextOverflow.ellipsis),
@@ -489,7 +586,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                         isExpanded: true,
                         style: TextStyle(color: colors.textPrimary, fontSize: 14),
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(LucideIcons.tag, size: 18, color: Color(0xFF8B5CF6)),
+                          prefixIcon: const Icon(LucideIcons.tag, size: 18, color: Color(0xFF24968B)),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           filled: true,
                           fillColor: colors.bgElevated,
@@ -507,7 +604,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                       ),
                       const SizedBox(height: 14),
 
-                      // Banner info sales penanggung jawab otomatis
+                      // Info Sales Penanggung Jawab sesuai unit (ASM untuk Depo, SPV untuk Area)
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -518,9 +615,9 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                         child: Row(
                           children: [
                             Icon(
-                              selectedLevel == 'DEPO' ? LucideIcons.crown : LucideIcons.userCheck,
+                              isTargetDepo ? LucideIcons.crown : LucideIcons.userCheck,
                               size: 20,
-                              color: selectedLevel == 'DEPO' ? AppColors.primaryLight : AppColors.warning,
+                              color: isTargetDepo ? AppColors.primaryLight : AppColors.warning,
                             ),
                             const SizedBox(width: 10),
                             Expanded(
@@ -528,13 +625,15 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    detectedRoleText.isNotEmpty ? detectedRoleText : (selectedLevel == 'DEPO' ? 'Posisi ASM (Area Sales Manager)' : 'Posisi SPV (Sales Supervisor)'),
+                                    detectedRoleText.isNotEmpty
+                                        ? detectedRoleText
+                                        : (isTargetDepo ? 'Posisi ASM (Area Sales Manager)' : 'Posisi SPV (Sales Supervisor)'),
                                     style: TextStyle(fontSize: 11, color: colors.textMuted, fontWeight: FontWeight.bold),
                                   ),
                                   Text(
                                     detectedSales != null
                                         ? '${detectedSales.name} (@${detectedSales.username})'
-                                        : '(Belum ada personil di-assign ke unit ini)',
+                                        : '(Otomatis mengikuti assignment ${isTargetDepo ? 'ASM' : 'SPV'} aktif)',
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
@@ -598,7 +697,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                               DropdownMenuItem(value: 'SELL_IN', child: Text('Sell-In (Kg / Box)')),
                               DropdownMenuItem(value: 'AO', child: Text('Active Outlet (AO Toko)')),
                             ]
-                          : (selectedKategori == 'INDUSTRI'
+                          : (selectedScheme == 'INDUSTRI'
                               ? const [
                                   DropdownMenuItem(value: 'SELL_IN', child: Text('Sell-In (Kg / Tonase)')),
                                   DropdownMenuItem(value: 'NOO', child: Text('New Open Outlet (NOO)')),
@@ -613,12 +712,17 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                     ),
                     const SizedBox(height: 14),
 
-                    // Besaran Angka Target
+                    // Besaran Angka Target (Murni 1 Field sesuai Jenis Target yang dipilih)
                     if (!isOutletMetric)
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Besaran Kuota Volume (Kg / Box) *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+                          Text(
+                            isTargetDepo
+                                ? 'Besaran Target Depo (Kg / Box) *'
+                                : (isTargetArea ? 'Besaran Target Area (Kg / Box) *' : 'Besaran Kuota Volume (Kg / Box) *'),
+                            style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
                           const SizedBox(height: 6),
                           TextField(
                             controller: quotaCtrl,
@@ -638,7 +742,14 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Target Jumlah Toko / Outlet ($selectedTargetType) *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+                          Text(
+                            isTargetDepo
+                                ? 'Target Jumlah Toko / Outlet Depo ($selectedTargetType) *'
+                                : (isTargetArea
+                                    ? 'Target Jumlah Toko / Outlet Area ($selectedTargetType) *'
+                                    : 'Target Jumlah Toko / Outlet ($selectedTargetType) *'),
+                            style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
                           const SizedBox(height: 6),
                           TextField(
                             controller: outletCtrl,
@@ -813,12 +924,14 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                     );
                     return;
                   }
-                  if (isDistributor && selectedLevel == 'AREA' && selectedAreaId == null) {
+                  if (isTargetArea && selectedAreaId == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Untuk target tingkat Area, wajib memilih Area!'), backgroundColor: AppColors.danger),
+                      const SnackBar(content: Text('Wajib memilih Area!'), backgroundColor: AppColors.danger),
                     );
                     return;
                   }
+
+                  final targetLevel = isTargetDepo ? 'DEPO' : (isTargetArea ? 'AREA' : 'SALES');
 
                   final success = isEdit
                       ? await ref.read(masterTargetProvider.notifier).updateTarget(
@@ -826,10 +939,10 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                           userId: isDistributor ? (detectedSales?.id ?? targetToEdit.userId) : selectedUserId,
                           distributorId: isDistributor ? selectedDistributorId : null,
                           depoId: isDistributor ? selectedDepoId : null,
-                          areaId: (isDistributor && selectedLevel == 'AREA') ? selectedAreaId : null,
+                          areaId: isTargetArea ? selectedAreaId : null,
                           brandId: isDistributor ? selectedBrandId : null,
-                          level: isDistributor ? selectedLevel : 'SALES',
-                          kategoriSkema: isDistributor ? 'KONSUMSI' : selectedKategori,
+                          level: targetLevel,
+                          kategoriSkema: isDistributor ? 'KONSUMSI' : selectedScheme,
                           targetType: selectedTargetType,
                           period: period,
                           targetQuota: isOutletMetric ? (outletVal?.toDouble() ?? 0.0) : quotaVal,
@@ -839,10 +952,10 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                           userId: isDistributor ? (detectedSales?.id) : selectedUserId,
                           distributorId: isDistributor ? selectedDistributorId : null,
                           depoId: isDistributor ? selectedDepoId : null,
-                          areaId: (isDistributor && selectedLevel == 'AREA') ? selectedAreaId : null,
+                          areaId: isTargetArea ? selectedAreaId : null,
                           brandId: isDistributor ? selectedBrandId : null,
-                          level: isDistributor ? selectedLevel : 'SALES',
-                          kategoriSkema: isDistributor ? 'KONSUMSI' : selectedKategori,
+                          level: targetLevel,
+                          kategoriSkema: isDistributor ? 'KONSUMSI' : selectedScheme,
                           targetType: selectedTargetType,
                           period: period,
                           isFullYear: isFullYearMode,
@@ -875,6 +988,16 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
   @override
   Widget build(BuildContext context) {
     final targetState = ref.watch(masterTargetProvider);
+    ref.listen<MasterTargetState>(masterTargetProvider, (prev, next) {
+      if (next.successMessage != null && next.successMessage != prev?.successMessage) {
+        _hierarchyKey.currentState?.reload();
+      }
+    });
+    final summary = targetState.summary;
+    final depoTargetsCount = summary?['depo_count'] ?? targetState.targets.where((t) => (t.kategoriSkema == 'KONSUMSI' || t.kategoriSkema == 'DISTRIBUTOR') && t.level == 'DEPO').length;
+    final areaTargetsCount = summary?['area_count'] ?? targetState.targets.where((t) => (t.kategoriSkema == 'KONSUMSI' || t.kategoriSkema == 'DISTRIBUTOR') && t.level == 'AREA').length;
+    final industriCount = summary?['industri_count'] ?? targetState.targets.where((t) => t.kategoriSkema == 'INDUSTRI').length;
+    final surabayaCount = summary?['surabaya_count'] ?? targetState.targets.where((t) => t.kategoriSkema == 'SURABAYA').length;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -888,43 +1011,64 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
               final titleWidget = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        'Master Target Kuota Penjualan',
-                        style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
-                      ),
-                      const SizedBox(width: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.3)),
-                        ),
-                        child: const Text(
-                          'Distributor & Sales',
-                          style: TextStyle(color: AppColors.primaryLight, fontSize: 11, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
                   Text(
-                    'Manajemen kuota target per Distributor (Depo & Area per Brand untuk ASM & SPV), Industri, dan Sales Surabaya',
-                    style: GoogleFonts.inter(fontSize: 13, color: context.colors.textMuted),
+                    'Target & Kuota Penjualan',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 25,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.4,
+                      color: context.colors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    'Kelola target kuota hierarki Distributor (Depo & Area), Industri, serta Sales Surabaya.',
+                    style: GoogleFonts.plusJakartaSans(fontSize: 13.5, color: context.colors.textMuted),
                   ),
                 ],
+              );
+
+              final exportButton = OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: context.colors.textPrimary,
+                  backgroundColor: context.colors.bgCard,
+                  side: BorderSide(color: context.colors.border),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+                  shape: const StadiumBorder(),
+                ),
+                icon: const Icon(LucideIcons.download, size: 16),
+                label: Text(
+                  'Tarik Excel Template',
+                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 13.5),
+                ),
+                onPressed: () {
+                  final activePeriod = ref.read(masterTargetProvider).selectedPeriod;
+                  ref.read(bulkUploadProvider.notifier).downloadTemplate(
+                    entity: 'master_target_distributor',
+                    withData: true,
+                    period: activePeriod,
+                  );
+                },
               );
 
               final actionButton = ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
+                  shape: const StadiumBorder(),
                 ),
-                icon: const Icon(LucideIcons.plus, size: 16, color: Colors.white),
-                label: const Text('Input Target Baru', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                icon: const Icon(LucideIcons.plus, size: 17, color: Colors.white),
+                label: Text(
+                  switch (_activeTabIndex) {
+                    0 => 'Tambah Target Distributor',
+                    1 => 'Tambah Target Area',
+                    2 => 'Tambah Target Industri',
+                    _ => 'Tambah Target Surabaya',
+                  },
+                  style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13.5),
+                ),
                 onPressed: _showAddTargetDialog,
               );
 
@@ -934,7 +1078,14 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                   children: [
                     titleWidget,
                     const SizedBox(height: 16),
-                    actionButton,
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        exportButton,
+                        actionButton,
+                      ],
+                    ),
                   ],
                 );
               }
@@ -948,11 +1099,13 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                     tooltip: 'Muat Ulang Target',
                     color: context.colors.textMuted,
                     onPressed: () {
-                      ref.read(masterTargetProvider.notifier).fetchTargets();
-                      ref.read(masterDataProvider.notifier).fetchAllMasterData();
-                      ref.read(salesAssignmentProvider.notifier).fetchAllAssignments();
+                      _fetchActiveTabTargets(force: true);
+                      ref.read(masterDataProvider.notifier).fetchAllMasterData(force: true);
+                      ref.read(salesAssignmentProvider.notifier).fetchAllAssignments(force: true);
                     },
                   ),
+                  const SizedBox(width: 8),
+                  exportButton,
                   const SizedBox(width: 8),
                   actionButton,
                 ],
@@ -961,7 +1114,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
           ),
           const SizedBox(height: 20),
 
-          // Main Tab Card
+          // Main Tab Card (4 Tab Terpisah: Target Depo, Target Area, Target Industri, Target Sales Surabaya)
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -976,7 +1129,13 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                 TabBar(
                   controller: _tabController,
                   isScrollable: true,
-                  onTap: (val) => setState(() => _activeTabIndex = val),
+                  onTap: (val) {
+                    final mapped = _tabToInternal(val);
+                    if (_activeTabIndex != mapped) {
+                      setState(() => _activeTabIndex = mapped);
+                      _fetchActiveTabTargets(force: true);
+                    }
+                  },
                   dividerColor: Colors.transparent,
                   indicatorColor: AppColors.primaryLight,
                   labelColor: context.colors.textPrimary,
@@ -985,9 +1144,9 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                     Tab(
                       child: Row(
                         children: [
-                          const Icon(LucideIcons.building2, size: 16),
+                          const Icon(LucideIcons.network, size: 16),
                           const SizedBox(width: 8),
-                          Text('Target Distributor: Depo & Area (${targetState.targets.where((t) => t.kategoriSkema == 'KONSUMSI' || t.kategoriSkema == 'DISTRIBUTOR').length})'),
+                          Text('Target Distributor ($depoTargetsCount Depo · $areaTargetsCount Area)'),
                         ],
                       ),
                     ),
@@ -996,16 +1155,16 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                         children: [
                           const Icon(LucideIcons.factory, size: 16),
                           const SizedBox(width: 8),
-                          Text('Target Industri (${targetState.targets.where((t) => t.kategoriSkema == 'INDUSTRI').length})'),
+                          Text('Target Industri ($industriCount)'),
                         ],
                       ),
                     ),
                     Tab(
                       child: Row(
                         children: [
-                          const Icon(LucideIcons.mapPin, size: 16),
+                          const Icon(LucideIcons.compass, size: 16),
                           const SizedBox(width: 8),
-                          Text('Target Sales Surabaya (${targetState.targets.where((t) => t.kategoriSkema == 'SURABAYA').length})'),
+                          Text('Target Sales Surabaya ($surabayaCount)'),
                         ],
                       ),
                     ),
@@ -1015,7 +1174,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                 Divider(height: 1, color: context.colors.border),
                 const SizedBox(height: 16),
 
-                if (targetState.isLoading)
+                if (targetState.isLoading && _activeTabIndex >= 2)
                   const Padding(
                     padding: EdgeInsets.all(40),
                     child: Center(child: CircularProgressIndicator()),
@@ -1030,34 +1189,53 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
     );
   }
 
+  /// Tab UI: 0 = Target Distributor (hirarki Depo+Area), 1 = Industri, 2 = Surabaya.
+  /// Index internal: 0 = Distributor, 2 = Industri, 3 = Surabaya.
+  int _tabToInternal(int tab) => switch (tab) { 0 => 0, 1 => 2, _ => 3 };
+
   Widget _buildActiveTabContent() {
     switch (_activeTabIndex) {
       case 0:
-        return _buildDistributorTargetTab();
       case 1:
-        return _buildGenericTargetTable('INDUSTRI');
+        return TargetDistributorHierarchyView(
+          key: _hierarchyKey,
+          period: ref.read(masterTargetProvider).selectedPeriod,
+          onEdit: (t) => _showTargetFormDialog(targetToEdit: t),
+          onDelete: (t) async {
+            final confirmed = await showConfirmDeleteDialog(
+              context: context,
+              title: 'Hapus Target Kuota',
+              message: 'Yakin hapus target ${t.targetType} ${t.level == 'AREA' ? (t.area?.name ?? '') : (t.depo?.name ?? '')} (${t.brand?.name ?? '-'})?',
+            );
+            if (confirmed == true) {
+              await ref.read(masterTargetProvider.notifier).deleteTarget(t.id);
+              _hierarchyKey.currentState?.reload();
+            }
+          },
+        );
       case 2:
+        return _buildGenericTargetTable('INDUSTRI');
+      case 3:
       default:
         return _buildGenericTargetTable('SURABAYA');
     }
   }
 
   // =========================================================================
-  // TAB 0: TARGET DISTRIBUTOR (DEPO & AREA PER BRAND UNTUK ASM & SPV)
+  // TAB 0 (TARGET DEPO) & TAB 1 (TARGET AREA) — MURNI TERPISAH SENDIRI-SENDIRI
   // =========================================================================
-  Widget _buildDistributorTargetTab() {
+  // ignore: unused_element
+  Widget _buildSeparateUnitTargetTab({required String level}) {
     final colors = context.colors;
     final targetState = ref.watch(masterTargetProvider);
     final masterState = ref.watch(masterDataProvider);
     final assignState = ref.watch(salesAssignmentProvider);
+    final isAreaTab = level == 'AREA';
 
-    // Filter distributor targets
-    final allDistTargets = targetState.targets.where((t) => t.kategoriSkema == 'KONSUMSI' || t.kategoriSkema == 'DISTRIBUTOR').toList();
+    final unitTargets = targetState.targets.where((t) => t.level == level).toList();
 
-    final filteredList = allDistTargets.where((t) {
+    final filteredList = unitTargets.where((t) {
       if (_filterDistributorId != null && t.distributorId != _filterDistributorId) return false;
-      if (_filterLevel == 'DEPO' && t.level != 'DEPO') return false;
-      if (_filterLevel == 'AREA' && t.level != 'AREA') return false;
       if (_filterMetric != 'ALL' && t.targetType != _filterMetric) return false;
       if (_filterBrandId != null && t.brandId != _filterBrandId) return false;
 
@@ -1068,80 +1246,87 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
         final areaName = (t.area?.name ?? '').toLowerCase();
         final brandName = (t.brand?.name ?? '').toLowerCase();
         final userName = (t.user?.name ?? '').toLowerCase();
-        return distName.contains(q) || depoName.contains(q) || areaName.contains(q) || brandName.contains(q) || userName.contains(q);
+        return distName.contains(q) || depoName.contains(q) || (isAreaTab && areaName.contains(q)) || brandName.contains(q) || userName.contains(q);
       }
       return true;
     }).toList();
 
-    // Summary calculation (gunakan agregasi backend jika tanpa filter lokal, atau filter lokal jika spesifik)
     final summary = targetState.summary;
-    final bool hasLocalFilters = _filterDistributorId != null || _filterLevel != 'ALL' || _filterMetric != 'ALL' || _filterBrandId != null || _searchQuery.isNotEmpty;
+    final bool hasLocalFilters = _filterDistributorId != null || _filterMetric != 'ALL' || _filterBrandId != null || _searchQuery.isNotEmpty;
 
-    final double totalSellIn = !hasLocalFilters && summary != null
-        ? ((summary['total_sell_in'] as num?)?.toDouble() ?? 0.0)
-        : filteredList.where((t) => t.targetType == 'SELL_IN').fold<double>(0.0, (sum, t) => sum + t.targetQuota);
-
-    final double totalSellOut = !hasLocalFilters && summary != null
-        ? ((summary['total_sell_out'] as num?)?.toDouble() ?? 0.0)
+    final double totalSellOut = !hasLocalFilters && summary != null && summary[isAreaTab ? 'area_sell_out' : 'depo_sell_out'] != null
+        ? ((summary[isAreaTab ? 'area_sell_out' : 'depo_sell_out'] as num?)?.toDouble() ?? 0.0)
         : filteredList.where((t) => t.targetType == 'SELL_OUT').fold<double>(0.0, (sum, t) => sum + t.targetQuota);
 
-    final int totalAo = !hasLocalFilters && summary != null
-        ? ((summary['total_ao'] as num?)?.toInt() ?? 0)
+    final double totalSellIn = !hasLocalFilters && summary != null && summary[isAreaTab ? 'area_sell_in' : 'depo_sell_in'] != null
+        ? ((summary[isAreaTab ? 'area_sell_in' : 'depo_sell_in'] as num?)?.toDouble() ?? 0.0)
+        : filteredList.where((t) => t.targetType == 'SELL_IN').fold<double>(0.0, (sum, t) => sum + t.targetQuota);
+
+    final int totalAo = !hasLocalFilters && summary != null && summary[isAreaTab ? 'area_ao' : 'depo_ao'] != null
+        ? ((summary[isAreaTab ? 'area_ao' : 'depo_ao'] as num?)?.toInt() ?? 0)
         : filteredList.where((t) => t.targetType == 'AO').fold<int>(0, (sum, t) => sum + (t.targetOutlet ?? t.targetQuota.toInt()));
 
-    final int depoCount = !hasLocalFilters && summary != null
-        ? ((summary['depo_count'] as num?)?.toInt() ?? 0)
-        : filteredList.where((t) => t.level == 'DEPO').length;
+    final int unitCount = !hasLocalFilters && summary != null && summary[isAreaTab ? 'area_count' : 'depo_count'] != null
+        ? ((summary[isAreaTab ? 'area_count' : 'depo_count'] as num?)?.toInt() ?? 0)
+        : filteredList.length;
 
-    final int areaCount = !hasLocalFilters && summary != null
-        ? ((summary['area_count'] as num?)?.toInt() ?? 0)
-        : filteredList.where((t) => t.level == 'AREA').length;
+    void applyServerFilter({
+      int? distId,
+      bool clearDist = false,
+      String? metric,
+      int? brandId,
+      bool clearBrand = false,
+    }) {
+      final nextDist = clearDist ? null : (distId ?? _filterDistributorId);
+      final nextMetric = metric ?? _filterMetric;
+      final nextBrand = clearBrand ? null : (brandId ?? _filterBrandId);
 
-    final selectedDistObj = masterState.distributors.where((d) => d.id == _filterDistributorId).firstOrNull;
+      setState(() {
+        _filterDistributorId = nextDist;
+        _filterMetric = nextMetric;
+        _filterBrandId = nextBrand;
+      });
+
+      _fetchActiveTabTargets(force: true, page: 1);
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Summary KPI Banner
+        // Summary KPI Banner khusus tab ini saja (Target Depo sendiri / Target Area sendiri)
         Wrap(
           spacing: 12,
           runSpacing: 12,
           children: [
             _buildMiniKpiCard(
-              title: selectedDistObj != null ? 'Distributor Aktif' : 'Total Target Distributor',
-              value: selectedDistObj != null ? selectedDistObj.name : '${masterState.distributors.length} Distributor',
-              icon: LucideIcons.building2,
-              color: AppColors.primary,
+              title: isAreaTab ? 'Total Target Area (SPV)' : 'Total Target Depo (ASM)',
+              value: isAreaTab ? '$unitCount Baris Target Area' : '$unitCount Baris Target Depo',
+              icon: isAreaTab ? LucideIcons.mapPin : LucideIcons.building2,
+              color: isAreaTab ? AppColors.warning : AppColors.primary,
             ),
             _buildMiniKpiCard(
-              title: 'Total Kuota Sell-Out',
+              title: isAreaTab ? 'Total Sell-Out Area' : 'Total Sell-Out Depo',
               value: '${CurrencyFormatter.formatNumber(totalSellOut)} Kg',
               icon: LucideIcons.trendingUp,
-              color: const Color(0xFF8B5CF6),
+              color: const Color(0xFF24968B),
             ),
             _buildMiniKpiCard(
-              title: 'Total Kuota Sell-In',
+              title: isAreaTab ? 'Total Sell-In Area' : 'Total Sell-In Depo',
               value: '${CurrencyFormatter.formatNumber(totalSellIn)} Kg',
               icon: LucideIcons.truck,
               color: AppColors.info,
             ),
             _buildMiniKpiCard(
-              title: 'Total Active Outlet (AO)',
+              title: isAreaTab ? 'Total Active Outlet (AO) Area' : 'Total Active Outlet (AO) Depo',
               value: '$totalAo Toko',
               icon: LucideIcons.store,
               color: AppColors.success,
-            ),
-            _buildMiniKpiCard(
-              title: 'Rincian Kuota',
-              value: '$depoCount Depo • $areaCount Area',
-              icon: LucideIcons.layers,
-              color: const Color(0xFFF59E0B),
             ),
           ],
         ),
         const SizedBox(height: 16),
 
-        // Filter Toolbar (Pilih Periode, Distributor, Tingkat, Brand, Metrik, & Search)
+        // Filter Toolbar
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -1151,10 +1336,10 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final isCompact = constraints.maxWidth < 1180;
+              final isCompact = constraints.maxWidth < 1050;
 
               final periodWidget = DropdownButtonFormField<String>(
-                key: ValueKey('period_dist_${targetState.selectedPeriod}'),
+                key: ValueKey('period_${level}_${targetState.selectedPeriod}'),
                 initialValue: targetState.availablePeriods.contains(targetState.selectedPeriod) || targetState.selectedPeriod == 'ALL'
                     ? targetState.selectedPeriod
                     : (targetState.availablePeriods.isNotEmpty ? targetState.availablePeriods.first : '202610'),
@@ -1211,29 +1396,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                     child: Text('${d.name} (${d.code})', overflow: TextOverflow.ellipsis),
                   )),
                 ],
-                onChanged: (val) => setState(() => _filterDistributorId = val),
-              );
-
-              final levelWidget = DropdownButtonFormField<String>(
-                initialValue: _filterLevel,
-                dropdownColor: colors.bgElevated,
-                isExpanded: true,
-                style: TextStyle(color: colors.textPrimary, fontSize: 13),
-                decoration: InputDecoration(
-                  labelText: 'Tingkat Target',
-                  labelStyle: TextStyle(color: colors.textMuted, fontSize: 12),
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'ALL', child: Text('Semua Tingkat', overflow: TextOverflow.ellipsis)),
-                  DropdownMenuItem(value: 'DEPO', child: Text('Depo (ASM)', overflow: TextOverflow.ellipsis)),
-                  DropdownMenuItem(value: 'AREA', child: Text('Area (SPV)', overflow: TextOverflow.ellipsis)),
-                ],
-                onChanged: (val) {
-                  if (val != null) setState(() => _filterLevel = val);
-                },
+                onChanged: (val) => applyServerFilter(distId: val, clearDist: val == null),
               );
 
               final metricWidget = DropdownButtonFormField<String>(
@@ -1255,7 +1418,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                   DropdownMenuItem(value: 'AO', child: Text('Active Outlet (AO)', overflow: TextOverflow.ellipsis)),
                 ],
                 onChanged: (val) {
-                  if (val != null) setState(() => _filterMetric = val);
+                  if (val != null) applyServerFilter(metric: val);
                 },
               );
 
@@ -1278,14 +1441,16 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                     child: Text(b.name, overflow: TextOverflow.ellipsis),
                   )),
                 ],
-                onChanged: (val) => setState(() => _filterBrandId = val),
+                onChanged: (val) => applyServerFilter(brandId: val, clearBrand: val == null),
               );
 
               final searchWidget = TextField(
                 controller: _searchController,
                 style: TextStyle(color: colors.textPrimary, fontSize: 13),
                 decoration: InputDecoration(
-                  hintText: 'Cari Nama Distributor, Depo, Area, Brand, atau Sales Personil (Tekan Enter untuk cari)...',
+                  hintText: isAreaTab
+                      ? 'Cari Nama Area, Depo, Distributor, Brand, atau SPV (Tekan Enter)...'
+                      : 'Cari Nama Depo, Distributor, Brand, atau ASM (Tekan Enter)...',
                   hintStyle: TextStyle(color: colors.textMuted, fontSize: 13),
                   prefixIcon: const Icon(LucideIcons.search, size: 16),
                   isDense: true,
@@ -1295,7 +1460,14 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
                 onChanged: (val) => setState(() => _searchQuery = val.trim()),
-                onSubmitted: (val) => ref.read(masterTargetProvider.notifier).fetchTargets(search: val.trim(), page: 1),
+                onSubmitted: (val) => ref.read(masterTargetProvider.notifier).fetchTargets(
+                  distributorId: _filterDistributorId,
+                  metrikTarget: _filterMetric,
+                  brandId: _filterBrandId,
+                  search: val.trim(),
+                  page: 1,
+                  force: true,
+                ),
               );
 
               if (isCompact) {
@@ -1311,8 +1483,6 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        Expanded(child: levelWidget),
-                        const SizedBox(width: 10),
                         Expanded(child: metricWidget),
                         const SizedBox(width: 10),
                         Expanded(child: brandWidget),
@@ -1332,8 +1502,6 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                       const SizedBox(width: 10),
                       Expanded(flex: 3, child: distWidget),
                       const SizedBox(width: 10),
-                      Expanded(flex: 2, child: levelWidget),
-                      const SizedBox(width: 10),
                       Expanded(flex: 2, child: metricWidget),
                       const SizedBox(width: 10),
                       Expanded(flex: 2, child: brandWidget),
@@ -1348,7 +1516,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
         ),
         const SizedBox(height: 16),
 
-        // Table
+        // Table (Murni menampilkan Target Depo saja pada Tab Depo, atau Target Area saja pada Tab Area)
         if (filteredList.isEmpty)
           Container(
             padding: const EdgeInsets.all(40),
@@ -1357,37 +1525,57 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
               children: [
                 Icon(LucideIcons.inbox, size: 48, color: colors.textMuted.withValues(alpha: 0.5)),
                 const SizedBox(height: 12),
-                Text('Belum ada data target kuota distributor yang sesuai filter.', style: TextStyle(color: colors.textMuted)),
+                Text(
+                  isAreaTab
+                      ? 'Belum ada data Target Area (SPV) yang sesuai filter.'
+                      : 'Belum ada data Target Depo (ASM) yang sesuai filter.',
+                  style: TextStyle(color: colors.textMuted),
+                ),
               ],
             ),
           )
         else
           ResponsiveTableCard(
-            minWidth: 1080,
+            minWidth: 1020,
             child: DataTable(
               headingRowColor: WidgetStateProperty.all(colors.bgTableHead),
+              dataRowMinHeight: 58,
+              dataRowMaxHeight: 74,
               columns: [
-                DataColumn(label: Text('Tingkat', style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Distributor', style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Depo & Area Operasional', style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold))),
+                if (!isAreaTab)
+                  DataColumn(label: Text('Depo Cabang', style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold)))
+                else ...[
+                  DataColumn(label: Text('Area Operasional', style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold))),
+                  DataColumn(label: Text('Depo Induk', style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold))),
+                ],
                 DataColumn(label: Text('Brand Produk', style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Metrik Target', style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Besaran Kuota Target', style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Posisi & Sales Penanggung Jawab', style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold))),
+                DataColumn(
+                  label: Text(
+                    isAreaTab ? 'Besaran Target Area' : 'Besaran Target Depo',
+                    style: TextStyle(color: isAreaTab ? AppColors.warning : AppColors.primaryLight, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    isAreaTab ? 'SPV Penanggung Jawab' : 'ASM Penanggung Jawab',
+                    style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold),
+                  ),
+                ),
                 DataColumn(label: Text('Periode', style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Aksi', style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold))),
               ],
               rows: filteredList.map((item) {
-                final isArea = item.level == 'AREA';
                 final isOutlet = item.targetType == 'AO' || item.targetType == 'NOO';
 
                 // Resolve sales personil (from target or assignment)
                 UserModel? assignedSales = item.user;
                 String assignedPosition = '';
                 if (assignedSales != null) {
-                  assignedPosition = assignedSales.position?.code ?? (isArea ? 'SPV' : 'ASM');
+                  assignedPosition = assignedSales.position?.code ?? (isAreaTab ? 'SPV' : 'ASM');
                 } else {
-                  if (isArea && item.areaId != null) {
+                  if (isAreaTab && item.areaId != null) {
                     final assign = assignState.distributorAssignments.where((a) => a.areaId == item.areaId && a.isActive).firstOrNull;
                     assignedSales = assign?.user;
                     assignedPosition = 'SPV';
@@ -1400,31 +1588,6 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
 
                 return DataRow(
                   cells: [
-                    // Tingkat Badge
-                    DataCell(
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: isArea
-                              ? AppColors.warning.withValues(alpha: 0.15)
-                              : AppColors.primary.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: isArea ? AppColors.warning.withValues(alpha: 0.4) : AppColors.primary.withValues(alpha: 0.4)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(isArea ? LucideIcons.mapPin : LucideIcons.building2, size: 12, color: isArea ? AppColors.warning : AppColors.primaryLight),
-                            const SizedBox(width: 4),
-                            Text(
-                              isArea ? 'AREA (SPV)' : 'DEPO (ASM)',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isArea ? AppColors.warning : AppColors.primaryLight),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
                     // Distributor
                     DataCell(
                       Column(
@@ -1437,39 +1600,53 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                       ),
                     ),
 
-                    // Depo & Area
-                    DataCell(
-                      isArea
-                          ? Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(item.area?.name ?? 'Area #${item.areaId}', style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold)),
-                                Text('Depo: ${item.depo?.name ?? '-'}', style: TextStyle(color: colors.textMuted, fontSize: 11)),
-                              ],
-                            )
-                          : Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(item.depo?.name ?? 'Depo #${item.depoId}', style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold)),
-                                Text('Seluruh Area Depo', style: TextStyle(color: colors.textMuted, fontSize: 11, fontStyle: FontStyle.italic)),
-                              ],
-                            ),
-                    ),
+                    // Unit: Depo Cabang (untuk Tab Depo) atau Area Operasional + Depo Induk (untuk Tab Area)
+                    if (!isAreaTab)
+                      DataCell(
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(item.depo?.name ?? 'Depo #${item.depoId}', style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold)),
+                            Text(item.depo?.code ?? '-', style: TextStyle(color: colors.textMuted, fontSize: 11)),
+                          ],
+                        ),
+                      )
+                    else ...[
+                      DataCell(
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(item.area?.name ?? 'Area #${item.areaId}', style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold)),
+                            Text(item.area?.code ?? '-', style: TextStyle(color: colors.textMuted, fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                      DataCell(
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(item.depo?.name ?? 'Depo #${item.depoId}', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.w600)),
+                            Text(item.depo?.code ?? '-', style: TextStyle(color: colors.textMuted, fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                    ],
 
                     // Brand Produk
                     DataCell(
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
+                          color: const Color(0xFF24968B).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.3)),
+                          border: Border.all(color: const Color(0xFF24968B).withValues(alpha: 0.3)),
                         ),
                         child: Text(
                           item.brand?.name ?? (item.brandId != null ? 'Brand #${item.brandId}' : 'Semua Brand'),
-                          style: const TextStyle(color: Color(0xFF8B5CF6), fontSize: 11, fontWeight: FontWeight.bold),
+                          style: const TextStyle(color: Color(0xFF24968B), fontSize: 11, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
@@ -1480,7 +1657,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: item.targetType == 'SELL_OUT'
-                              ? const Color(0xFF8B5CF6).withValues(alpha: 0.15)
+                              ? const Color(0xFF24968B).withValues(alpha: 0.15)
                               : (item.targetType == 'SELL_IN' ? AppColors.info.withValues(alpha: 0.15) : AppColors.success.withValues(alpha: 0.15)),
                           borderRadius: BorderRadius.circular(6),
                         ),
@@ -1488,7 +1665,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                           item.targetType,
                           style: TextStyle(
                             color: item.targetType == 'SELL_OUT'
-                                ? const Color(0xFF8B5CF6)
+                                ? const Color(0xFF24968B)
                                 : (item.targetType == 'SELL_IN' ? AppColors.info : AppColors.success),
                             fontWeight: FontWeight.bold,
                             fontSize: 11,
@@ -1497,27 +1674,39 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                       ),
                     ),
 
-                    // Besaran Target Kuota
+                    // Besaran Target (Murni Target Depo pada Tab Depo, atau Murni Target Area pada Tab Area)
                     DataCell(
-                      Text(
-                        isOutlet
-                            ? '${item.targetOutlet ?? item.targetQuota.toInt()} Toko'
-                            : '${CurrencyFormatter.formatNumber(item.targetQuota)} Kg',
-                        style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            isOutlet
+                                ? '${item.targetOutlet ?? item.targetQuota.toInt()} Toko'
+                                : '${CurrencyFormatter.formatNumber(item.targetQuota)} Kg',
+                            style: TextStyle(
+                              color: isAreaTab ? AppColors.warning : AppColors.primaryLight,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13.5,
+                            ),
+                          ),
+                          if (!isOutlet && item.targetOutlet != null && item.targetOutlet! > 0)
+                            Text('AO: ${item.targetOutlet} Toko', style: TextStyle(color: colors.textMuted, fontSize: 10.5)),
+                        ],
                       ),
                     ),
 
-                    // Posisi & Sales Penanggung Jawab
+                    // Penanggung Jawab (ASM / SPV)
                     DataCell(
                       assignedSales != null
                           ? Row(
                               children: [
                                 CircleAvatar(
                                   radius: 12,
-                                  backgroundColor: isArea ? AppColors.warning.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.2),
+                                  backgroundColor: isAreaTab ? AppColors.warning.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.2),
                                   child: Text(
                                     assignedSales.name.isNotEmpty ? assignedSales.name[0].toUpperCase() : 'S',
-                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isArea ? AppColors.warning : AppColors.primaryLight),
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isAreaTab ? AppColors.warning : AppColors.primaryLight),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -1554,7 +1743,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                               final confirmed = await showConfirmDeleteDialog(
                                 context: context,
                                 title: 'Hapus Target Kuota',
-                                message: 'Yakin ingin menghapus target ${item.targetType} untuk ${item.level == 'AREA' ? item.area?.name : item.depo?.name} (${item.brand?.name})?',
+                                message: 'Yakin ingin menghapus target ${item.targetType} untuk ${isAreaTab ? item.area?.name : item.depo?.name} (${item.brand?.name})?',
                               );
                               if (confirmed == true) {
                                 await ref.read(masterTargetProvider.notifier).deleteTarget(item.id);
@@ -1569,14 +1758,14 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
               }).toList(),
             ),
           ),
-          if (targetState.totalItems > 0)
-            _buildPaginationBar(targetState),
+        if (targetState.totalItems > 0)
+          _buildPaginationBar(targetState),
       ],
     );
   }
 
   // =========================================================================
-  // TAB 1 & 2: TARGET INDUSTRI & SURABAYA
+  // TAB 2 & 3: TARGET INDUSTRI & SURABAYA
   // =========================================================================
   Widget _buildGenericTargetTable(String kategori) {
     final colors = context.colors;
@@ -1592,7 +1781,6 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Filter Toolbar for Generic Tab (Periode & Search)
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -1681,6 +1869,8 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
             minWidth: 850,
             child: DataTable(
               headingRowColor: WidgetStateProperty.all(colors.bgTableHead),
+              dataRowMinHeight: 54,
+              dataRowMaxHeight: 70,
               columns: [
                 DataColumn(label: Text('Sales Personil', style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Periode', style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold))),

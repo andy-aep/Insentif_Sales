@@ -4,6 +4,7 @@ use App\Http\Controllers\AreaController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BatchUploadController;
 use App\Http\Controllers\BrandController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DepoController;
 use App\Http\Controllers\DistributorController;
 use App\Http\Controllers\GradeBobotController;
@@ -22,14 +23,17 @@ use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 // Public Authentication Route
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 // Authenticated Sanctum Routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/change-password', [AuthController::class, 'changePassword']);
+    Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
 
     // Master Access & Users
+    Route::put('users/{user}/password', [UserController::class, 'updatePassword']);
     Route::apiResource('users', UserController::class);
     Route::apiResource('roles', RoleController::class);
     Route::apiResource('positions', PositionController::class);
@@ -57,17 +61,21 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('grade-bobots', GradeBobotController::class);
     Route::apiResource('percent-targets', PercentTargetController::class);
     Route::apiResource('nilai-rewards', NilaiRewardController::class);
+    Route::get('master-targets/hierarchy', [MasterTargetController::class, 'hierarchy']);
     Route::get('master-targets/periods', [MasterTargetController::class, 'periods']);
     Route::apiResource('master-targets', MasterTargetController::class);
 
     // Kalkulasi Insentif
     Route::post('/incentives/calculate', [IncentiveCalculationController::class, 'calculate']);
     Route::get('/incentives/results', [IncentiveCalculationController::class, 'index']);
+    Route::get('/incentives/distributor-breakdown', [IncentiveCalculationController::class, 'distributorBreakdown']);
     Route::get('/incentives/export-excel', [IncentiveCalculationController::class, 'exportExcel']);
 
     // Batch Management & Rollback
     Route::get('/bulk-upload/history', [BatchUploadController::class, 'history']);
     Route::get('/bulk-upload/template/{entity}', [BatchUploadController::class, 'downloadTemplate']);
+    Route::get('/bulk-upload/batches/{batchId}/download', [BatchUploadController::class, 'downloadBatchFile']);
     Route::post('/bulk-upload/rollback/{batchId}', [BatchUploadController::class, 'rollback']);
+    Route::delete('/bulk-upload/batches/{batchId}', [BatchUploadController::class, 'destroy']);
     Route::post('/bulk-upload/{entity}', [BatchUploadController::class, 'upload']);
 });

@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../../../core/constants/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/network/dio_client.dart';
 import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../../../core/widgets/responsive_table.dart';
 import '../../../data/models/master_model.dart';
+import '../../bulk_upload/providers/bulk_upload_provider.dart';
 import '../providers/master_data_provider.dart';
 
 class MasterDistributorScreen extends ConsumerStatefulWidget {
@@ -28,6 +31,12 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging && _tabController.index != _activeTabIndex) {
         setState(() => _activeTabIndex = _tabController.index);
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (ref.read(masterDataProvider).distributors.isEmpty) {
+        ref.read(masterDataProvider.notifier).fetchAllMasterData();
       }
     });
   }
@@ -109,7 +118,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                     decoration: const BoxDecoration(
-                      color: Color(0xFF4F46E5),
+                      color: Color(0xFFF47A60),
                       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                     ),
                     child: Row(
@@ -152,7 +161,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                               children: [
                                 Row(
                                   children: [
-                                    const Icon(LucideIcons.building, size: 16, color: Color(0xFF4F46E5)),
+                                    const Icon(LucideIcons.building, size: 16, color: Color(0xFFF47A60)),
                                     const SizedBox(width: 8),
                                     Text(
                                       'Identitas Distributor Utama',
@@ -237,7 +246,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                               ),
                               ElevatedButton.icon(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF4F46E5),
+                                  backgroundColor: const Color(0xFFF47A60),
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -366,7 +375,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                                             children: [
                                               Row(
                                                 children: [
-                                                  const Icon(LucideIcons.mapPin, size: 13, color: Color(0xFF10B981)),
+                                                  const Icon(LucideIcons.mapPin, size: 13, color: Color(0xFF24968B)),
                                                   const SizedBox(width: 6),
                                                   Text(
                                                     'Area Tercover (${depo.areas.length} Area)',
@@ -376,7 +385,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                                               ),
                                               TextButton.icon(
                                                 style: TextButton.styleFrom(
-                                                  foregroundColor: const Color(0xFF10B981),
+                                                  foregroundColor: const Color(0xFF24968B),
                                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                                   minimumSize: Size.zero,
                                                 ),
@@ -478,7 +487,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                         const SizedBox(width: 12),
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF4F46E5),
+                            backgroundColor: const Color(0xFFF47A60),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
@@ -551,8 +560,21 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
   }
 
   // ---------------- 2. Detail Dialog for Distributor Hierarchy ----------------
-  void _showDistributorDetailDialog(DistributorModel dist) {
+  Future<void> _showDistributorDetailDialog(DistributorModel dist) async {
     final colors = context.colors;
+    DistributorModel currentDist = dist;
+
+    if (dist.depos.isNotEmpty && dist.depos.first.areas.isEmpty) {
+      try {
+        final res = await DioClient.instance.get('${ApiEndpoints.distributors}/${dist.id}');
+        final data = res.data['data'] ?? res.data;
+        if (data is Map<String, dynamic>) {
+          currentDist = DistributorModel.fromJson(data);
+        }
+      } catch (_) {}
+    }
+
+    if (!mounted) return;
 
     showDialog(
       context: context,
@@ -569,7 +591,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 decoration: const BoxDecoration(
-                  color: Color(0xFF4F46E5),
+                  color: Color(0xFFF47A60),
                   borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                 ),
                 child: Row(
@@ -578,7 +600,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Struktur Hirarki: ${dist.name}',
+                        'Struktur Hirarki: ${currentDist.name}',
                         style: GoogleFonts.outfit(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -610,20 +632,20 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF4F46E5).withValues(alpha: 0.15),
+                                color: const Color(0xFFF47A60).withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(6),
                               ),
-                              child: Text(dist.code, style: const TextStyle(color: Color(0xFF4F46E5), fontWeight: FontWeight.bold, fontSize: 13)),
+                              child: Text(currentDist.code, style: const TextStyle(color: Color(0xFFF47A60), fontWeight: FontWeight.bold, fontSize: 13)),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(dist.name, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: colors.textPrimary)),
+                                  Text(currentDist.name, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: colors.textPrimary)),
                                   const SizedBox(height: 2),
                                   Text(
-                                    'Region: ${dist.region != null ? "${dist.region!.code} - ${dist.region!.name}" : "Nasional / Tanpa Region"} • Total: ${dist.depos.length} Depo Logistik Terdaftar',
+                                    'Region: ${currentDist.region != null ? "${currentDist.region!.code} - ${currentDist.region!.name}" : "Nasional / Tanpa Region"} • Total: ${currentDist.depos.length} Depo Logistik Terdaftar',
                                     style: TextStyle(color: colors.textMuted, fontSize: 12),
                                   ),
                                 ],
@@ -637,7 +659,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                       Text('Daftar Jaringan Depo & Area:', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: colors.textPrimary)),
                       const SizedBox(height: 10),
 
-                      if (dist.depos.isEmpty)
+                      if (currentDist.depos.isEmpty)
                         Container(
                           padding: const EdgeInsets.all(20),
                           alignment: Alignment.center,
@@ -645,7 +667,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                           child: Text('Belum ada depo di distributor ini.', style: TextStyle(color: colors.textMuted)),
                         )
                       else
-                        ...dist.depos.map((depo) {
+                        ...currentDist.depos.map((depo) {
                           return Container(
                             margin: const EdgeInsets.only(bottom: 12),
                             padding: const EdgeInsets.all(14),
@@ -659,7 +681,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                               children: [
                                 Row(
                                   children: [
-                                    const Icon(LucideIcons.warehouse, size: 15, color: Color(0xFF0288D1)),
+                                    const Icon(LucideIcons.warehouse, size: 15, color: Color(0xFF316879)),
                                     const SizedBox(width: 8),
                                     Text(
                                       '${depo.name} (${depo.code})',
@@ -668,8 +690,8 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                                     const Spacer(),
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(color: const Color(0xFFE8F5E9), borderRadius: BorderRadius.circular(6)),
-                                      child: Text('${depo.areas.length} Area', style: const TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.bold, fontSize: 11)),
+                                      decoration: BoxDecoration(color: const Color(0xFFDDF9F6), borderRadius: BorderRadius.circular(6)),
+                                      child: Text('${depo.areas.length} Area', style: const TextStyle(color: Color(0xFF24968B), fontWeight: FontWeight.bold, fontSize: 11)),
                                     ),
                                   ],
                                 ),
@@ -705,7 +727,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                 decoration: BoxDecoration(color: colors.bgElevated, borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16))),
                 alignment: Alignment.centerRight,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5), foregroundColor: Colors.white),
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF47A60), foregroundColor: Colors.white),
                   child: const Text('Tutup'),
                   onPressed: () => Navigator.pop(ctx),
                 ),
@@ -743,7 +765,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: colors.border)),
             title: Row(
               children: [
-                const Icon(LucideIcons.warehouse, color: Color(0xFF0288D1), size: 20),
+                const Icon(LucideIcons.warehouse, color: Color(0xFF316879), size: 20),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -870,7 +892,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: TextStyle(color: colors.textMuted))),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0288D1), foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF316879), foregroundColor: Colors.white),
                 onPressed: () async {
                   if (selectedDistId == null || codeCtrl.text.trim().isEmpty || nameCtrl.text.trim().isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -931,7 +953,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: colors.border)),
             title: Row(
               children: [
-                const Icon(LucideIcons.mapPin, color: Color(0xFF10B981), size: 20),
+                const Icon(LucideIcons.mapPin, color: Color(0xFF24968B), size: 20),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -981,7 +1003,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: TextStyle(color: colors.textMuted))),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF24968B), foregroundColor: Colors.white),
                 onPressed: () async {
                   if (selectedDepoId == null || codeCtrl.text.trim().isEmpty || nameCtrl.text.trim().isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -1027,7 +1049,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: colors.border)),
         title: Row(
           children: [
-            const Icon(LucideIcons.tag, color: Color(0xFFF59E0B), size: 20),
+            const Icon(LucideIcons.tag, color: Color(0xFFF47A60), size: 20),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -1059,7 +1081,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: TextStyle(color: colors.textMuted))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF59E0B), foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF47A60), foregroundColor: Colors.white),
             onPressed: () async {
               if (codeCtrl.text.trim().isEmpty || nameCtrl.text.trim().isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -1094,29 +1116,29 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
 
     String addBtnLabel = 'Tambah Distributor';
     IconData addBtnIcon = LucideIcons.building2;
-    Color addBtnColor = const Color(0xFF4F46E5);
+    Color addBtnColor = const Color(0xFFF47A60);
 
     switch (_activeTabIndex) {
       case 1:
         addBtnLabel = 'Tambah Depo';
         addBtnIcon = LucideIcons.warehouse;
-        addBtnColor = const Color(0xFF0288D1);
+        addBtnColor = const Color(0xFF316879);
         break;
       case 2:
         addBtnLabel = 'Tambah Area';
         addBtnIcon = LucideIcons.mapPin;
-        addBtnColor = const Color(0xFF10B981);
+        addBtnColor = const Color(0xFF24968B);
         break;
       case 3:
         addBtnLabel = 'Tambah Brand';
         addBtnIcon = LucideIcons.tag;
-        addBtnColor = const Color(0xFFF59E0B);
+        addBtnColor = const Color(0xFFF47A60);
         break;
       case 0:
       default:
         addBtnLabel = 'Tambah Distributor';
         addBtnIcon = LucideIcons.building2;
-        addBtnColor = const Color(0xFF4F46E5);
+        addBtnColor = const Color(0xFFF47A60);
         break;
     }
 
@@ -1144,6 +1166,41 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                 ],
               );
 
+              final refreshButton = OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: context.colors.textPrimary,
+                  side: BorderSide(color: context.colors.border),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                icon: state.isLoading
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                      )
+                    : const Icon(LucideIcons.refreshCw, size: 14),
+                label: Text(state.isLoading ? 'Memuat...' : 'Segarkan', style: const TextStyle(fontWeight: FontWeight.w600)),
+                onPressed: state.isLoading ? null : () => ref.read(masterDataProvider.notifier).fetchAllMasterData(force: true),
+              );
+
+              final exportButton = OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: context.colors.textPrimary,
+                  side: BorderSide(color: context.colors.border),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                icon: const Icon(LucideIcons.download, size: 14),
+                label: const Text('Tarik Excel Template', style: TextStyle(fontWeight: FontWeight.w600)),
+                onPressed: () {
+                  ref.read(bulkUploadProvider.notifier).downloadTemplate(
+                    entity: 'distributor',
+                    withData: true,
+                  );
+                },
+              );
+
               final addButton = ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: addBtnColor,
@@ -1156,13 +1213,24 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                 onPressed: _triggerTabAdd,
               );
 
+              final actionButtons = Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  refreshButton,
+                  exportButton,
+                  addButton,
+                ],
+              );
+
               if (isCompact) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     titleSection,
                     const SizedBox(height: 14),
-                    Align(alignment: Alignment.centerLeft, child: addButton),
+                    actionButtons,
                   ],
                 );
               }
@@ -1170,7 +1238,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
               return Row(
                 children: [
                   Expanded(child: titleSection),
-                  addButton,
+                  actionButtons,
                 ],
               );
             },
@@ -1189,6 +1257,19 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (state.isLoading)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.all(Radius.circular(4)),
+                      child: LinearProgressIndicator(
+                        minHeight: 4,
+                        backgroundColor: Colors.transparent,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final isCompact = constraints.maxWidth < 750;
@@ -1265,6 +1346,34 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
   }
 
   Widget _buildActiveTabContent(BuildContext context, MasterDataState state) {
+    if (state.isLoading && state.distributors.isEmpty && state.depos.isEmpty && state.areas.isEmpty && state.brands.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 60),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                width: 40,
+                height: 40,
+                child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.primary),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Memuat Data Master...',
+                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Sedang menyinkronkan data distributor, depo, area, dan brand dari server',
+                style: GoogleFonts.inter(fontSize: 12.5, color: context.colors.textMuted),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     switch (_activeTabIndex) {
       case 0:
         return _buildDistributorsList(state);
@@ -1296,164 +1405,214 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
       );
     }
 
-    return ResponsiveTableCard(
-      minWidth: 800,
-      child: DataTable(
-        headingRowColor: WidgetStateProperty.all(context.colors.bgTableHead),
-        columnSpacing: 16,
-        horizontalMargin: 12,
-        columns: [
-          DataColumn(label: Text('Kode', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Nama Distributor', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Wilayah Region', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Jaringan Depo & Area', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Aksi', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-        ],
-        rows: filtered.map((d) {
-          final totalAreas = d.depos.fold<int>(0, (sum, dp) => sum + dp.areas.length);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (filtered.length > 50)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              children: [
+                Icon(LucideIcons.info, size: 14, color: context.colors.textMuted),
+                const SizedBox(width: 6),
+                Text(
+                  'Menampilkan 50 dari total ${filtered.length} distributor. Gunakan kotak cari untuk memfilter data spesifik.',
+                  style: TextStyle(color: context.colors.textMuted, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ResponsiveTableCard(
+          minWidth: 840,
+          child: DataTable(
+            headingRowColor: WidgetStateProperty.all(context.colors.bgTableHead),
+            columnSpacing: 16,
+            horizontalMargin: 12,
+            dataRowMinHeight: 64,
+            dataRowMaxHeight: 80,
+            columns: [
+              DataColumn(label: Text('Kode', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Nama Distributor', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Wilayah Region', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Jaringan Depo & Area', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Aksi', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+            ],
+            rows: filtered.take(50).map((d) {
+              final totalAreas = d.totalAreasCount;
+              final totalDepos = d.totalDeposCount;
 
-          return DataRow(
-            cells: [
-              DataCell(
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF4F46E5).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(d.code, style: const TextStyle(color: Color(0xFF4F46E5), fontWeight: FontWeight.bold)),
-                ),
-              ),
-              DataCell(
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 240),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(d.name, style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13.5)),
-                      Text('${d.depos.length} Depo • $totalAreas Area Terhubung', style: TextStyle(color: context.colors.textMuted, fontSize: 11.5)),
-                    ],
-                  ),
-                ),
-              ),
-              DataCell(
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: d.region != null ? const Color(0xFF8B5CF6).withValues(alpha: 0.12) : context.colors.bgElevated,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: d.region != null ? const Color(0xFF8B5CF6).withValues(alpha: 0.3) : context.colors.border,
+              return DataRow(
+                cells: [
+                  DataCell(
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF47A60).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(d.code, style: const TextStyle(color: Color(0xFFF47A60), fontWeight: FontWeight.bold)),
                     ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(LucideIcons.globe, size: 12, color: d.region != null ? const Color(0xFF8B5CF6) : context.colors.textMuted),
-                      const SizedBox(width: 5),
-                      Text(
-                        d.region != null ? '${d.region!.code} - ${d.region!.name}' : 'Belum Diatur',
-                        style: TextStyle(
-                          color: d.region != null ? const Color(0xFF8B5CF6) : context.colors.textMuted,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11.5,
+                  DataCell(
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 280),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Tooltip(
+                            message: d.name,
+                            child: Text(
+                              d.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: context.colors.textPrimary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                height: 1.25,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            '$totalDepos Depo • $totalAreas Area Terhubung',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: context.colors.textMuted, fontSize: 11.5),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: d.region != null ? const Color(0xFF24968B).withValues(alpha: 0.12) : context.colors.bgElevated,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: d.region != null ? const Color(0xFF24968B).withValues(alpha: 0.3) : context.colors.border,
                         ),
                       ),
-                    ],
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(LucideIcons.globe, size: 12, color: d.region != null ? const Color(0xFF24968B) : context.colors.textMuted),
+                          const SizedBox(width: 5),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 160),
+                            child: Text(
+                              d.region != null ? '${d.region!.code} - ${d.region!.name}' : 'Belum Diatur',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: d.region != null ? const Color(0xFF24968B) : context.colors.textMuted,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              DataCell(
-                InkWell(
-                  onTap: () => _showDistributorDetailDialog(d),
-                  borderRadius: BorderRadius.circular(6),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
+                  DataCell(
+                    InkWell(
+                      onTap: () => _showDistributorDetailDialog(d),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE0F2FE),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(LucideIcons.warehouse, size: 12, color: Color(0xFF316879)),
+                                    const SizedBox(width: 5),
+                                    Text('$totalDepos Depo', style: const TextStyle(color: Color(0xFF316879), fontWeight: FontWeight.bold, fontSize: 11.5)),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDDF9F6),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(LucideIcons.mapPin, size: 12, color: Color(0xFF24968B)),
+                                    const SizedBox(width: 5),
+                                    Text('$totalAreas Area', style: const TextStyle(color: Color(0xFF24968B), fontWeight: FontWeight.bold, fontSize: 11.5)),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(LucideIcons.chevronRight, size: 14, color: AppColors.slate400),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE0F2FE),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(LucideIcons.warehouse, size: 12, color: Color(0xFF0288D1)),
-                              const SizedBox(width: 5),
-                              Text('${d.depos.length} Depo', style: const TextStyle(color: Color(0xFF0288D1), fontWeight: FontWeight.bold, fontSize: 11.5)),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE8F5E9),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(LucideIcons.mapPin, size: 12, color: Color(0xFF2E7D32)),
-                              const SizedBox(width: 5),
-                              Text('$totalAreas Area', style: const TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.bold, fontSize: 11.5)),
-                            ],
-                          ),
+                        IconButton(
+                          icon: const Icon(LucideIcons.eye, size: 16, color: Color(0xFFF47A60)),
+                          padding: const EdgeInsets.all(6),
+                          constraints: const BoxConstraints(),
+                          tooltip: 'Lihat Hirarki Depo & Area',
+                          onPressed: () => _showDistributorDetailDialog(d),
                         ),
                         const SizedBox(width: 4),
-                        const Icon(LucideIcons.chevronRight, size: 14, color: AppColors.slate400),
+                        IconButton(
+                          icon: const Icon(LucideIcons.pencil, size: 16, color: Color(0xFF316879)),
+                          padding: const EdgeInsets.all(6),
+                          constraints: const BoxConstraints(),
+                          tooltip: 'Edit Distributor & Jaringan',
+                          onPressed: () => _showComprehensiveDistributorDialog(dist: d),
+                        ),
+                        const SizedBox(width: 4),
+                        IconButton(
+                          icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
+                          padding: const EdgeInsets.all(6),
+                          constraints: const BoxConstraints(),
+                          tooltip: 'Hapus Distributor',
+                          onPressed: () async {
+                            final confirmed = await showConfirmDeleteDialog(
+                              context: context,
+                              title: 'Hapus Distributor',
+                              message: 'Apakah Anda yakin ingin menghapus data distributor "${d.name}" (${d.code}) beserta seluruh jaringan Depo dan Area di dalamnya?',
+                            );
+                            if (confirmed == true) {
+                              await ref.read(masterDataProvider.notifier).deleteDistributor(d.id);
+                            }
+                          },
+                        ),
                       ],
                     ),
                   ),
-                ),
-              ),
-              DataCell(
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(LucideIcons.eye, size: 16, color: Color(0xFF4F46E5)),
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(),
-                      tooltip: 'Lihat Hirarki Depo & Area',
-                      onPressed: () => _showDistributorDetailDialog(d),
-                    ),
-                    const SizedBox(width: 4),
-                    IconButton(
-                      icon: const Icon(LucideIcons.pencil, size: 16, color: Color(0xFF0288D1)),
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(),
-                      tooltip: 'Edit Distributor & Jaringan',
-                      onPressed: () => _showComprehensiveDistributorDialog(dist: d),
-                    ),
-                    const SizedBox(width: 4),
-                    IconButton(
-                      icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(),
-                      tooltip: 'Hapus Distributor',
-                      onPressed: () async {
-                        final confirmed = await showConfirmDeleteDialog(
-                          context: context,
-                          title: 'Hapus Distributor',
-                          message: 'Apakah Anda yakin ingin menghapus data distributor "${d.name}" (${d.code}) beserta seluruh jaringan Depo dan Area di dalamnya?',
-                        );
-                        if (confirmed == true) {
-                          await ref.read(masterDataProvider.notifier).deleteDistributor(d.id);
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        }).toList(),
-      ),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1476,117 +1635,162 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
       );
     }
 
-    return ResponsiveTableCard(
-      minWidth: 800,
-      child: DataTable(
-        headingRowColor: WidgetStateProperty.all(context.colors.bgTableHead),
-        columnSpacing: 16,
-        horizontalMargin: 12,
-        columns: [
-          DataColumn(label: Text('Kode Depo', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Nama Depo', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Induk Distributor', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Area Tercover', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Aksi', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-        ],
-        rows: filtered.map((depo) {
-          final distName = depo.distributor?.name ?? '—';
-
-          return DataRow(
-            cells: [
-              DataCell(
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0288D1).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(depo.code, style: const TextStyle(color: Color(0xFF0288D1), fontWeight: FontWeight.bold)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (filtered.length > 50)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              children: [
+                Icon(LucideIcons.info, size: 14, color: context.colors.textMuted),
+                const SizedBox(width: 6),
+                Text(
+                  'Menampilkan 50 dari total ${filtered.length} depo. Gunakan kotak cari untuk memfilter data spesifik.',
+                  style: TextStyle(color: context.colors.textMuted, fontSize: 12),
                 ),
-              ),
-              DataCell(Text(depo.name, style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.w600))),
-              DataCell(
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF4F46E5).withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(LucideIcons.building2, size: 12, color: Color(0xFF4F46E5)),
-                      const SizedBox(width: 5),
-                      Text(distName, style: const TextStyle(color: Color(0xFF4F46E5), fontWeight: FontWeight.w500, fontSize: 12)),
-                    ],
-                  ),
-                ),
-              ),
-              DataCell(
-                depo.areas.isEmpty
-                    ? Text('0 Area', style: TextStyle(color: context.colors.textMuted, fontSize: 12))
-                    : Wrap(
-                        spacing: 4,
-                        runSpacing: 4,
-                        children: depo.areas.take(3).map((a) {
-                          return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE8F5E9),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(a.name, style: const TextStyle(color: Color(0xFF2E7D32), fontSize: 11, fontWeight: FontWeight.w500)),
-                          );
-                        }).toList()
-                          ..addAll(depo.areas.length > 3
-                              ? [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: context.colors.bgElevated,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text('+${depo.areas.length - 3}', style: TextStyle(color: context.colors.textMuted, fontSize: 11)),
-                                  )
-                                ]
-                              : []),
-                      ),
-              ),
-              DataCell(
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(LucideIcons.pencil, size: 16, color: Color(0xFF0288D1)),
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(),
-                      tooltip: 'Edit Depo & Area',
-                      onPressed: () => _showDepoDialog(depo: depo),
-                    ),
-                    const SizedBox(width: 4),
-                    IconButton(
-                      icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(),
-                      tooltip: 'Hapus Depo',
-                      onPressed: () async {
-                        final confirmed = await showConfirmDeleteDialog(
-                          context: context,
-                          title: 'Hapus Depo Logistik',
-                          message: 'Apakah Anda yakin ingin menghapus depo "${depo.name}" beserta area di dalamnya?',
-                        );
-                        if (confirmed == true) {
-                          await ref.read(masterDataProvider.notifier).deleteDepo(depo.id);
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
+              ],
+            ),
+          ),
+        ResponsiveTableCard(
+          minWidth: 800,
+          child: DataTable(
+            headingRowColor: WidgetStateProperty.all(context.colors.bgTableHead),
+            columnSpacing: 16,
+            horizontalMargin: 12,
+            dataRowMinHeight: 56,
+            dataRowMaxHeight: 74,
+            columns: [
+              DataColumn(label: Text('Kode Depo', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Nama Depo', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Induk Distributor', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Area Tercover', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Aksi', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
             ],
-          );
-        }).toList(),
-      ),
+            rows: filtered.take(50).map((depo) {
+              final distName = depo.distributor?.name ?? '—';
+
+              return DataRow(
+                cells: [
+                  DataCell(
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF316879).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(depo.code, style: const TextStyle(color: Color(0xFF316879), fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  DataCell(
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 240),
+                      child: Tooltip(
+                        message: depo.name,
+                        child: Text(
+                          depo.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.w600, height: 1.25),
+                        ),
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF47A60).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(LucideIcons.building2, size: 12, color: Color(0xFFF47A60)),
+                          const SizedBox(width: 5),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 160),
+                            child: Text(
+                              distName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: Color(0xFFF47A60), fontWeight: FontWeight.w500, fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    depo.areas.isEmpty
+                        ? Text('0 Area', style: TextStyle(color: context.colors.textMuted, fontSize: 12))
+                        : SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: depo.areas.take(3).map((a) {
+                                return Container(
+                                  margin: const EdgeInsets.only(right: 4),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFDDF9F6),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(a.name, style: const TextStyle(color: Color(0xFF24968B), fontSize: 11, fontWeight: FontWeight.w500)),
+                                );
+                              }).toList()
+                                ..addAll(depo.areas.length > 3
+                                    ? [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: context.colors.bgElevated,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text('+${depo.areas.length - 3}', style: TextStyle(color: context.colors.textMuted, fontSize: 11)),
+                                        )
+                                      ]
+                                    : []),
+                            ),
+                          ),
+                  ),
+                  DataCell(
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(LucideIcons.pencil, size: 16, color: Color(0xFF316879)),
+                          padding: const EdgeInsets.all(6),
+                          constraints: const BoxConstraints(),
+                          tooltip: 'Edit Depo & Area',
+                          onPressed: () => _showDepoDialog(depo: depo),
+                        ),
+                        const SizedBox(width: 4),
+                        IconButton(
+                          icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
+                          padding: const EdgeInsets.all(6),
+                          constraints: const BoxConstraints(),
+                          tooltip: 'Hapus Depo',
+                          onPressed: () async {
+                            final confirmed = await showConfirmDeleteDialog(
+                              context: context,
+                              title: 'Hapus Depo Logistik',
+                              message: 'Apakah Anda yakin ingin menghapus depo "${depo.name}" beserta area di dalamnya?',
+                            );
+                            if (confirmed == true) {
+                              await ref.read(masterDataProvider.notifier).deleteDepo(depo.id);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1609,105 +1813,155 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
       );
     }
 
-    return ResponsiveTableCard(
-      minWidth: 800,
-      child: DataTable(
-        headingRowColor: WidgetStateProperty.all(context.colors.bgTableHead),
-        columnSpacing: 16,
-        horizontalMargin: 12,
-        columns: [
-          DataColumn(label: Text('Kode Area', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Nama Area Operasional', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Induk Depo', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Distributor Rekanan', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Aksi', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-        ],
-        rows: filtered.map((area) {
-          final depoName = area.depo?.name ?? '—';
-          final distName = area.depo?.distributor?.name ?? '—';
-
-          return DataRow(
-            cells: [
-              DataCell(
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(area.code, style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (filtered.length > 50)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              children: [
+                Icon(LucideIcons.info, size: 14, color: context.colors.textMuted),
+                const SizedBox(width: 6),
+                Text(
+                  'Menampilkan 50 dari total ${filtered.length} area. Gunakan kotak cari untuk memfilter data spesifik.',
+                  style: TextStyle(color: context.colors.textMuted, fontSize: 12),
                 ),
-              ),
-              DataCell(Text(area.name, style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.w600))),
-              DataCell(
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0288D1).withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(LucideIcons.warehouse, size: 12, color: Color(0xFF0288D1)),
-                      const SizedBox(width: 5),
-                      Text(depoName, style: const TextStyle(color: Color(0xFF0288D1), fontWeight: FontWeight.w500, fontSize: 12)),
-                    ],
-                  ),
-                ),
-              ),
-              DataCell(
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF4F46E5).withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(LucideIcons.building2, size: 12, color: Color(0xFF4F46E5)),
-                      const SizedBox(width: 5),
-                      Text(distName, style: const TextStyle(color: Color(0xFF4F46E5), fontWeight: FontWeight.w500, fontSize: 12)),
-                    ],
-                  ),
-                ),
-              ),
-              DataCell(
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(LucideIcons.pencil, size: 16, color: Color(0xFF10B981)),
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(),
-                      tooltip: 'Edit Area',
-                      onPressed: () => _showAreaDialog(area: area),
-                    ),
-                    const SizedBox(width: 4),
-                    IconButton(
-                      icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(),
-                      tooltip: 'Hapus Area',
-                      onPressed: () async {
-                        final confirmed = await showConfirmDeleteDialog(
-                          context: context,
-                          title: 'Hapus Area Operasional',
-                          message: 'Apakah Anda yakin ingin menghapus area "${area.name}"?',
-                        );
-                        if (confirmed == true) {
-                          await ref.read(masterDataProvider.notifier).deleteArea(area.id);
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
+              ],
+            ),
+          ),
+        ResponsiveTableCard(
+          minWidth: 800,
+          child: DataTable(
+            headingRowColor: WidgetStateProperty.all(context.colors.bgTableHead),
+            columnSpacing: 16,
+            horizontalMargin: 12,
+            dataRowMinHeight: 56,
+            dataRowMaxHeight: 74,
+            columns: [
+              DataColumn(label: Text('Kode Area', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Nama Area Operasional', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Induk Depo', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Distributor Rekanan', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Aksi', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
             ],
-          );
-        }).toList(),
-      ),
+            rows: filtered.take(50).map((area) {
+              final depoName = area.depo?.name ?? '—';
+              final distName = area.depo?.distributor?.name ?? '—';
+
+              return DataRow(
+                cells: [
+                  DataCell(
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF24968B).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(area.code, style: const TextStyle(color: Color(0xFF24968B), fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  DataCell(
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 220),
+                      child: Tooltip(
+                        message: area.name,
+                        child: Text(
+                          area.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.w600, height: 1.25),
+                        ),
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF316879).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(LucideIcons.warehouse, size: 12, color: Color(0xFF316879)),
+                          const SizedBox(width: 5),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 150),
+                            child: Text(
+                              depoName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: Color(0xFF316879), fontWeight: FontWeight.w500, fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF47A60).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(LucideIcons.building2, size: 12, color: Color(0xFFF47A60)),
+                          const SizedBox(width: 5),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 160),
+                            child: Text(
+                              distName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: Color(0xFFF47A60), fontWeight: FontWeight.w500, fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(LucideIcons.pencil, size: 16, color: Color(0xFF24968B)),
+                          padding: const EdgeInsets.all(6),
+                          constraints: const BoxConstraints(),
+                          tooltip: 'Edit Area',
+                          onPressed: () => _showAreaDialog(area: area),
+                        ),
+                        const SizedBox(width: 4),
+                        IconButton(
+                          icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
+                          padding: const EdgeInsets.all(6),
+                          constraints: const BoxConstraints(),
+                          tooltip: 'Hapus Area',
+                          onPressed: () async {
+                            final confirmed = await showConfirmDeleteDialog(
+                              context: context,
+                              title: 'Hapus Area Operasional',
+                              message: 'Apakah Anda yakin ingin menghapus area "${area.name}"?',
+                            );
+                            if (confirmed == true) {
+                              await ref.read(masterDataProvider.notifier).deleteArea(area.id);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1727,66 +1981,100 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
       );
     }
 
-    return ResponsiveTableCard(
-      minWidth: 600,
-      child: DataTable(
-        headingRowColor: WidgetStateProperty.all(context.colors.bgTableHead),
-        columnSpacing: 16,
-        horizontalMargin: 12,
-        columns: [
-          DataColumn(label: Text('Kode Brand', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Nama Merek Dagang', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Aksi', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-        ],
-        rows: filtered.map((brand) {
-          return DataRow(
-            cells: [
-              DataCell(
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(brand.code, style: const TextStyle(color: Color(0xFFD97706), fontWeight: FontWeight.bold)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (filtered.length > 100)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              children: [
+                Icon(LucideIcons.info, size: 14, color: context.colors.textMuted),
+                const SizedBox(width: 6),
+                Text(
+                  'Menampilkan 100 dari total ${filtered.length} brand. Gunakan kotak cari untuk memfilter data spesifik.',
+                  style: TextStyle(color: context.colors.textMuted, fontSize: 12),
                 ),
-              ),
-              DataCell(Text(brand.name, style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.w600))),
-              DataCell(
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(LucideIcons.pencil, size: 16, color: Color(0xFFF59E0B)),
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(),
-                      tooltip: 'Edit Brand',
-                      onPressed: () => _showBrandDialog(brand: brand),
-                    ),
-                    const SizedBox(width: 4),
-                    IconButton(
-                      icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(),
-                      tooltip: 'Hapus Brand',
-                      onPressed: () async {
-                        final confirmed = await showConfirmDeleteDialog(
-                          context: context,
-                          title: 'Hapus Brand',
-                          message: 'Apakah Anda yakin ingin menghapus brand "${brand.name}"?',
-                        );
-                        if (confirmed == true) {
-                          await ref.read(masterDataProvider.notifier).deleteBrand(brand.id);
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
+              ],
+            ),
+          ),
+        ResponsiveTableCard(
+          minWidth: 600,
+          child: DataTable(
+            headingRowColor: WidgetStateProperty.all(context.colors.bgTableHead),
+            columnSpacing: 16,
+            horizontalMargin: 12,
+            dataRowMinHeight: 52,
+            dataRowMaxHeight: 70,
+            columns: [
+              DataColumn(label: Text('Kode Brand', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Nama Merek Dagang', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Aksi', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
             ],
-          );
-        }).toList(),
-      ),
+            rows: filtered.map((brand) {
+              return DataRow(
+                cells: [
+                  DataCell(
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF47A60).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(brand.code, style: const TextStyle(color: Color(0xFFD97706), fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  DataCell(
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 280),
+                      child: Tooltip(
+                        message: brand.name,
+                        child: Text(
+                          brand.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.w600, height: 1.25),
+                        ),
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(LucideIcons.pencil, size: 16, color: Color(0xFFF47A60)),
+                          padding: const EdgeInsets.all(6),
+                          constraints: const BoxConstraints(),
+                          tooltip: 'Edit Brand',
+                          onPressed: () => _showBrandDialog(brand: brand),
+                        ),
+                        const SizedBox(width: 4),
+                        IconButton(
+                          icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
+                          padding: const EdgeInsets.all(6),
+                          constraints: const BoxConstraints(),
+                          tooltip: 'Hapus Brand',
+                          onPressed: () async {
+                            final confirmed = await showConfirmDeleteDialog(
+                              context: context,
+                              title: 'Hapus Brand',
+                              message: 'Apakah Anda yakin ingin menghapus brand "${brand.name}"?',
+                            );
+                            if (confirmed == true) {
+                              await ref.read(masterDataProvider.notifier).deleteBrand(brand.id);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -10,10 +10,20 @@ class AreaController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $areas = Area::with('depo.distributor')
-            ->when($request->depo_id, fn ($q) => $q->where('depo_id', $request->depo_id))
-            ->latest()
-            ->get();
+        $limit = $request->integer('limit', 150);
+        $search = $request->string('search')->trim();
+
+        $query = Area::with('depo:id,distributor_id,code,name', 'depo.distributor:id,code,name')
+            ->when($request->depo_id, fn ($q) => $q->where('depo_id', $request->depo_id));
+
+        if ($search->isNotEmpty()) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%");
+            });
+        }
+
+        $areas = $query->latest('id')->limit($limit)->get();
 
         return response()->json($areas);
     }

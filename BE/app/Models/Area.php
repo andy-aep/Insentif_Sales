@@ -11,6 +11,7 @@ class Area extends Model
     use HasFactory;
 
     protected $fillable = [
+        'batch_id',
         'depo_id',
         'code',
         'name',

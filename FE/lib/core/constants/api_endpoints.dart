@@ -5,6 +5,8 @@ class ApiEndpoints {
   static const String login = '/login';
   static const String logout = '/logout';
   static const String me = '/me';
+  static const String changePassword = '/change-password';
+  static const String dashboardSummary = '/dashboard/summary';
 
   // 1. User & Access Management
   static const String users = '/users';
@@ -35,6 +37,7 @@ class ApiEndpoints {
   // 5. Master Target (Distributor, Industri, Surabaya)
   static const String masterTargets = '/master-targets';
   static const String masterTargetPeriods = '/master-targets/periods';
+  static const String masterTargetHierarchy = '/master-targets/hierarchy';
 
   // 6. Setting Insentif 3-Level
   static const String targetHeaders = '/target-headers';
@@ -46,11 +49,21 @@ class ApiEndpoints {
   // 7. Kalkulasi & Laporan Insentif per Skema
   static const String calculateIncentive = '/incentives/calculate';
   static const String incentiveResults = '/incentives/results';
+  static const String incentiveDistributorBreakdown = '/incentives/distributor-breakdown';
   static const String exportExcel = '/incentives/export-excel';
 
   // 8. Bulk Upload & Batch Rollback
   static String bulkUpload(String entity) => '/bulk-upload/$entity';
-  static String bulkUploadTemplate(String entity) => '/bulk-upload/template/$entity';
+  static String bulkUploadTemplate(String entity, {bool withData = false, String? period}) {
+    var url = '/bulk-upload/template/$entity';
+    final params = <String>[];
+    if (withData) params.add('with_data=true');
+    if (period != null && period.isNotEmpty && period != 'ALL') params.add('period=$period');
+    if (params.isNotEmpty) url += '?${params.join('&')}';
+    return url;
+  }
   static String rollbackBatch(String batchId) => '/bulk-upload/rollback/$batchId';
+  static String downloadBatchFile(String batchId) => '/bulk-upload/batches/$batchId/download';
+  static String deleteBatch(String batchId) => '/bulk-upload/batches/$batchId';
   static const String batchHistory = '/bulk-upload/history';
 }

@@ -49,6 +49,28 @@ class AuthController extends Controller
         ]);
     }
 
+    public function changePassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'password' => 'required|string|min:6',
+        ]);
+
+        if (! Hash::check($request->current_password, $request->user()->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Kata sandi saat ini tidak sesuai.'],
+            ]);
+        }
+
+        $request->user()->update([
+            'password' => Hash::make($request->password),
+        ]);
+
+        return response()->json([
+            'message' => 'Kata sandi berhasil diperbarui',
+        ]);
+    }
+
     public function me(Request $request): JsonResponse
     {
         $user = $request->user()->load(['role.menuPermissions.menu', 'position']);

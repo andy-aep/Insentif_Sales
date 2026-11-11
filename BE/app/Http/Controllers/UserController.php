@@ -89,6 +89,21 @@ class UserController extends Controller
         ]);
     }
 
+    public function updatePassword(Request $request, User $user): JsonResponse
+    {
+        $validated = $request->validate([
+            'password' => 'required|string|min:6',
+        ]);
+
+        $user->update([
+            'password' => Hash::make($validated['password']),
+        ]);
+
+        return response()->json([
+            'message' => "Kata sandi user {$user->name} berhasil diperbarui",
+        ]);
+    }
+
     public function destroy(User $user): JsonResponse
     {
         $user->delete();

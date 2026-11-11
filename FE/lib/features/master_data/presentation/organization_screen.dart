@@ -77,7 +77,7 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
               final refreshBtn = IconButton(
                 icon: Icon(LucideIcons.refreshCw, color: colors.textSecondary),
                 tooltip: 'Segarkan Master Data',
-                onPressed: () => notifier.fetchAllMasterData(),
+                onPressed: () => notifier.fetchAllMasterData(force: true),
               );
 
               if (isNarrow) {
@@ -224,6 +224,8 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
       minWidth: 700,
       child: DataTable(
         headingRowColor: WidgetStateProperty.all(colors.bgTableHead),
+        dataRowMinHeight: 52,
+        dataRowMaxHeight: 68,
         columns: [
           DataColumn(label: Text('Kode', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
           DataColumn(label: Text('Nama Distributor', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
@@ -233,8 +235,18 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
           return DataRow(
             cells: [
               DataCell(Text(d.code, style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.bold))),
-              DataCell(Text(d.name, style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w500))),
-              DataCell(Text(d.address ?? '-', style: TextStyle(color: colors.textSecondary))),
+              DataCell(
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 240),
+                  child: Text(d.name, style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w500), maxLines: 2, overflow: TextOverflow.ellipsis),
+                ),
+              ),
+              DataCell(
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 300),
+                  child: Text(d.address ?? '-', style: TextStyle(color: colors.textSecondary), maxLines: 2, overflow: TextOverflow.ellipsis),
+                ),
+              ),
             ],
           );
         }).toList(),
@@ -255,6 +267,8 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
       minWidth: 700,
       child: DataTable(
         headingRowColor: WidgetStateProperty.all(colors.bgTableHead),
+        dataRowMinHeight: 52,
+        dataRowMaxHeight: 68,
         columns: [
           DataColumn(label: Text('Kode Depo', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
           DataColumn(label: Text('Nama Depo', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
@@ -264,8 +278,18 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
           return DataRow(
             cells: [
               DataCell(Text(d.code, style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.bold))),
-              DataCell(Text(d.name, style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w500))),
-              DataCell(Text(d.distributor?.name ?? 'Distributor #${d.distributorId ?? "-"}', style: TextStyle(color: colors.textSecondary))),
+              DataCell(
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 240),
+                  child: Text(d.name, style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w500), maxLines: 2, overflow: TextOverflow.ellipsis),
+                ),
+              ),
+              DataCell(
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 260),
+                  child: Text(d.distributor?.name ?? 'Distributor #${d.distributorId ?? "-"}', style: TextStyle(color: colors.textSecondary), maxLines: 2, overflow: TextOverflow.ellipsis),
+                ),
+              ),
             ],
           );
         }).toList(),
@@ -286,6 +310,8 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
       minWidth: 650,
       child: DataTable(
         headingRowColor: WidgetStateProperty.all(colors.bgTableHead),
+        dataRowMinHeight: 52,
+        dataRowMaxHeight: 68,
         columns: [
           DataColumn(label: Text('Kode Area', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
           DataColumn(label: Text('Nama Area Operasional', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
@@ -294,7 +320,12 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
           return DataRow(
             cells: [
               DataCell(Text(a.code, style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.bold))),
-              DataCell(Text(a.name, style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w500))),
+              DataCell(
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 300),
+                  child: Text(a.name, style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w500), maxLines: 2, overflow: TextOverflow.ellipsis),
+                ),
+              ),
             ],
           );
         }).toList(),
@@ -315,6 +346,8 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
       minWidth: 650,
       child: DataTable(
         headingRowColor: WidgetStateProperty.all(colors.bgTableHead),
+        dataRowMinHeight: 52,
+        dataRowMaxHeight: 68,
         columns: [
           DataColumn(label: Text('Kode Brand', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
           DataColumn(label: Text('Nama Merek Dagang', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
@@ -323,7 +356,12 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
           return DataRow(
             cells: [
               DataCell(Text(b.code, style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.bold))),
-              DataCell(Text(b.name, style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w500))),
+              DataCell(
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 300),
+                  child: Text(b.name, style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w500), maxLines: 2, overflow: TextOverflow.ellipsis),
+                ),
+              ),
             ],
           );
         }).toList(),

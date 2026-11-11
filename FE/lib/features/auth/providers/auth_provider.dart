@@ -75,8 +75,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
             await prefs.setString('user_data', jsonEncode(freshUser.toJson()));
             state = state.copyWith(user: freshUser);
           }
+        } on DioException catch (dioErr) {
+          if (dioErr.response?.statusCode == 401) {
+            await prefs.remove('auth_token');
+            await prefs.remove('user_data');
+            state = state.copyWith(isAuthenticated: false, token: null, user: null, isLoading: false);
+          }
         } catch (_) {
-          // If /me fails but token exists, keep authenticated with cached user
+          // If /me fails due to connection but token exists, keep authenticated with cached user
         }
       } else {
         state = state.copyWith(isAuthenticated: false, isLoading: false);
@@ -144,12 +150,49 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<void> logout() async {
+  Future<String?> changeOwnPassword(String currentPassword, String newPassword) async {
     try {
-      await DioClient.instance.post(ApiEndpoints.logout);
-    } catch (_) {}
+      final res = await DioClient.instance.post(
+        ApiEndpoints.changePassword,
+        data: {
+          'current_password': currentPassword,
+          'password': newPassword,
+        },
+      );
+      final msg = res.data is Map && res.data['message'] != null
+          ? res.data['message'].toString()
+          : 'Kata sandi berhasil diperbarui';
+      return msg;
+    } on DioException catch (dioErr) {
+      if (dioErr.response?.data is Map) {
+        final data = dioErr.response!.data as Map;
+        if (data['errors'] is Map) {
+          final errMap = data['errors'] as Map;
+          final firstKey = errMap.keys.firstOrNull;
+          if (firstKey != null && errMap[firstKey] is List) {
+            return (errMap[firstKey] as List).join(', ');
+          }
+        }
+        if (data['message'] != null) {
+          return data['message'].toString();
+        }
+      }
+      return 'Gagal mengubah kata sandi: ${dioErr.message}';
+    } catch (e) {
+      return 'Terjadi kesalahan: $e';
+    }
+  }
 
+  Future<void> logout({bool remote = true}) async {
     final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+
+    if (remote && token != null && token.isNotEmpty) {
+      try {
+        await DioClient.instance.post(ApiEndpoints.logout);
+      } catch (_) {}
+    }
+
     await prefs.remove('auth_token');
     await prefs.remove('user_data');
 
