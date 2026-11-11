@@ -59,10 +59,10 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final responses = await Future.wait([
-        DioClient.instance.get(ApiEndpoints.users).catchError((_) => Response(requestOptions: RequestOptions())),
-        DioClient.instance.get(ApiEndpoints.roles).catchError((_) => Response(requestOptions: RequestOptions())),
-        DioClient.instance.get(ApiEndpoints.positions).catchError((_) => Response(requestOptions: RequestOptions())),
-        DioClient.instance.get(ApiEndpoints.menus).catchError((_) => Response(requestOptions: RequestOptions())),
+        DioClient.instance.get(ApiEndpoints.users, queryParameters: {'per_page': 500}).catchError((_) => Response(requestOptions: RequestOptions())),
+        DioClient.instance.get(ApiEndpoints.roles, queryParameters: {'per_page': 100}).catchError((_) => Response(requestOptions: RequestOptions())),
+        DioClient.instance.get(ApiEndpoints.positions, queryParameters: {'per_page': 100}).catchError((_) => Response(requestOptions: RequestOptions())),
+        DioClient.instance.get(ApiEndpoints.menus, queryParameters: {'per_page': 100}).catchError((_) => Response(requestOptions: RequestOptions())),
       ]);
 
       List<UserModel> users = _extractList(responses[0].data, (j) => UserModel.fromJson(j));

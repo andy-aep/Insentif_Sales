@@ -11,6 +11,8 @@ class UserController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        $perPage = $request->boolean('all') ? 1000 : min(max($request->integer('per_page', 250), 1), 1000);
+
         $users = User::with(['role', 'position'])
             ->when($request->role_id, fn ($q) => $q->where('role_id', $request->role_id))
             ->when($request->position_id, fn ($q) => $q->where('position_id', $request->position_id))
@@ -20,8 +22,8 @@ class UserController extends Controller
                         ->orWhere('username', 'like', "%{$search}%");
                 });
             })
-            ->latest()
-            ->paginate($request->integer('per_page', 15));
+            ->orderBy('name')
+            ->paginate($perPage);
 
         return response()->json($users);
     }
