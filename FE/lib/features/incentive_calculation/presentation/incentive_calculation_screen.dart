@@ -23,12 +23,16 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
   final _periodController = TextEditingController(text: '202610');
   final _searchController = TextEditingController();
   final Set<int> _expandedCardIds = {};
+  int _cardsPage = 1;
+  int _cardsPerPage = 10;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(userManagementProvider.notifier).fetchAll();
+      if (ref.read(userManagementProvider).users.isEmpty) {
+        ref.read(userManagementProvider.notifier).fetchAll();
+      }
       if (widget.initialKategori != null) {
         ref.read(incentiveCalculationProvider.notifier).setKategori(widget.initialKategori!);
       }
@@ -292,7 +296,10 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                   );
                                 }),
                               ],
-                              onChanged: (val) => notifier.setPosition(val),
+                              onChanged: (val) {
+                                setState(() => _cardsPage = 1);
+                                notifier.setPosition(val);
+                              },
                             ),
                           ),
                         ),
@@ -348,7 +355,10 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                   );
                                 }),
                               ],
-                              onChanged: (val) => notifier.setUser(val),
+                              onChanged: (val) {
+                                setState(() => _cardsPage = 1);
+                                notifier.setUser(val);
+                              },
                             ),
                           ),
                         ),
@@ -595,7 +605,10 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: colors.borderMuted)),
                             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.primary)),
                           ),
-                          onChanged: (val) => notifier.setSearchQuery(val),
+                          onChanged: (val) {
+                            setState(() => _cardsPage = 1);
+                            notifier.setSearchQuery(val);
+                          },
                         ),
                       );
 
@@ -763,17 +776,143 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
       );
     }
 
+    final totalCards = filteredCards.length;
+    final totalPages = _cardsPerPage > 0 ? (totalCards / _cardsPerPage).ceil().clamp(1, 999999) : 1;
+    final currentPage = _cardsPage.clamp(1, totalPages);
+    final startIndex = _cardsPerPage > 0 ? (currentPage - 1) * _cardsPerPage : 0;
+    final displayedCards = _cardsPerPage > 0
+        ? filteredCards.skip(startIndex).take(_cardsPerPage).toList()
+        : filteredCards;
+
     return Padding(
       padding: const EdgeInsets.all(20),
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: filteredCards.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 16),
-        itemBuilder: (context, index) {
-          final card = filteredCards[index];
-          return _buildDepoCard(card, colors);
-        },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: displayedCards.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 16),
+            itemBuilder: (context, index) {
+              final card = displayedCards[index];
+              return _buildDepoCard(card, colors);
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildPaginationBar(
+            totalCards: totalCards,
+            currentPage: currentPage,
+            totalPages: totalPages,
+            startIndex: startIndex,
+            displayedCount: displayedCards.length,
+            colors: colors,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaginationBar({
+    required int totalCards,
+    required int currentPage,
+    required int totalPages,
+    required int startIndex,
+    required int displayedCount,
+    required AppThemeColors colors,
+  }) {
+    if (totalCards == 0) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: colors.bgSubtle.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.borderMuted),
+      ),
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 12,
+        runSpacing: 10,
+        children: [
+          Text(
+            'Menampilkan ${totalCards > 0 ? startIndex + 1 : 0} - ${startIndex + displayedCount} dari $totalCards Depo',
+            style: TextStyle(fontSize: 12.5, color: colors.textSecondary, fontWeight: FontWeight.w500),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Baris: ', style: TextStyle(fontSize: 12, color: colors.textSecondary)),
+              DropdownButton<int>(
+                value: _cardsPerPage,
+                isDense: true,
+                underline: const SizedBox.shrink(),
+                dropdownColor: colors.bgCard,
+                style: TextStyle(fontSize: 12, color: colors.textPrimary, fontWeight: FontWeight.w600),
+                items: const [
+                  DropdownMenuItem(value: 10, child: Text('10')),
+                  DropdownMenuItem(value: 25, child: Text('25')),
+                  DropdownMenuItem(value: 50, child: Text('50')),
+                  DropdownMenuItem(value: -1, child: Text('Semua')),
+                ],
+                onChanged: (val) {
+                  if (val != null) {
+                    setState(() {
+                      _cardsPerPage = val;
+                      _cardsPage = 1;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(width: 14),
+              IconButton(
+                icon: const Icon(LucideIcons.chevronsLeft, size: 15),
+                tooltip: 'Halaman Pertama',
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints(),
+                onPressed: currentPage > 1 ? () => setState(() => _cardsPage = 1) : null,
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                icon: const Icon(LucideIcons.chevronLeft, size: 15),
+                tooltip: 'Halaman Sebelumnya',
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints(),
+                onPressed: currentPage > 1 ? () => setState(() => _cardsPage = currentPage - 1) : null,
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: colors.bgCard,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: colors.border),
+                ),
+                child: Text(
+                  '$currentPage / $totalPages',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(LucideIcons.chevronRight, size: 15),
+                tooltip: 'Halaman Selanjutnya',
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints(),
+                onPressed: currentPage < totalPages ? () => setState(() => _cardsPage = currentPage + 1) : null,
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                icon: const Icon(LucideIcons.chevronsRight, size: 15),
+                tooltip: 'Halaman Terakhir',
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints(),
+                onPressed: currentPage < totalPages ? () => setState(() => _cardsPage = totalPages) : null,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

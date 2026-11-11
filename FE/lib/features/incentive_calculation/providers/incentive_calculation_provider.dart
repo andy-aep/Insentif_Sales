@@ -94,6 +94,9 @@ class IncentiveCalculationNotifier extends StateNotifier<IncentiveCalculationSta
 
   void setKategori(String kategori) {
     final normalized = kategori.toUpperCase() == 'DISTRIBUTOR' ? 'KONSUMSI' : kategori.toUpperCase();
+    if (state.selectedKategori == normalized && (state.results.isNotEmpty || state.breakdownCards.isNotEmpty || state.isLoading)) {
+      return;
+    }
     state = state.copyWith(
       selectedKategori: normalized,
       clearPosition: true,
@@ -137,6 +140,7 @@ class IncentiveCalculationNotifier extends StateNotifier<IncentiveCalculationSta
   }
 
   Future<void> fetchResults() async {
+    if (state.isLoading) return;
     state = state.copyWith(isLoading: true, clearError: true, clearSuccess: true);
     try {
       final queryParams = <String, dynamic>{

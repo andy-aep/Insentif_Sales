@@ -243,9 +243,15 @@ class IncentiveCalculationController extends Controller
 
         $depoTargets = $depoQuery->get();
 
-        // Realization records cache
+        // Realization records cache with fast hash map indexing
         $allSellin = SellinDistributor::where('period', $cleanPeriod)->get();
         $allSellout = SelloutDistributor::where('period', $cleanPeriod)->get();
+
+        $sellinByDistBrand = $allSellin->groupBy(fn ($s) => $s->distributor_id . '_' . ($s->brand_id ?? 0));
+        $sellinByDist = $allSellin->groupBy('distributor_id');
+
+        $selloutByDepoBrand = $allSellout->groupBy(fn ($s) => $s->depo_id . '_' . ($s->brand_id ?? 0));
+        $selloutByDepo = $allSellout->groupBy('depo_id');
 
         // 2. Get relevant AREA target rows
         $areaQuery = MasterTarget::with(['area', 'brand', 'user.position'])
@@ -302,11 +308,12 @@ class IncentiveCalculationController extends Controller
                 if (!$match) continue;
             }
 
-            // Sell-In
+            // Sell-In (O(1) hash map lookup)
             $targetSi = (float) $dt->target_quota;
-            $realSi = (float) $allSellin->where('distributor_id', $dt->distributor_id)
-                ->when($dt->brand_id, fn($c) => $c->where('brand_id', $dt->brand_id))
-                ->sum('volume_kg');
+            $matchedSiRecords = $dt->brand_id
+                ? ($sellinByDistBrand->get($dt->distributor_id . '_' . $dt->brand_id) ?? collect())
+                : ($sellinByDist->get($dt->distributor_id) ?? collect());
+            $realSi = (float) $matchedSiRecords->sum('volume_kg');
             $achSiPct = $targetSi > 0 ? round(($realSi / $targetSi) * 100, 1) : 0.0;
 
             $rewardSi = $this->calculateRewardForMetric($asmHeader, $targetSi, $realSi);
@@ -332,12 +339,13 @@ class IncentiveCalculationController extends Controller
                 $targetSo = (float) $at->target_quota;
                 $targetAo = (int) $at->target_outlet;
 
-                $realSo = (float) $allSellout->where('depo_id', $dt->depo_id)
-                    ->when($at->brand_id, fn($c) => $c->where('brand_id', $at->brand_id))
-                    ->sum('volume_kg');
-                $realAo = (int) $allSellout->where('depo_id', $dt->depo_id)
-                    ->when($at->brand_id, fn($c) => $c->where('brand_id', $at->brand_id))
-                    ->sum('active_outlet_count');
+                // Sell-Out & AO (O(1) hash map lookup)
+                $matchedSoRecords = $at->brand_id
+                    ? ($selloutByDepoBrand->get($dt->depo_id . '_' . $at->brand_id) ?? collect())
+                    : ($selloutByDepo->get($dt->depo_id) ?? collect());
+
+                $realSo = (float) $matchedSoRecords->sum('volume_kg');
+                $realAo = (int) $matchedSoRecords->sum('active_outlet_count');
 
                 $achSoPct = $targetSo > 0 ? round(($realSo / $targetSo) * 100, 1) : 0.0;
                 $achAoPct = $targetAo > 0 ? round(($realAo / $targetAo) * 100, 1) : 0.0;
