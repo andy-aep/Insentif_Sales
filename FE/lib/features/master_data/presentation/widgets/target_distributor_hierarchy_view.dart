@@ -5,8 +5,10 @@ import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../data/models/master_model.dart';
 import '../../../../data/models/master_target_model.dart';
 import '../../providers/master_data_provider.dart';
+import '../../providers/master_target_provider.dart';
 
 /// Tampilan Target Distributor hirarkis:
 /// Distributor -> Depo (target per brand) -> Area (target per brand).
@@ -14,12 +16,22 @@ class TargetDistributorHierarchyView extends ConsumerStatefulWidget {
   final String period;
   final void Function(MasterTargetModel target) onEdit;
   final Future<void> Function(MasterTargetModel target) onDelete;
+  final void Function({
+    required int distributorId,
+    required int depoId,
+    int? brandId,
+    String? period,
+    double? initialDepoSellIn,
+    Map<int, double>? initialAreaSellOut,
+    Map<int, int>? initialAreaAo,
+  })? onEditDepoBundle;
 
   const TargetDistributorHierarchyView({
     super.key,
     required this.period,
     required this.onEdit,
     required this.onDelete,
+    this.onEditDepoBundle,
   });
 
   @override
@@ -68,6 +80,9 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
   String _metric = 'ALL';
   String _search = '';
   final _searchCtrl = TextEditingController();
+
+  int? get activeDistributorId => _distId;
+  int? get activeBrandId => _brandId;
 
   @override
   void initState() {
@@ -140,11 +155,228 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
   double _sumQuota(List<MasterTargetModel> list, String metric) =>
       list.where((t) => t.targetType == metric).fold(0.0, (s, t) => s + t.targetQuota);
 
+  void _showMultiPeriodFilterDialog(BuildContext context, List<String> availablePeriods) {
+    final colors = context.colors;
+    final raw = widget.period.trim();
+    final isAllInitial = raw.isEmpty || raw.toUpperCase() == 'ALL';
+    final selected = <String>{
+      if (!isAllInitial)
+        ...raw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty),
+    };
+    bool selectAllPeriods = isAllInitial;
+    final customPeriodCtrl = TextEditingController();
+
+    final periodsToShow = List<String>.from(availablePeriods);
+    for (final s in selected) {
+      if (!periodsToShow.contains(s)) periodsToShow.add(s);
+    }
+    if (periodsToShow.isEmpty) {
+      periodsToShow.addAll(['202612', '202611', '202610', '202609', '202608', '202607']);
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) {
+          return AlertDialog(
+            backgroundColor: colors.bgDialog,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: colors.border),
+            ),
+            title: Row(
+              children: [
+                const Icon(LucideIcons.calendar, size: 19, color: AppColors.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Filter Periode Target',
+                    style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setDialogState(() {
+                      selectAllPeriods = !selectAllPeriods;
+                      if (selectAllPeriods) {
+                        selected
+                          ..clear()
+                          ..addAll(periodsToShow);
+                      } else {
+                        selected
+                          ..clear()
+                          ..add(periodsToShow.first);
+                      }
+                    });
+                  },
+                  child: Text(
+                    selectAllPeriods ? 'Pilih 1 Bulan' : 'Semua Periode',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: 360,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  CheckboxListTile(
+                    dense: true,
+                    activeColor: AppColors.primary,
+                    value: selectAllPeriods,
+                    title: Text(
+                      'Tampilkan Semua Periode (ALL)',
+                      style: TextStyle(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    onChanged: (val) {
+                      setDialogState(() {
+                        selectAllPeriods = val == true;
+                        if (selectAllPeriods) {
+                          selected
+                            ..clear()
+                            ..addAll(periodsToShow);
+                        } else if (selected.length == periodsToShow.length) {
+                          selected
+                            ..clear()
+                            ..add(periodsToShow.first);
+                        }
+                      });
+                    },
+                  ),
+                  Divider(height: 12, color: colors.border),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 260),
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: periodsToShow.map((p) {
+                        final isChecked = selectAllPeriods || selected.contains(p);
+                        return CheckboxListTile(
+                          dense: true,
+                          activeColor: AppColors.primary,
+                          value: isChecked,
+                          title: Text(
+                            'Periode $p',
+                            style: TextStyle(
+                              color: colors.textPrimary,
+                              fontWeight: isChecked ? FontWeight.w600 : FontWeight.normal,
+                              fontSize: 13,
+                            ),
+                          ),
+                          onChanged: (checked) {
+                            setDialogState(() {
+                              if (selectAllPeriods) {
+                                selectAllPeriods = false;
+                                selected
+                                  ..clear()
+                                  ..addAll(periodsToShow);
+                              }
+                              if (checked == true) {
+                                selected.add(p);
+                              } else if (selected.length > 1) {
+                                selected.remove(p);
+                              }
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: customPeriodCtrl,
+                          keyboardType: TextInputType.number,
+                          maxLength: 6,
+                          style: TextStyle(color: colors.textPrimary, fontSize: 12.5),
+                          decoration: InputDecoration(
+                            counterText: '',
+                            hintText: 'Tambah YYYYMM (mis: 202611)',
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton(
+                        onPressed: () {
+                          final txt = customPeriodCtrl.text.trim();
+                          if (txt.length == 6) {
+                            setDialogState(() {
+                              if (!periodsToShow.contains(txt)) periodsToShow.insert(0, txt);
+                              selectAllPeriods = false;
+                              selected.add(txt);
+                              customPeriodCtrl.clear();
+                            });
+                          }
+                        },
+                        child: const Text('+ Tambah', style: TextStyle(fontSize: 12)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Batal', style: TextStyle(color: colors.textMuted)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  if (selectAllPeriods) {
+                    ref.read(masterTargetProvider.notifier).setPeriod('ALL');
+                  } else {
+                    final sorted = selected.toList()..sort();
+                    ref.read(masterTargetProvider.notifier).setPeriod(
+                      sorted.isEmpty ? 'ALL' : sorted.join(','),
+                    );
+                  }
+                },
+                child: Text(
+                  selectAllPeriods ? 'Terapkan (Semua Periode)' : 'Terapkan (${selected.length} Periode)',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     final master = ref.watch(masterDataProvider);
+    final targetState = ref.watch(masterTargetProvider);
+    final sortedDists = List<DistributorModel>.from(master.distributors)
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     num s(String k) => (_summary[k] as num?) ?? 0;
+
+    final rawPeriod = widget.period.trim();
+    final periodItems = (rawPeriod.isEmpty || rawPeriod.toUpperCase() == 'ALL')
+        ? <String>[]
+        : rawPeriod.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    final periodLabel = periodItems.isEmpty
+        ? 'Semua Periode'
+        : (periodItems.length == 1
+            ? 'Periode: ${periodItems.first}'
+            : '${periodItems.length} Periode (${periodItems.first}–${periodItems.last})');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -155,12 +387,12 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
           children: [
             _kpi(context, 'Distributor', '${s('distributor_count')} Distributor', LucideIcons.building, AppColors.primary),
             _kpi(context, 'Baris Target', '${s('depo_count')} Depo · ${s('area_count')} Area', LucideIcons.layers, AppColors.warning),
-            _kpi(context, 'Sell-Out Depo / Area',
-                '${CurrencyFormatter.formatNumber(s('depo_sell_out').toDouble())} / ${CurrencyFormatter.formatNumber(s('area_sell_out').toDouble())} Kg',
-                LucideIcons.trendingUp, AppColors.success),
-            _kpi(context, 'Sell-In Depo / Area',
-                '${CurrencyFormatter.formatNumber(s('depo_sell_in').toDouble())} / ${CurrencyFormatter.formatNumber(s('area_sell_in').toDouble())} Kg',
+            _kpi(context, 'Target Sell-In (Depo)',
+                '${CurrencyFormatter.formatNumber(s('depo_sell_in').toDouble())} Kg',
                 LucideIcons.truck, AppColors.info),
+            _kpi(context, 'Target Sell-Out & AO (Area)',
+                '${CurrencyFormatter.formatNumber(s('area_sell_out').toDouble())} Kg · ${CurrencyFormatter.formatNumber(s('total_ao').toDouble())} Toko',
+                LucideIcons.trendingUp, AppColors.success),
           ],
         ),
         const SizedBox(height: 16),
@@ -177,8 +409,45 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
             runSpacing: 12,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
+              // 1. Filter Multi-Periode
+              InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => _showMultiPeriodFilterDialog(context, targetState.availablePeriods),
+                child: Container(
+                  width: 225,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: colors.bgElevated,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.6)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(LucideIcons.calendar, size: 16, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Filter Periode', style: TextStyle(color: colors.textMuted, fontSize: 10)),
+                            Text(
+                              periodLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 12.5),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(LucideIcons.chevronDown, size: 15, color: colors.textMuted),
+                    ],
+                  ),
+                ),
+              ),
+              // 2. Filter Distributor (Urut Abjad)
               SizedBox(
-                width: 280,
+                width: 260,
                 child: DropdownButtonFormField<int?>(
                   initialValue: _distId,
                   isExpanded: true,
@@ -186,7 +455,7 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
                   decoration: _dec('Filter Distributor', LucideIcons.building2),
                   items: [
                     const DropdownMenuItem<int?>(value: null, child: Text('Semua Distributor')),
-                    ...master.distributors.map((d) => DropdownMenuItem<int?>(value: d.id, child: Text(d.name, overflow: TextOverflow.ellipsis))),
+                    ...sortedDists.map((d) => DropdownMenuItem<int?>(value: d.id, child: Text('${d.name} (${d.code})', overflow: TextOverflow.ellipsis))),
                   ],
                   onChanged: (v) {
                     _distId = v;
@@ -194,8 +463,9 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
                   },
                 ),
               ),
+              // 3. Filter Brand
               SizedBox(
-                width: 200,
+                width: 185,
                 child: DropdownButtonFormField<int?>(
                   initialValue: _brandId,
                   isExpanded: true,
@@ -203,7 +473,7 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
                   decoration: _dec('Filter Brand', LucideIcons.tag),
                   items: [
                     const DropdownMenuItem<int?>(value: null, child: Text('Semua Brand')),
-                    ...master.brands.map((b) => DropdownMenuItem<int?>(value: b.id, child: Text(b.name))),
+                    ...master.brands.map((b) => DropdownMenuItem<int?>(value: b.id, child: Text(b.name, overflow: TextOverflow.ellipsis))),
                   ],
                   onChanged: (v) {
                     _brandId = v;
@@ -211,8 +481,9 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
                   },
                 ),
               ),
+              // 4. Filter Metrik
               SizedBox(
-                width: 190,
+                width: 170,
                 child: DropdownButtonFormField<String>(
                   initialValue: _metric,
                   isExpanded: true,
@@ -220,9 +491,8 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
                   decoration: _dec('Metrik', LucideIcons.activity),
                   items: const [
                     DropdownMenuItem(value: 'ALL', child: Text('Semua Metrik', overflow: TextOverflow.ellipsis)),
-                    DropdownMenuItem(value: 'SELL_OUT', child: Text('SELL_OUT', overflow: TextOverflow.ellipsis)),
-                    DropdownMenuItem(value: 'SELL_IN', child: Text('SELL_IN', overflow: TextOverflow.ellipsis)),
-                    DropdownMenuItem(value: 'AO', child: Text('AO', overflow: TextOverflow.ellipsis)),
+                    DropdownMenuItem(value: 'SELL_IN', child: Text('Sell-In (Depo)', overflow: TextOverflow.ellipsis)),
+                    DropdownMenuItem(value: 'SELL_OUT', child: Text('Sell-Out & AO (Area)', overflow: TextOverflow.ellipsis)),
                   ],
                   onChanged: (v) {
                     _metric = v ?? 'ALL';
@@ -230,8 +500,9 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
                   },
                 ),
               ),
+              // 5. Cari
               SizedBox(
-                width: 320,
+                width: 260,
                 child: TextField(
                   controller: _searchCtrl,
                   style: TextStyle(color: colors.textPrimary, fontSize: 13),
@@ -311,6 +582,52 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
     );
   }
 
+  void _triggerEditDepoBundle(_DistNode d, _DepoNode dp, {int? preferredBrandId, String? preferredPeriod}) {
+    if (widget.onEditDepoBundle == null) return;
+    final allTargets = [...dp.targets, ...dp.areas.expand((a) => a.targets)];
+    final sample = allTargets.isNotEmpty ? allTargets.first : null;
+    final resolvedPeriod = preferredPeriod ?? sample?.period;
+    final resolvedBrandId = preferredBrandId ?? sample?.brandId;
+
+    MasterTargetModel? matchedDepoTarget;
+    for (final t in dp.targets) {
+      if ((resolvedPeriod == null || t.period == resolvedPeriod) &&
+          (resolvedBrandId == null || t.brandId == resolvedBrandId)) {
+        matchedDepoTarget = t;
+        break;
+      }
+    }
+    matchedDepoTarget ??= dp.targets.firstOrNull;
+
+    final areaSoMap = <int, double>{};
+    final areaAoMap = <int, int>{};
+    for (final a in dp.areas) {
+      MasterTargetModel? matchedAreaTarget;
+      for (final t in a.targets) {
+        if ((resolvedPeriod == null || t.period == resolvedPeriod) &&
+            (resolvedBrandId == null || t.brandId == resolvedBrandId)) {
+          matchedAreaTarget = t;
+          break;
+        }
+      }
+      matchedAreaTarget ??= a.targets.firstOrNull;
+      if (matchedAreaTarget != null) {
+        areaSoMap[a.id] = matchedAreaTarget.targetQuota;
+        areaAoMap[a.id] = matchedAreaTarget.targetOutlet ?? 0;
+      }
+    }
+
+    widget.onEditDepoBundle!(
+      distributorId: d.id,
+      depoId: dp.id,
+      brandId: resolvedBrandId,
+      period: resolvedPeriod,
+      initialDepoSellIn: matchedDepoTarget?.targetQuota,
+      initialAreaSellOut: areaSoMap,
+      initialAreaAo: areaAoMap,
+    );
+  }
+
   Widget _distTile(BuildContext context, _DistNode d) {
     final colors = context.colors;
     return Container(
@@ -337,15 +654,17 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
           subtitle: Text('${d.code} · ${d.depos.length} Depo · ${d.depoTargetCount} target depo · ${d.areaTargetCount} target area',
               style: TextStyle(color: colors.textMuted, fontSize: 12)),
           childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-          children: d.depos.map((dp) => _depoTile(context, dp)).toList(),
+          children: d.depos.map((dp) => _depoTile(context, d, dp)).toList(),
         ),
       ),
     );
   }
 
-  Widget _depoTile(BuildContext context, _DepoNode dp) {
+  Widget _depoTile(BuildContext context, _DistNode d, _DepoNode dp) {
     final colors = context.colors;
     final allTargets = [...dp.targets, ...dp.areas.expand((a) => a.targets)];
+    final periodsInDepo = allTargets.map((t) => t.period).where((p) => p.isNotEmpty).toSet().toList()..sort();
+
     return Container(
       margin: const EdgeInsets.only(top: 10),
       decoration: BoxDecoration(
@@ -356,8 +675,51 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
+          initiallyExpanded: true,
           leading: const Icon(LucideIcons.building2, size: 18, color: AppColors.primary),
-          title: Text('Depo: ${dp.name}', style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+          title: Wrap(
+            spacing: 10,
+            runSpacing: 6,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Depo: ${dp.name}', style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                  if (periodsInDepo.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        periodsInDepo.length == 1
+                            ? 'Periode ${periodsInDepo.first}'
+                            : '${periodsInDepo.length} Periode (${periodsInDepo.first}–${periodsInDepo.last})',
+                        style: const TextStyle(color: AppColors.primaryLight, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              if (widget.onEditDepoBundle != null)
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  icon: const Icon(LucideIcons.sliders, size: 13),
+                  label: const Text('Edit Depo & Area Sekaligus', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                  onPressed: () => _triggerEditDepoBundle(d, dp),
+                ),
+            ],
+          ),
           subtitle: Text(
             '${dp.code} · ${dp.targets.length} target brand · ${dp.areas.length} Area · Sell-In Depo ${CurrencyFormatter.formatNumber(_sumQuota(dp.targets, 'SELL_IN'))} Kg',
             style: TextStyle(color: colors.textMuted, fontSize: 11.5),
@@ -366,7 +728,7 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
           children: [
             if (allTargets.isEmpty) Text('Tidak ada target.', style: TextStyle(color: colors.textMuted)),
             if (dp.targets.isNotEmpty) ...[
-              _sectionLabel(context, 'Target Depo (ASM) per Brand', AppColors.primary),
+              _sectionLabel(context, 'Target Depo (ASM — Sell-In)', AppColors.primary),
               _targetTable(context, dp.targets, isDepo: true),
             ],
             ...dp.areas.map((a) => Padding(
@@ -413,33 +775,47 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
         dataRowMaxHeight: 44,
         headingRowColor: WidgetStateProperty.all(colors.bgTableHead),
         columns: [
+          const DataColumn(label: Text('Periode')),
           const DataColumn(label: Text('Brand')),
           const DataColumn(label: Text('Metrik')),
-          const DataColumn(label: Text('Target Kuota')),
-          if (!isDepo) const DataColumn(label: Text('Target Outlet')),
+          DataColumn(label: Text(isDepo ? 'Target Sell-In' : 'Target Sell-Out')),
+          if (!isDepo) const DataColumn(label: Text('Target AO (Toko)')),
           const DataColumn(label: Text('PIC')),
           const DataColumn(label: Text('Aksi')),
         ],
         rows: targets.map((t) {
           final isAo = t.targetType == 'AO';
           return DataRow(cells: [
+            DataCell(
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  t.period,
+                  style: const TextStyle(color: AppColors.primaryLight, fontSize: 11.5, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
             DataCell(Text(t.brand?.name ?? '-', style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600))),
-            DataCell(Text(t.targetType, style: const TextStyle(color: AppColors.info, fontSize: 12, fontWeight: FontWeight.bold))),
+            DataCell(Text(isDepo ? 'SELL_IN' : 'SELL_OUT & AO', style: const TextStyle(color: AppColors.info, fontSize: 11.5, fontWeight: FontWeight.bold))),
             DataCell(Text(
               isAo ? '${t.targetOutlet ?? t.targetQuota.toInt()} Toko' : '${CurrencyFormatter.formatNumber(t.targetQuota)} Kg',
               style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.bold),
             )),
-            if (!isDepo) DataCell(Text(t.targetOutlet != null ? '${t.targetOutlet} Toko' : '-', style: TextStyle(color: colors.textSecondary))),
+            if (!isDepo) DataCell(Text(t.targetOutlet != null ? '${t.targetOutlet} Toko' : '-', style: const TextStyle(color: AppColors.warning, fontWeight: FontWeight.bold))),
             DataCell(Text(t.user?.name ?? '-', style: TextStyle(color: colors.textSecondary))),
             DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
               IconButton(
                 icon: const Icon(LucideIcons.pencil, size: 15, color: AppColors.primaryLight),
-                tooltip: 'Edit',
+                tooltip: 'Edit Baris Ini',
                 onPressed: () => widget.onEdit(t),
               ),
               IconButton(
                 icon: const Icon(LucideIcons.trash2, size: 15, color: AppColors.danger),
-                tooltip: 'Hapus',
+                tooltip: 'Hapus Baris Ini',
                 onPressed: () => widget.onDelete(t),
               ),
             ])),

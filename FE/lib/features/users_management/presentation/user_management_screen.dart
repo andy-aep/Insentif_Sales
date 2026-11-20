@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -74,12 +75,20 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
     final aktifToCtrl = TextEditingController(text: sanitizeDate(user?.aktifTo));
 
     final state = ref.read(userManagementProvider);
+    if (state.sapSalesEmployees.isEmpty && !state.isLoadingSapSales) {
+      ref.read(userManagementProvider.notifier).fetchSapSalesEmployees();
+    }
     int selectedRoleId = user?.roleId ?? (state.roles.isNotEmpty ? state.roles.first.id : 1);
     int? selectedPosId = user?.positionId ?? (state.positions.isNotEmpty ? state.positions.first.id : null);
+    int? selectedSapCode = user?.sapSalesCode;
+    String? selectedSapName = user?.sapSalesName;
     bool isKonsumsi = user?.isEligibleKonsumsi ?? true;
     bool isIndustri = user?.isEligibleIndustri ?? false;
     bool isSurabaya = user?.isEligibleSurabaya ?? false;
     bool obscurePassword = true;
+    bool isSaving = false;
+    String? dialogError;
+    final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
@@ -104,21 +113,63 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
             content: SizedBox(
               width: 520,
               child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: nameCtrl,
-                      style: TextStyle(color: colors.textPrimary),
-                      decoration: const InputDecoration(labelText: 'Nama Lengkap'),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: usernameCtrl,
-                      style: TextStyle(color: colors.textPrimary),
-                      decoration: const InputDecoration(labelText: 'Username'),
-                    ),
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (dialogError != null)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(10),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: AppColors.danger.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+                          ),
+                          child: Text(
+                            dialogError!,
+                            style: const TextStyle(color: AppColors.danger, fontSize: 12.5, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      TextFormField(
+                        controller: nameCtrl,
+                        style: TextStyle(color: colors.textPrimary),
+                        decoration: const InputDecoration(labelText: 'Nama Lengkap *'),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) return 'Nama lengkap wajib diisi';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: usernameCtrl,
+                        style: TextStyle(color: colors.textPrimary),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9._-]')),
+                        ],
+                        decoration: const InputDecoration(
+                          labelText: 'Username *',
+                          hintText: 'contoh: yusuf_yusron (huruf kecil, tanpa spasi)',
+                          helperText: 'Unik, min. 3 karakter (huruf kecil, angka, ., _, -), tanpa spasi',
+                        ),
+                        validator: (val) {
+                          final v = (val ?? '').trim().toLowerCase();
+                          if (v.isEmpty) return 'Username wajib diisi';
+                          if (v.length < 3) return 'Username minimal 3 karakter';
+                          if (!RegExp(r'^[a-z0-9._-]+$').hasMatch(v)) {
+                            return 'Hanya huruf kecil, angka, titik (.), underscore (_), atau strip (-)';
+                          }
+                          final isDuplicate = state.users.any(
+                            (u) => u.id != user?.id && u.username.trim().toLowerCase() == v,
+                          );
+                          if (isDuplicate) return 'Username "$v" sudah digunakan';
+                          return null;
+                        },
+                      ),
                     if (user == null) ...[
                       const SizedBox(height: 12),
                       TextField(
@@ -196,6 +247,97 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 14),
+                    Consumer(
+                      builder: (context, ref, _) {
+                        final umState = ref.watch(userManagementProvider);
+                        final sapList = List<SapSalesEmployeeModel>.from(umState.sapSalesEmployees);
+                        if (selectedSapCode != null && !sapList.any((s) => s.slpCode == selectedSapCode)) {
+                          sapList.insert(
+                            0,
+                            SapSalesEmployeeModel(
+                              slpCode: selectedSapCode!,
+                              slpName: selectedSapName ?? 'SAP Sales #$selectedSapCode',
+                            ),
+                          );
+                        }
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: DropdownButtonFormField<int?>(
+                                    initialValue: selectedSapCode,
+                                    dropdownColor: colors.bgCard,
+                                    isExpanded: true,
+                                    style: TextStyle(color: colors.textPrimary, fontSize: 13),
+                                    decoration: InputDecoration(
+                                      labelText: 'Kode Sales SAP (ListSalesEmp)',
+                                      prefixIcon: const Icon(LucideIcons.link2, size: 16),
+                                      prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                      helperText: umState.isLoadingSapSales
+                                          ? 'Memuat daftar sales dari SAP...'
+                                          : (umState.sapError != null
+                                              ? 'SAP offline: ${umState.sapError}'
+                                              : '${sapList.length} sales SAP tersedia'),
+                                      helperStyle: TextStyle(
+                                        fontSize: 11,
+                                        color: umState.sapError != null ? AppColors.danger : colors.textMuted,
+                                      ),
+                                    ),
+                                    items: [
+                                      const DropdownMenuItem<int?>(
+                                        value: null,
+                                        child: Text('Tidak Terhubung ke SAP', overflow: TextOverflow.ellipsis),
+                                      ),
+                                      ...sapList.map((s) {
+                                        return DropdownMenuItem<int?>(
+                                          value: s.slpCode,
+                                          child: Text(
+                                            '[${s.slpCode}] ${s.slpName}',
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        );
+                                      }),
+                                    ],
+                                    onChanged: (val) {
+                                      setDialogState(() {
+                                        selectedSapCode = val;
+                                        if (val == null) {
+                                          selectedSapName = null;
+                                        } else {
+                                          final found = sapList.firstWhere(
+                                            (s) => s.slpCode == val,
+                                            orElse: () => SapSalesEmployeeModel(slpCode: val, slpName: ''),
+                                          );
+                                          selectedSapName = found.slpName;
+                                        }
+                                      });
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  tooltip: 'Muat ulang data Sales SAP',
+                                  onPressed: umState.isLoadingSapSales
+                                      ? null
+                                      : () => ref.read(userManagementProvider.notifier).fetchSapSalesEmployees(force: true),
+                                  icon: umState.isLoadingSapSales
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        )
+                                      : const Icon(LucideIcons.refreshCw, size: 18, color: AppColors.primary),
+                                ),
+                              ],
+                            ),
+                          ],
+                        );
+                      },
                     ),
                     const SizedBox(height: 14),
                     Row(
@@ -342,32 +484,54 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                     ),
                   ],
                 ),
+                ),
               ),
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(ctx),
+                onPressed: isSaving ? null : () => Navigator.pop(ctx),
                 child: Text('Batal', style: GoogleFonts.inter(color: colors.textSecondary)),
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-                onPressed: () {
-                  final data = {
-                    'name': nameCtrl.text.trim(),
-                    'username': usernameCtrl.text.trim(),
-                    if (passwordCtrl.text.isNotEmpty) 'password': passwordCtrl.text,
-                    'role_id': selectedRoleId,
-                    'position_id': selectedPosId,
-                    'aktif_from': aktifFromCtrl.text.trim(),
-                    'aktif_to': aktifToCtrl.text.trim().isEmpty ? null : aktifToCtrl.text.trim(),
-                    'is_eligible_konsumsi': isKonsumsi,
-                    'is_eligible_industri': isIndustri,
-                    'is_eligible_surabaya': isSurabaya,
-                  };
-                  ref.read(userManagementProvider.notifier).saveUser(data, id: user?.id);
-                  Navigator.pop(ctx);
-                },
-                child: Text('Simpan Pengguna', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                onPressed: isSaving
+                    ? null
+                    : () async {
+                        if (!(formKey.currentState?.validate() ?? false)) return;
+                        setDialogState(() {
+                          isSaving = true;
+                          dialogError = null;
+                        });
+                        final normalizedUsername = usernameCtrl.text.trim().toLowerCase();
+                        final data = {
+                          'name': nameCtrl.text.trim(),
+                          'username': normalizedUsername,
+                          if (passwordCtrl.text.isNotEmpty) 'password': passwordCtrl.text,
+                          'role_id': selectedRoleId,
+                          'position_id': selectedPosId,
+                          'sap_sales_code': selectedSapCode,
+                          'sap_sales_name': selectedSapName,
+                          'aktif_from': aktifFromCtrl.text.trim(),
+                          'aktif_to': aktifToCtrl.text.trim().isEmpty ? null : aktifToCtrl.text.trim(),
+                          'is_eligible_konsumsi': isKonsumsi,
+                          'is_eligible_industri': isIndustri,
+                          'is_eligible_surabaya': isSurabaya,
+                        };
+                        final ok = await ref.read(userManagementProvider.notifier).saveUser(data, id: user?.id);
+                        if (!ctx.mounted) return;
+                        if (ok) {
+                          Navigator.pop(ctx);
+                        } else {
+                          final errMsg = ref.read(userManagementProvider).errorMessage ?? 'Gagal menyimpan pengguna';
+                          setDialogState(() {
+                            isSaving = false;
+                            dialogError = errMsg;
+                          });
+                        }
+                      },
+                child: isSaving
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Text('Simpan Pengguna', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
               ),
             ],
           );
@@ -836,6 +1000,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
           DataColumn(label: Text('Nama & Username', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
           DataColumn(label: Text('Role', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
           DataColumn(label: Text('Posisi Sales', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('Kode Sales SAP', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
           DataColumn(label: Text('Masa Aktif', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
           DataColumn(label: Text('Eligibility Skema', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
           DataColumn(label: Text('Aksi', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
@@ -881,6 +1046,25 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 150),
                   child: Text(u.position?.name ?? '-', style: TextStyle(color: colors.textSecondary, fontSize: 12.5), overflow: TextOverflow.ellipsis),
+                ),
+              ),
+              DataCell(
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 180),
+                  child: u.sapSalesCode != null
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.petrol.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '[${u.sapSalesCode}] ${u.sapSalesName ?? ''}',
+                            style: const TextStyle(color: AppColors.petrol, fontSize: 11.5, fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        )
+                      : Text('-', style: TextStyle(color: colors.textMuted, fontSize: 12)),
                 ),
               ),
               DataCell(

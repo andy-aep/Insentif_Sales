@@ -17,6 +17,7 @@ class Grade extends Model
         'grade_name',
         'target_from',
         'target_to',
+        'multiplier_rate',
     ];
 
     protected function casts(): array
@@ -24,6 +25,7 @@ class Grade extends Model
         return [
             'target_from' => 'decimal:2',
             'target_to' => 'decimal:2',
+            'multiplier_rate' => 'decimal:2',
         ];
     }
 

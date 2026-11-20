@@ -6,9 +6,11 @@ use App\Models\Area;
 use App\Models\Brand;
 use App\Models\Depo;
 use App\Models\Distributor;
+use App\Models\IndustriCustomer;
 use App\Models\MasterTarget;
 use App\Models\Region;
 use App\Models\SalesDistributorAssignment;
+use App\Models\SalesIndustriAssignment;
 use App\Models\SellinDistributor;
 use App\Models\SellinIndustri;
 use App\Models\SelloutDistributor;
@@ -34,6 +36,7 @@ class BatchImportService
             'sell_in_distributor', 'sellin_distributor' => 'sellin_distributor',
             'sell_out_distributor', 'sellout_distributor' => 'sellout_distributor',
             'sell_in_industri', 'sellin_industri' => 'sellin_industri',
+            'industri_customers', 'industri_customer', 'customer_industri' => 'industri_customer',
             'sell_out_surabaya', 'sellout_surabaya', 'sellout_sales_surabaya' => 'sellout_sales_surabaya',
             'distributors', 'distributor' => 'distributor',
             'master_target_depo', 'target_depo' => 'master_target_depo',
@@ -45,12 +48,19 @@ class BatchImportService
         };
     }
 
-    public function createBatch(string $entityType, string $fileName, int $userId): UploadBatch
-    {
+    public function createBatch(
+        string $entityType,
+        string $fileName,
+        int $userId,
+        ?string $period = null,
+        ?int $distributorId = null
+    ): UploadBatch {
         return UploadBatch::create([
             'id' => (string) Str::uuid(),
             'entity_type' => self::normalizeEntity($entityType),
             'file_name' => $fileName,
+            'period' => $period !== null && trim($period) !== '' ? trim($period) : null,
+            'distributor_id' => $distributorId,
             'status' => 'PROCESSING',
             'uploaded_by' => $userId,
         ]);
@@ -112,12 +122,13 @@ class BatchImportService
 
             [$totalRows, $successCount, $failedCount] = match ($entityType) {
                 'distributor' => $this->processDistributorBulk($generator, $header, $batch->id),
-                'sellout_distributor' => $this->processSelloutDistributorBulk($generator, $header, $batch->id),
+                'sellout_distributor' => $this->processSelloutDistributorBulk($generator, $header, $batch),
                 'master_target_depo' => $this->processMasterTargetDistributorBulk($generator, $header, 'DEPO', $batch->id),
                 'master_target_area' => $this->processMasterTargetDistributorBulk($generator, $header, 'AREA', $batch->id),
                 'master_target_distributor' => $this->processMasterTargetDistributorBulk($generator, $header, null, $batch->id),
                 'sellin_distributor' => $this->processSellinDistributorBulk($generator, $header, $batch->id),
                 'sellin_industri' => $this->processSellinIndustriBulk($generator, $header, $batch->id),
+                'industri_customer' => $this->processIndustriCustomerBulk($generator, $header, $batch->id),
                 'sellout_sales_surabaya' => $this->processSelloutSurabayaBulk($generator, $header, $batch->id),
                 'depo' => $this->processDepoBulk($generator, $header, $batch->id),
                 'area' => $this->processAreaBulk($generator, $header, $batch->id),
@@ -161,6 +172,14 @@ class BatchImportService
 
         if (in_array('depo_code', $cols, true) && in_array('volume_kg', $cols, true) && in_array('active_outlet_count', $cols, true)) {
             return 'sellout_distributor';
+        }
+
+        if (in_array('faktur', $cols, true) && (in_array('saleskg', $cols, true) || in_array('sales_kg', $cols, true) || in_array('jenissales', $cols, true))) {
+            return 'sellout_distributor';
+        }
+
+        if (in_array('customer_code', $cols, true) && in_array('customer_type', $cols, true)) {
+            return 'industri_customer';
         }
 
         return self::normalizeEntity($currentEntity);
@@ -516,21 +535,123 @@ class BatchImportService
     }
 
     /**
-     * 2. BULK IMPORT: Transaksi Sell-Out Distributor (100k - 500k+ baris)
+     * 2. BULK IMPORT: Transaksi Sell-Out Distributor (Validasi Ketat + Sinkronisasi Master Depo & AreaCode)
      */
-    protected function processSelloutDistributorBulk(Generator $generator, array $header, string $batchId): array
+    protected function processSelloutDistributorBulk(Generator $generator, array $header, UploadBatch $batch): array
     {
+        $batchId = $batch->id;
+        $colAliases = [
+            'faktur' => ['faktur', 'no_faktur', 'no faktur'],
+            'tanggal' => ['tanggal', 'tgl', 'transaction_date'],
+            'bulan' => ['bulan', 'month'],
+            'kodedistributor' => ['kodedistributor', 'kode_distributor', 'kode distributor', 'distributor_code'],
+            'namadistributor' => ['namadistributor', 'nama_distributor', 'nama distributor', 'distributor_name'],
+            'depo' => ['depo', 'depo_code', 'nama_depo', 'kode_depo'],
+            'areacode' => ['areacode', 'area_code', 'area code', 'kodearea', 'kode_area', 'kode area'],
+            'kodecustomer' => ['kodecustomer', 'kode_customer', 'kode customer', 'customer_code'],
+            'namacustomer' => ['namacustomer', 'nama_customer', 'nama customer', 'customer_name'],
+            'alamat' => ['alamat', 'address'],
+            'jenisbarang' => ['jenisbarang', 'jenis_barang', 'jenis barang', 'brand_code', 'brand'],
+            'jenissales' => ['jenissales', 'jenis_sales', 'jenis sales'],
+            'itm' => ['itm', 'item_code', 'kode_item', 'kodebarang'],
+            'namabarang' => ['namabarang', 'nama_barang', 'nama barang', 'item_name'],
+            'barang' => ['barang', 'item_desc', 'deskripsi_barang'],
+            'saleskg' => ['saleskg', 'sales_kg', 'sales kg', 'volume_kg'],
+            'dpp' => ['dpp', 'nominal'],
+            'kota_kab' => ['kota/kab', 'kota_kab', 'kota', 'kabupaten'],
+            'kecamatan' => ['kecamatan'],
+            'salesmandist' => ['salesmandist', 'salesman_dist', 'salesman dist', 'salesman'],
+            'pic' => ['pic'],
+            'tipeoutlet' => ['tipeoutlet', 'tipe_outlet', 'tipe outlet'],
+        ];
+
+        $requiredLabels = [
+            'faktur' => 'Faktur',
+            'tanggal' => 'Tanggal',
+            'bulan' => 'Bulan',
+            'kodedistributor' => 'KodeDistributor',
+            'namadistributor' => 'NamaDistributor',
+            'depo' => 'Depo',
+            'areacode' => 'AreaCode',
+            'kodecustomer' => 'KodeCustomer',
+            'namacustomer' => 'NamaCustomer',
+            'alamat' => 'Alamat',
+            'jenisbarang' => 'JenisBarang',
+            'jenissales' => 'JenisSales',
+            'itm' => 'ITM',
+            'namabarang' => 'NamaBarang',
+            'barang' => 'Barang',
+            'saleskg' => 'SalesKg',
+            'dpp' => 'DPP',
+            'kota_kab' => 'Kota/Kab',
+            'salesmandist' => 'SalesmanDist',
+            'pic' => 'PIC',
+            'tipeoutlet' => 'TipeOutlet',
+        ];
+
+        $headerCols = array_values($header);
+        $resolvedHeaderKey = [];
+        $missingHeaders = [];
+
+        foreach ($colAliases as $canonical => $aliases) {
+            $found = null;
+            foreach ($aliases as $alias) {
+                if (in_array($alias, $headerCols, true)) {
+                    $found = $alias;
+                    break;
+                }
+            }
+            if ($found !== null) {
+                $resolvedHeaderKey[$canonical] = $found;
+            } elseif (isset($requiredLabels[$canonical])) {
+                $missingHeaders[] = $requiredLabels[$canonical];
+            }
+        }
+
+        if (! empty($missingHeaders)) {
+            throw new Exception(
+                'Header kolom wajib Sell-Out Distributor belum lengkap: [' . implode(', ', $missingHeaders) . ']. ' .
+                'Pastikan kolom AreaCode dan seluruh kolom wajib tersedia sesuai template.'
+            );
+        }
+
+        // Muat Master Area & Master Depo (beserta Distributor induk) dan Master Brand
+        $areas = Area::with('depo.distributor')->get();
+        $areaByCode = [];
+        foreach ($areas as $ar) {
+            $areaByCode[strtoupper(trim((string) $ar->code))] = $ar;
+        }
+
+        $depos = Depo::with('distributor')->get();
+        $depoByKey = [];
+        foreach ($depos as $dp) {
+            $depoByKey[strtoupper(trim((string) $dp->code))] = $dp;
+            $depoByKey[strtoupper(trim((string) $dp->name))] = $dp;
+        }
+        $outAreaTokens = ['LUAR', 'OUT_AREA', 'OUT-AREA', 'AREA_LUAR', 'NON_AREA'];
+
+        $brands = Brand::all();
+        $brandMap = [];
+        foreach ($brands as $b) {
+            $brandMap[strtoupper(trim((string) $b->code))] = (int) $b->id;
+            $brandMap[strtoupper(trim((string) $b->name))] = (int) $b->id;
+        }
+        if (isset($brandMap['LAYAR']) && ! isset($brandMap['PERAHU LAYAR'])) {
+            $brandMap['PERAHU LAYAR'] = $brandMap['LAYAR'];
+        }
+
         $totalRows = 0;
-        $successCount = 0;
-        $failedCount = 0;
-
-        $depoMap = array_change_key_case(DB::table('depos')->pluck('id', 'code')->all(), CASE_UPPER);
-        $brandMap = array_change_key_case(DB::table('brands')->pluck('id', 'code')->all(), CASE_UPPER);
-        $defaultPeriod = date('Ym');
+        $errors = [];
+        $validatedRows = [];
+        $outletNetKg = [];
+        $periodsInFile = [];
+        $distributorsInFile = [];
         $now = now()->format('Y-m-d H:i:s');
-
-        $chunk = [];
-        $chunkSize = 2500;
+        $isPlaceholderCode = static fn (string $v): bool => in_array(
+            strtoupper(trim($v)),
+            ['', '-', '--', '0', 'NULL', 'N/A', 'NA', 'NONE'],
+            true
+        );
 
         while ($generator->valid()) {
             $rawRow = $generator->current();
@@ -540,45 +661,353 @@ class BatchImportService
                 continue;
             }
             $totalRows++;
+            $excelLine = $totalRows + 1;
 
-            $depoId = $row['depo_id'] ?? null;
-            if (! $depoId && ! empty($row['depo_code'])) {
-                $depoId = $depoMap[strtoupper(trim((string) $row['depo_code']))] ?? null;
+            $val = function (string $canonical) use ($row, $resolvedHeaderKey): string {
+                $key = $resolvedHeaderKey[$canonical] ?? null;
+                if ($key === null || ! array_key_exists($key, $row) || $row[$key] === null) {
+                    return '';
+                }
+
+                return trim((string) $row[$key]);
+            };
+
+            // 1. Cek kolom wajib tidak boleh kosong
+            $emptyCols = [];
+            foreach ($requiredLabels as $canonical => $label) {
+                if ($val($canonical) === '') {
+                    $emptyCols[] = $label;
+                }
             }
-
-            $brandId = $row['brand_id'] ?? null;
-            if (! $brandId && ! empty($row['brand_code'])) {
-                $brandId = $brandMap[strtoupper(trim((string) $row['brand_code']))] ?? null;
-            }
-
-            if (! $depoId || ! $brandId) {
-                $failedCount++;
+            if (! empty($emptyCols)) {
+                $errors[] = "Baris {$excelLine}: Kolom wajib tidak boleh kosong [" . implode(', ', $emptyCols) . '].';
+                if (count($errors) >= 25) {
+                    break;
+                }
                 continue;
             }
 
-            $chunk[] = [
+            // 1b. Cek kolom pengkodean tidak boleh berisi placeholder (-, 0, N/A, NULL)
+            $codeCols = [
+                'Faktur' => $val('faktur'),
+                'KodeDistributor' => $val('kodedistributor'),
+                'AreaCode' => $val('areacode'),
+                'KodeCustomer' => $val('kodecustomer'),
+                'JenisBarang' => $val('jenisbarang'),
+                'ITM' => $val('itm'),
+            ];
+            $badCodes = [];
+            foreach ($codeCols as $cLabel => $cVal) {
+                if ($isPlaceholderCode($cVal)) {
+                    $badCodes[] = "{$cLabel} ('{$cVal}')";
+                }
+            }
+            if (! empty($badCodes)) {
+                $errors[] = "Baris {$excelLine}: Pengkodean wajib valid dan tidak boleh placeholder [" . implode(', ', $badCodes) . '].';
+                if (count($errors) >= 25) {
+                    break;
+                }
+                continue;
+            }
+
+            // 2. Validasi ketat format Tanggal
+            $rawTanggal = $val('tanggal');
+            $parsedDate = $this->parseStrictSelloutDate($rawTanggal);
+            if ($parsedDate === null) {
+                $errors[] = "Baris {$excelLine}: Format Tanggal '{$rawTanggal}' tidak valid (gunakan YYYY-MM-DD, contoh: 2026-07-01).";
+                if (count($errors) >= 25) {
+                    break;
+                }
+                continue;
+            }
+            [$formattedDate, $yearInt, $monthInt] = $parsedDate;
+
+            // 3. Validasi ketat Bulan (1-12 & harus sama dengan bulan Tanggal)
+            $rawBulan = $val('bulan');
+            if (! preg_match('/^\d{1,2}$/', $rawBulan) || (int) $rawBulan < 1 || (int) $rawBulan > 12) {
+                $errors[] = "Baris {$excelLine}: Kolom Bulan '{$rawBulan}' tidak valid (wajib angka 1 s/d 12).";
+                if (count($errors) >= 25) {
+                    break;
+                }
+                continue;
+            }
+            $bulanInt = (int) $rawBulan;
+            if ($bulanInt !== $monthInt) {
+                $errors[] = "Baris {$excelLine}: Kolom Bulan ({$bulanInt}) tidak sinkron dengan bulan pada Tanggal '{$formattedDate}' (bulan {$monthInt}).";
+                if (count($errors) >= 25) {
+                    break;
+                }
+                continue;
+            }
+
+            // 4. Validasi ketat AreaCode (terdaftar di Master atau kode resmi Area Luar: LUAR / OUT_AREA)
+            $rawAreaCode = strtoupper($val('areacode'));
+            $isOutOfArea = in_array($rawAreaCode, $outAreaTokens, true);
+            $areaObj = $isOutOfArea ? null : ($areaByCode[$rawAreaCode] ?? null);
+
+            if ($isOutOfArea) {
+                $rawDepoKey = strtoupper($val('depo'));
+                $rawDistCodeKey = strtoupper($val('kodedistributor'));
+                $depoObj = $depoByKey[$rawDistCodeKey] ?? $depoByKey[$rawDepoKey] ?? null;
+                $distObj = $depoObj?->distributor;
+                if (! $depoObj || ! $distObj) {
+                    $errors[] = "Baris {$excelLine}: AreaCode '{$rawAreaCode}' (Area Luar) tetap wajib memiliki Depo '{$val('depo')}' / KodeDistributor '{$val('kodedistributor')}' yang terdaftar di Master.";
+                    if (count($errors) >= 25) {
+                        break;
+                    }
+                    continue;
+                }
+            } else {
+                if (! $areaObj || ! $areaObj->depo || ! $areaObj->depo->distributor) {
+                    $errors[] = "Baris {$excelLine}: AreaCode '{$rawAreaCode}' tidak terdaftar di Master Distributor & Area (isi 'LUAR' jika penjualan area luar).";
+                    if (count($errors) >= 25) {
+                        break;
+                    }
+                    continue;
+                }
+                $depoObj = $areaObj->depo;
+                $distObj = $depoObj->distributor;
+            }
+
+            $rawDepo = strtoupper($val('depo'));
+            $masterDepoName = strtoupper(trim((string) $depoObj->name));
+            $masterDepoCode = strtoupper(trim((string) $depoObj->code));
+            $masterAreaName = $areaObj ? strtoupper(trim((string) $areaObj->name)) : '';
+            if ($rawDepo !== $masterDepoName && $rawDepo !== $masterDepoCode && ($masterAreaName === '' || $rawDepo !== $masterAreaName)) {
+                $errors[] = "Baris {$excelLine}: AreaCode '{$rawAreaCode}' milik Depo '{$depoObj->name}' ({$depoObj->code}), tidak sinkron dengan kolom Depo '{$val('depo')}'.";
+                if (count($errors) >= 25) {
+                    break;
+                }
+                continue;
+            }
+
+            $rawDistCode = strtoupper($val('kodedistributor'));
+            $masterDistCode = strtoupper(trim((string) $distObj->code));
+            if ($rawDistCode !== $masterDepoCode && $rawDistCode !== $masterDistCode) {
+                $errors[] = "Baris {$excelLine}: AreaCode '{$rawAreaCode}' milik KodeDistributor '{$depoObj->code}' ({$distObj->code}), tidak sinkron dengan kolom KodeDistributor '{$val('kodedistributor')}'.";
+                if (count($errors) >= 25) {
+                    break;
+                }
+                continue;
+            }
+
+            $rawDistName = preg_replace('/\s+/', ' ', strtoupper($val('namadistributor')));
+            $masterDistName = preg_replace('/\s+/', ' ', strtoupper(trim((string) $distObj->name)));
+            if ($rawDistName !== $masterDistName) {
+                $errors[] = "Baris {$excelLine}: NamaDistributor '{$val('namadistributor')}' tidak sesuai dengan Master Distributor '{$distObj->name}' untuk AreaCode '{$rawAreaCode}'.";
+                if (count($errors) >= 25) {
+                    break;
+                }
+                continue;
+            }
+
+            // 5. Validasi JenisBarang (Master Brand)
+            $rawJenisBarang = strtoupper($val('jenisbarang'));
+            $brandId = $brandMap[$rawJenisBarang] ?? null;
+            if (! $brandId) {
+                $errors[] = "Baris {$excelLine}: JenisBarang '{$val('jenisbarang')}' tidak terdaftar di Master Brand.";
+                if (count($errors) >= 25) {
+                    break;
+                }
+                continue;
+            }
+
+            // 6. Validasi JenisSales
+            $rawJenisSales = strtoupper(str_replace(['_', '-'], ' ', $val('jenissales')));
+            $rawJenisSales = preg_replace('/\s+/', ' ', $rawJenisSales);
+            if ($rawJenisSales !== 'SELL OUT' && $rawJenisSales !== 'SELLOUT') {
+                $errors[] = "Baris {$excelLine}: JenisSales '{$val('jenissales')}' tidak valid (wajib 'SELL OUT').";
+                if (count($errors) >= 25) {
+                    break;
+                }
+                continue;
+            }
+
+            // 7. Validasi numerik SalesKg & DPP
+            $rawSalesKg = str_replace(',', '.', $val('saleskg'));
+            $rawDpp = str_replace(',', '.', $val('dpp'));
+            if (! preg_match('/^-?\d+(\.\d+)?$/', $rawSalesKg) || (float) $rawSalesKg == 0.0) {
+                $errors[] = "Baris {$excelLine}: SalesKg '{$val('saleskg')}' wajib berupa angka numerik valid dan tidak boleh 0.";
+                if (count($errors) >= 25) {
+                    break;
+                }
+                continue;
+            }
+            if (! preg_match('/^-?\d+(\.\d+)?$/', $rawDpp) || (float) $rawDpp == 0.0) {
+                $errors[] = "Baris {$excelLine}: DPP (total penjualan per baris) '{$val('dpp')}' wajib berupa angka numerik valid dan tidak boleh 0.";
+                if (count($errors) >= 25) {
+                    break;
+                }
+                continue;
+            }
+
+            $salesKg = (float) $rawSalesKg;
+            $dpp = (float) $rawDpp;
+            $period = sprintf('%04d%02d', $yearInt, $monthInt);
+            $periodsInFile[$period] = true;
+            $distributorsInFile[(int) $distObj->id] = "{$distObj->name} ({$distObj->code})";
+            $custCode = strtoupper($val('kodecustomer'));
+            $outletKey = $isOutOfArea ? null : "{$period}_{$areaObj->id}_{$custCode}";
+            if ($outletKey !== null) {
+                $outletNetKg[$outletKey] = ($outletNetKg[$outletKey] ?? 0.0) + $salesKg;
+            }
+
+            $validatedRows[] = [
                 'batch_id' => $batchId,
-                'depo_id' => (int) $depoId,
+                'distributor_id' => (int) $distObj->id,
+                'depo_id' => (int) $depoObj->id,
+                'area_id' => $areaObj ? (int) $areaObj->id : null,
+                'is_out_of_area' => $isOutOfArea,
                 'brand_id' => (int) $brandId,
-                'period' => substr(trim((string) ($row['period'] ?? $defaultPeriod)), 0, 6),
-                'volume_kg' => (float) ($row['volume_kg'] ?? 0),
-                'active_outlet_count' => (int) ($row['active_outlet_count'] ?? 0),
+                'period' => $period,
+                'faktur' => $val('faktur'),
+                'transaction_date' => $formattedDate,
+                'bulan' => $bulanInt,
+                'customer_code' => $custCode,
+                'customer_name' => $val('namacustomer'),
+                'alamat' => $val('alamat'),
+                'jenis_sales' => 'SELL OUT',
+                'item_code' => strtoupper($val('itm')),
+                'item_name' => $val('namabarang'),
+                'item_desc' => $val('barang'),
+                'volume_kg' => $salesKg,
+                'nominal' => $dpp,
+                'active_outlet_count' => 0,
+                'kota_kab' => $val('kota_kab'),
+                'kecamatan' => $val('kecamatan') !== '' ? $val('kecamatan') : null,
+                'salesman_dist' => $val('salesmandist'),
+                'pic' => $val('pic'),
+                'tipe_outlet' => $val('tipeoutlet'),
                 'created_at' => $now,
                 'updated_at' => $now,
+                '_outlet_key' => $outletKey,
             ];
-            $successCount++;
+        }
 
-            if (count($chunk) >= $chunkSize) {
-                DB::table('sellout_distributors')->insert($chunk);
-                $chunk = [];
+        if ($totalRows === 0) {
+            throw new Exception('File Sell-Out Distributor kosong atau tidak memiliki baris data transaksi.');
+        }
+
+        if (! empty($errors)) {
+            $preview = implode("\n- ", array_slice($errors, 0, 10));
+            $more = count($errors) > 10 ? "\n(...dan " . (count($errors) - 10) . ' kesalahan lainnya)' : '';
+            throw new Exception("Validasi Ketat Sell-Out Distributor Gagal:\n- {$preview}{$more}");
+        }
+
+        // Wajib 1 file Excel = 1 distributor (pencegatan wajib 1 bulan dinonaktifkan sementara)
+        if (count($distributorsInFile) > 1) {
+            throw new Exception(
+                'Validasi Ketat Sell-Out Distributor Gagal: 1 file Excel wajib hanya untuk 1 distributor. ' .
+                'Ditemukan lebih dari 1 distributor dalam file: [' . implode(', ', array_values($distributorsInFile)) . '].'
+            );
+        }
+
+        $singlePeriod = count($periodsInFile) === 1 ? (string) array_key_first($periodsInFile) : null;
+        $singleDistId = (int) array_key_first($distributorsInFile);
+
+        if (! empty($batch->distributor_id) && (int) $batch->distributor_id !== $singleDistId) {
+            $expectedDist = Distributor::find($batch->distributor_id);
+            $expectedName = $expectedDist ? "{$expectedDist->name} ({$expectedDist->code})" : "ID {$batch->distributor_id}";
+            throw new Exception(
+                "Validasi Ketat Sell-Out Distributor Gagal: Distributor yang dipilih ({$expectedName}) tidak sesuai dengan isi file ({$distributorsInFile[$singleDistId]})."
+            );
+        }
+
+        if ($singlePeriod !== null) {
+            $existingBatch = UploadBatch::where('entity_type', 'sellout_distributor')
+                ->where('status', 'COMPLETED')
+                ->where('period', $singlePeriod)
+                ->where('distributor_id', $singleDistId)
+                ->where('id', '!=', $batchId)
+                ->first();
+            if ($existingBatch && SelloutDistributor::where('batch_id', $existingBatch->id)->exists()) {
+                throw new Exception(
+                    "Data Sell-Out Distributor untuk periode {$singlePeriod} dan distributor {$distributorsInFile[$singleDistId]} sudah ada di Riwayat Upload (file: {$existingBatch->file_name}). " .
+                    'Hapus atau Rollback batch lama di Riwayat Upload terlebih dahulu sebelum upload ulang.'
+                );
             }
         }
 
-        if (! empty($chunk)) {
-            DB::table('sellout_distributors')->insert($chunk);
+        $batch->update([
+            'period' => $singlePeriod,
+            'distributor_id' => $singleDistId,
+        ]);
+
+        // Tandai active_outlet_count = 1 tepat 1x per (period, area_id, customer_code) yang net volume > 0
+        $countedOutlets = [];
+        foreach ($validatedRows as &$r) {
+            $oKey = $r['_outlet_key'];
+            unset($r['_outlet_key']);
+            if ($oKey !== null && ($outletNetKg[$oKey] ?? 0.0) > 0 && ! isset($countedOutlets[$oKey])) {
+                $r['active_outlet_count'] = 1;
+                $countedOutlets[$oKey] = true;
+            }
+        }
+        unset($r);
+
+        DB::transaction(function () use ($validatedRows) {
+            // 1000 baris x 25 kolom = 25.000 placeholder (< batas MySQL 65.535 placeholder per query)
+            foreach (array_chunk($validatedRows, 1000) as $chunk) {
+                DB::table('sellout_distributors')->insert($chunk);
+            }
+        });
+
+        $successCount = count($validatedRows);
+
+        return [$totalRows, $successCount, 0];
+    }
+
+    /**
+     * Validasi ketat format tanggal untuk Sell-Out Distributor.
+     *
+     * @return array{0: string, 1: int, 2: int}|null [YYYY-MM-DD, year, month]
+     */
+    protected function parseStrictSelloutDate(string $raw): ?array
+    {
+        $clean = trim($raw);
+        if ($clean === '') {
+            return null;
         }
 
-        return [$totalRows, $successCount, $failedCount];
+        // 1. Format YYYY-MM-DD atau YYYY/MM/DD
+        if (preg_match('/^(\d{4})[\-\/](\d{1,2})[\-\/](\d{1,2})$/', $clean, $m)) {
+            $y = (int) $m[1];
+            $mo = (int) $m[2];
+            $d = (int) $m[3];
+            if ($y >= 2000 && $y <= 2100 && checkdate($mo, $d, $y)) {
+                return [sprintf('%04d-%02d-%02d', $y, $mo, $d), $y, $mo];
+            }
+
+            return null;
+        }
+
+        // 2. Format DD/MM/YYYY atau DD-MM-YYYY
+        if (preg_match('/^(\d{1,2})[\-\/](\d{1,2})[\-\/](\d{4})$/', $clean, $m)) {
+            $d = (int) $m[1];
+            $mo = (int) $m[2];
+            $y = (int) $m[3];
+            if ($y >= 2000 && $y <= 2100 && checkdate($mo, $d, $y)) {
+                return [sprintf('%04d-%02d-%02d', $y, $mo, $d), $y, $mo];
+            }
+
+            return null;
+        }
+
+        // 3. Excel Serial Date (angka 5 digit antara tahun 2000..2099)
+        if (preg_match('/^\d{5}(\.\d+)?$/', $clean)) {
+            $serial = (float) $clean;
+            if ($serial >= 36526 && $serial <= 73050) {
+                $unix = (int) round(($serial - 25569) * 86400);
+                $y = (int) gmdate('Y', $unix);
+                $mo = (int) gmdate('m', $unix);
+                $d = (int) gmdate('d', $unix);
+                if (checkdate($mo, $d, $y)) {
+                    return [sprintf('%04d-%02d-%02d', $y, $mo, $d), $y, $mo];
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -908,6 +1337,13 @@ class BatchImportService
         $failedCount = 0;
 
         $userMap = array_change_key_case(DB::table('users')->pluck('id', 'username')->all(), CASE_LOWER);
+        $customerByCode = array_change_key_case(DB::table('industri_customers')->pluck('id', 'customer_code')->all(), CASE_UPPER);
+        $customerByName = array_change_key_case(DB::table('industri_customers')->pluck('id', 'customer_name')->all(), CASE_LOWER);
+        $assignmentByCust = DB::table('sales_industri_assignments')
+            ->where('is_active', true)
+            ->pluck('user_id', 'industri_customer_id')
+            ->all();
+
         $defaultPeriod = date('Ym');
         $now = now()->format('Y-m-d H:i:s');
         $chunk = [];
@@ -921,20 +1357,57 @@ class BatchImportService
             }
             $totalRows++;
 
-            $username = strtolower(trim((string) ($row['username'] ?? $row['sales_username'] ?? '')));
-            $userId = $row['user_id'] ?? ($userMap[$username] ?? null);
-            if (! $userId) {
+            $custCode = strtoupper(trim((string) ($row['customer_code'] ?? '')));
+            $custName = trim((string) ($row['customer_name'] ?? ''));
+            if ($custCode === '' && $custName === '') {
                 $failedCount++;
                 continue;
             }
 
+            $customerId = $row['industri_customer_id'] ?? null;
+            if (! $customerId && $custCode !== '') {
+                $customerId = $customerByCode[$custCode] ?? null;
+            }
+            if (! $customerId && $custName !== '') {
+                $customerId = $customerByName[strtolower($custName)] ?? null;
+            }
+
+            $username = strtolower(trim((string) ($row['username'] ?? $row['sales_username'] ?? '')));
+            $userId = $row['user_id'] ?? ($userMap[$username] ?? null);
+            if (! $userId && $customerId) {
+                $userId = $assignmentByCust[$customerId] ?? null;
+            }
+
+            $volRaw = $row['volume_kg'] ?? $row['tonase'] ?? 0;
+            $volumeKg = (float) $volRaw;
+            if ($volumeKg <= 0 && ! $userId && ! $customerId) {
+                $failedCount++;
+                continue;
+            }
+
+            $isNooVal = null;
+            if (isset($row['is_noo']) && trim((string) $row['is_noo']) !== '') {
+                $rawFlag = strtolower(trim((string) $row['is_noo']));
+                if (in_array($rawFlag, ['1', 'true', 'yes', 'ya', 'y'], true)) {
+                    $isNooVal = true;
+                } elseif (in_array($rawFlag, ['0', 'false', 'no', 'tidak', 'n'], true)) {
+                    $isNooVal = false;
+                }
+            }
+
             $chunk[] = [
                 'batch_id' => $batchId,
-                'user_id' => (int) $userId,
-                'customer_name' => trim((string) ($row['customer_name'] ?? 'General Customer')),
-                'period' => substr(trim((string) ($row['period'] ?? $defaultPeriod)), 0, 6),
-                'tonase' => (float) ($row['tonase'] ?? 0),
-                'sap_so_no' => isset($row['sap_so_no']) ? trim((string) $row['sap_so_no']) : null,
+                'user_id' => $userId ? (int) $userId : null,
+                'industri_customer_id' => $customerId ? (int) $customerId : null,
+                'customer_code' => $custCode !== '' ? $custCode : null,
+                'customer_name' => $custName !== '' ? $custName : ($custCode ?: 'General Customer'),
+                'period' => substr(preg_replace('/[^0-9]/', '', (string) ($row['period'] ?? $defaultPeriod)) ?: $defaultPeriod, 0, 6),
+                'tonase' => $volumeKg,
+                'volume_kg' => $volumeKg,
+                'nominal' => (float) ($row['nominal'] ?? 0),
+                'transaction_date' => !empty($row['transaction_date']) ? trim((string) $row['transaction_date']) : null,
+                'is_noo' => $isNooVal,
+                'sap_so_no' => isset($row['sap_so_no']) && $row['sap_so_no'] !== '' ? trim((string) $row['sap_so_no']) : null,
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
@@ -948,6 +1421,82 @@ class BatchImportService
 
         if (! empty($chunk)) {
             DB::table('sellin_industris')->insert($chunk);
+        }
+
+        return [$totalRows, $successCount, $failedCount];
+    }
+
+    protected function processIndustriCustomerBulk(Generator $generator, array $header, string $batchId): array
+    {
+        $totalRows = 0;
+        $successCount = 0;
+        $failedCount = 0;
+
+        $userMap = array_change_key_case(DB::table('users')->pluck('id', 'username')->all(), CASE_LOWER);
+        $now = now()->format('Y-m-d H:i:s');
+        $pendingAssignments = [];
+
+        while ($generator->valid()) {
+            $rawRow = $generator->current();
+            $generator->next();
+            $row = $this->mapRow($header, $rawRow);
+            if ($row === null) {
+                continue;
+            }
+            $totalRows++;
+
+            $custName = trim((string) ($row['customer_name'] ?? ''));
+            $custCode = strtoupper(trim((string) ($row['customer_code'] ?? '')));
+            if ($custName === '') {
+                $failedCount++;
+                continue;
+            }
+            if ($custCode === '') {
+                $custCode = 'IND-' . strtoupper(substr(md5($custName), 0, 6));
+            }
+
+            $custType = strtoupper(trim((string) ($row['customer_type'] ?? 'NEW')));
+            if (!in_array($custType, ['NEW', 'EXISTING'], true)) {
+                $custType = 'NEW';
+            }
+
+            $firstPeriod = preg_replace('/[^0-9]/', '', (string) ($row['first_transaction_period'] ?? ''));
+            $customer = IndustriCustomer::updateOrCreate(
+                ['customer_code' => $custCode],
+                [
+                    'batch_id' => $batchId,
+                    'customer_name' => $custName,
+                    'city' => !empty($row['city']) ? trim((string) $row['city']) : null,
+                    'customer_type' => $custType,
+                    'first_transaction_period' => $firstPeriod !== '' ? substr($firstPeriod, 0, 6) : null,
+                    'is_active' => true,
+                ]
+            );
+
+            $salesUsername = strtolower(trim((string) ($row['sales_username'] ?? $row['username'] ?? '')));
+            if ($salesUsername !== '' && isset($userMap[$salesUsername])) {
+                $pendingAssignments[] = [
+                    'user_id' => (int) $userMap[$salesUsername],
+                    'industri_customer_id' => $customer->id,
+                    'period' => !empty($row['period']) ? substr(preg_replace('/[^0-9]/', '', (string) $row['period']), 0, 6) : null,
+                    'is_active' => true,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            $successCount++;
+        }
+
+        foreach ($pendingAssignments as $pa) {
+            SalesIndustriAssignment::firstOrCreate(
+                [
+                    'user_id' => $pa['user_id'],
+                    'industri_customer_id' => $pa['industri_customer_id'],
+                    'period' => $pa['period'],
+                ],
+                ['is_active' => true]
+            );
         }
 
         return [$totalRows, $successCount, $failedCount];
@@ -1111,6 +1660,7 @@ class BatchImportService
                 'sellin_distributor' => SellinDistributor::where('batch_id', $batchId)->delete(),
                 'sellout_distributor' => SelloutDistributor::where('batch_id', $batchId)->delete(),
                 'sellin_industri' => SellinIndustri::where('batch_id', $batchId)->delete(),
+                'industri_customer' => IndustriCustomer::where('batch_id', $batchId)->delete(),
                 'sellout_sales_surabaya' => SelloutSalesSurabaya::where('batch_id', $batchId)->delete(),
                 'master_target_depo', 'master_target_area', 'master_target_distributor' => MasterTarget::where('batch_id', $batchId)->delete(),
                 'distributor' => $this->rollbackDistributorBatch($batchId),

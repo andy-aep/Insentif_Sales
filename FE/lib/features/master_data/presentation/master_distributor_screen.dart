@@ -67,16 +67,56 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
   }
 
   // ---------------- 1. Comprehensive Distributor + Depo + Area Builder ----------------
+  String _nextDistributorCode() {
+    final dists = ref.read(masterDataProvider).distributors;
+    int maxNum = 0;
+    final regex = RegExp(r'^DST(\d+)$', caseSensitive: false);
+    for (final d in dists) {
+      final m = regex.firstMatch(d.code.trim());
+      if (m != null) {
+        final n = int.tryParse(m.group(1)!) ?? 0;
+        if (n > maxNum) maxNum = n;
+      }
+    }
+    return 'DST${(maxNum + 1).toString().padLeft(4, '0')}';
+  }
+
+  String _nextAreaCode({int offset = 0}) {
+    final state = ref.read(masterDataProvider);
+    int maxNum = 0;
+    final regex = RegExp(r'^AR(\d+)$', caseSensitive: false);
+    for (final a in state.areas) {
+      final m = regex.firstMatch(a.code.trim());
+      if (m != null) {
+        final n = int.tryParse(m.group(1)!) ?? 0;
+        if (n > maxNum) maxNum = n;
+      }
+    }
+    for (final d in state.distributors) {
+      for (final dp in d.depos) {
+        for (final a in dp.areas) {
+          final m = regex.firstMatch(a.code.trim());
+          if (m != null) {
+            final n = int.tryParse(m.group(1)!) ?? 0;
+            if (n > maxNum) maxNum = n;
+          }
+        }
+      }
+    }
+    return 'AR${(maxNum + 1 + offset).toString().padLeft(5, '0')}';
+  }
+
   void _showComprehensiveDistributorDialog({DistributorModel? dist}) {
     final colors = context.colors;
     final isEdit = dist != null;
 
-    final codeCtrl = TextEditingController(text: dist?.code ?? '');
+    final codeCtrl = TextEditingController(text: dist?.code ?? _nextDistributorCode());
     final nameCtrl = TextEditingController(text: dist?.name ?? '');
     int? selectedRegionId = dist?.regionId;
 
     // Draft depos and nested areas
     List<_DepoDraft> draftDepos = [];
+    int draftAreaCount = 0;
     if (dist != null && dist.depos.isNotEmpty) {
       draftDepos = dist.depos.map((d) {
         return _DepoDraft(
@@ -93,7 +133,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
           code: '',
           name: '',
           areas: [
-            _AreaDraft(code: '', name: ''),
+            _AreaDraft(code: _nextAreaCode(offset: draftAreaCount++), name: ''),
           ],
         ),
       ];
@@ -177,7 +217,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                                       child: TextField(
                                         controller: codeCtrl,
                                         style: TextStyle(color: colors.textPrimary),
-                                        decoration: const InputDecoration(labelText: 'Kode Distributor *', hintText: 'Contoh: DST01'),
+                                        decoration: const InputDecoration(labelText: 'Kode Distributor', hintText: 'Otomatis (DSTxxxx) jika kosong'),
                                       ),
                                     ),
                                     const SizedBox(width: 12),
@@ -261,7 +301,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                                         code: codeCtrl.text.trim().isNotEmpty ? '${codeCtrl.text.trim()}-DP$dNum' : 'DP$dNum',
                                         name: 'Depo Baru $dNum',
                                         areas: [
-                                          _AreaDraft(code: '', name: 'Area 1'),
+                                          _AreaDraft(code: _nextAreaCode(offset: draftAreaCount++), name: 'Area 1'),
                                         ],
                                       ),
                                     );
@@ -393,7 +433,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                                                 label: const Text('Tambah Area', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
                                                 onPressed: () {
                                                   setDialogState(() {
-                                                    depo.areas.add(_AreaDraft(code: '', name: ''));
+                                                    depo.areas.add(_AreaDraft(code: _nextAreaCode(offset: draftAreaCount++), name: ''));
                                                   });
                                                 },
                                               ),
@@ -422,7 +462,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                                                         style: TextStyle(color: colors.textPrimary, fontSize: 12.5),
                                                         decoration: InputDecoration(
                                                           labelText: 'Kode Area',
-                                                          hintText: 'Auto / AR${aIdx + 1}',
+                                                          hintText: 'Auto (ARxxxxx)',
                                                           isDense: true,
                                                           contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                                                         ),
@@ -500,9 +540,9 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                           onPressed: () async {
                             final code = codeCtrl.text.trim();
                             final name = nameCtrl.text.trim();
-                            if (code.isEmpty || name.isEmpty) {
+                            if (name.isEmpty) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Kode dan Nama Distributor wajib diisi!')),
+                                const SnackBar(content: Text('Nama Distributor wajib diisi!')),
                               );
                               return;
                             }
@@ -831,7 +871,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                           label: const Text('Tambah Area', style: TextStyle(fontSize: 12)),
                           onPressed: () {
                             setDialogState(() {
-                              draftAreas.add(_AreaDraft(code: '', name: ''));
+                              draftAreas.add(_AreaDraft(code: _nextAreaCode(offset: draftAreas.length), name: ''));
                             });
                           },
                         ),
@@ -941,7 +981,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
     final isEdit = area != null;
 
     int? selectedDepoId = area?.depoId ?? preselectedDepoId ?? (state.depos.isNotEmpty ? state.depos.first.id : null);
-    final codeCtrl = TextEditingController(text: area?.code ?? '');
+    final codeCtrl = TextEditingController(text: area?.code ?? _nextAreaCode());
     final nameCtrl = TextEditingController(text: area?.name ?? '');
 
     showDialog(
@@ -989,7 +1029,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                   TextField(
                     controller: codeCtrl,
                     style: TextStyle(color: colors.textPrimary),
-                    decoration: const InputDecoration(labelText: 'Kode Area *', hintText: 'Contoh: AR-SBY-01'),
+                    decoration: const InputDecoration(labelText: 'Kode Area', hintText: 'Otomatis (ARxxxxx) jika kosong'),
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -1005,9 +1045,9 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF24968B), foregroundColor: Colors.white),
                 onPressed: () async {
-                  if (selectedDepoId == null || codeCtrl.text.trim().isEmpty || nameCtrl.text.trim().isEmpty) {
+                  if (selectedDepoId == null || nameCtrl.text.trim().isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Pilih Depo dan isi Kode & Nama Area!')),
+                      const SnackBar(content: Text('Pilih Depo dan isi Nama Area!')),
                     );
                     return;
                   }
@@ -1041,6 +1081,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
     final isEdit = brand != null;
     final codeCtrl = TextEditingController(text: brand?.code ?? '');
     final nameCtrl = TextEditingController(text: brand?.name ?? '');
+    final itemsCtrl = TextEditingController(text: brand?.itemCodes.join(', ') ?? '');
 
     showDialog(
       context: context,
@@ -1060,22 +1101,36 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
           ],
         ),
         content: SizedBox(
-          width: 440,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: codeCtrl,
-                style: TextStyle(color: colors.textPrimary),
-                decoration: const InputDecoration(labelText: 'Kode Brand *', hintText: 'Contoh: BRD01'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: nameCtrl,
-                style: TextStyle(color: colors.textPrimary),
-                decoration: const InputDecoration(labelText: 'Nama Merek Dagang *', hintText: 'Contoh: Minyak Goreng Kita'),
-              ),
-            ],
+          width: 480,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: codeCtrl,
+                  style: TextStyle(color: colors.textPrimary),
+                  decoration: const InputDecoration(labelText: 'Kode Brand *', hintText: 'Contoh: KAPAL'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: nameCtrl,
+                  style: TextStyle(color: colors.textPrimary),
+                  decoration: const InputDecoration(labelText: 'Nama Merek Dagang *', hintText: 'Contoh: KAPAL'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: itemsCtrl,
+                  maxLines: 4,
+                  style: TextStyle(color: colors.textPrimary, fontSize: 13),
+                  decoration: const InputDecoration(
+                    labelText: 'Mapping ItemCode SAP (Opsional)',
+                    hintText: 'Contoh: B13, B15, B26, C56 (pisahkan dengan koma atau baris baru)',
+                    helperText: 'Dipakai untuk otomatis mendeteksi Brand dari ItemCode SAP',
+                    alignLabelWithHint: true,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -1090,16 +1145,28 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                 return;
               }
 
+              final parsedCodes = itemsCtrl.text
+                  .split(RegExp(r'[\s,;]+'))
+                  .map((e) => e.trim().toUpperCase())
+                  .where((e) => e.isNotEmpty)
+                  .toSet()
+                  .toList();
+
               Navigator.pop(ctx);
               final ok = await ref.read(masterDataProvider.notifier).saveBrand(
                     id: brand?.id,
-                    code: codeCtrl.text.trim(),
+                    code: codeCtrl.text.trim().toUpperCase(),
                     name: nameCtrl.text.trim(),
+                    itemCodes: parsedCodes,
                   );
 
               if (mounted) {
+                final err = ref.read(masterDataProvider).errorMessage;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(ok ? 'Brand berhasil disimpan' : 'Gagal menyimpan brand')),
+                  SnackBar(
+                    content: Text(ok ? 'Brand & mapping item SAP berhasil disimpan' : (err ?? 'Gagal menyimpan brand')),
+                    backgroundColor: ok ? AppColors.success : AppColors.danger,
+                  ),
                 );
               }
             },
@@ -1600,7 +1667,19 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                               message: 'Apakah Anda yakin ingin menghapus data distributor "${d.name}" (${d.code}) beserta seluruh jaringan Depo dan Area di dalamnya?',
                             );
                             if (confirmed == true) {
-                              await ref.read(masterDataProvider.notifier).deleteDistributor(d.id);
+                              if (!mounted) return;
+                              final messenger = ScaffoldMessenger.of(context);
+                              final ok = await ref.read(masterDataProvider.notifier).deleteDistributor(d.id);
+                              if (!mounted) return;
+                              final st = ref.read(masterDataProvider);
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(ok
+                                      ? (st.successMessage ?? 'Distributor berhasil dihapus')
+                                      : (st.errorMessage ?? 'Gagal menghapus distributor')),
+                                  backgroundColor: ok ? AppColors.success : AppColors.danger,
+                                ),
+                              );
                             }
                           },
                         ),
@@ -1969,7 +2048,10 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
   Widget _buildBrandsList(MasterDataState state) {
     final filtered = state.brands.where((br) {
       if (_searchQuery.isEmpty) return true;
-      return br.name.toLowerCase().contains(_searchQuery) || br.code.toLowerCase().contains(_searchQuery);
+      final itemMatch = br.itemCodes.any((ic) => ic.toLowerCase().contains(_searchQuery));
+      return br.name.toLowerCase().contains(_searchQuery) ||
+          br.code.toLowerCase().contains(_searchQuery) ||
+          itemMatch;
     }).toList();
 
     if (filtered.isEmpty) {
@@ -2009,6 +2091,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
             columns: [
               DataColumn(label: Text('Kode Brand', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
               DataColumn(label: Text('Nama Merek Dagang', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Mapping ItemCode SAP', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
               DataColumn(label: Text('Aksi', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
             ],
             rows: filtered.map((brand) {
@@ -2036,6 +2119,22 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                           style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.w600, height: 1.25),
                         ),
                       ),
+                    ),
+                  ),
+                  DataCell(
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 320),
+                      child: brand.itemCodes.isEmpty
+                          ? Text('Belum ada item SAP', style: TextStyle(color: context.colors.textMuted, fontSize: 12))
+                          : Tooltip(
+                              message: brand.itemCodes.join(', '),
+                              child: Text(
+                                '${brand.itemCodes.length} Item: ${brand.itemCodes.take(5).join(', ')}${brand.itemCodes.length > 5 ? ', ...' : ''}',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(color: AppColors.petrol, fontSize: 12, fontWeight: FontWeight.w500),
+                              ),
+                            ),
                     ),
                   ),
                   DataCell(

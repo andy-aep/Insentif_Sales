@@ -171,28 +171,47 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
   void _showAddTargetDialog() => _showTargetFormDialog();
 
   // =========================================================================
-  // DIALOG: Tambah & Edit Master Target (Terpisah: Target Depo / Target Area / Industri / Surabaya)
+  // DIALOG: Tambah (Terpadu Depo Sell-In + Area Sell-Out & AO) & Edit Master Target
   // =========================================================================
-  void _showTargetFormDialog({MasterTargetModel? targetToEdit}) {
+  void _showTargetFormDialog({
+    MasterTargetModel? targetToEdit,
+    int? initialDistributorId,
+    int? initialDepoId,
+    int? initialBrandId,
+    String? initialPeriod,
+    double? initialDepoSellIn,
+    Map<int, double>? initialAreaSellOut,
+    Map<int, int>? initialAreaAo,
+  }) {
     final colors = context.colors;
     final userState = ref.read(userManagementProvider);
     final masterState = ref.read(masterDataProvider);
     final assignState = ref.read(salesAssignmentProvider);
     final targetState = ref.read(masterTargetProvider);
     final isEdit = targetToEdit != null;
+    final isBundlePreFill = !isEdit && initialDistributorId != null;
 
-    // Skema terpisah: 'TARGET_DEPO', 'TARGET_AREA', 'INDUSTRI', 'SURABAYA'
-    String selectedScheme = 'TARGET_DEPO';
+    final sortedDistributors = List<DistributorModel>.from(masterState.distributors)
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+    // Mode Tambah: 'DISTRIBUTOR_TERPADU', 'INDUSTRI', 'SURABAYA'
+    // Mode Edit:   'TARGET_DEPO', 'TARGET_AREA', 'INDUSTRI', 'SURABAYA'
+    String selectedScheme = 'DISTRIBUTOR_TERPADU';
     int? selectedDistributorId;
     int? selectedDepoId;
     int? selectedAreaId;
     int? selectedBrandId;
     int? selectedUserId;
-    String selectedTargetType = 'SELL_OUT';
-    String defaultQuota = '5000';
-    String defaultOutlet = '50';
-    final activeFilterPeriod = targetState.selectedPeriod;
-    String defaultPeriod = activeFilterPeriod != 'ALL' && activeFilterPeriod.isNotEmpty ? activeFilterPeriod : '202610';
+    String selectedTargetType = 'SELL_IN';
+    String defaultQuota = '';
+    String defaultOutlet = '';
+    final activeFilterPeriod = targetState.selectedPeriod.trim();
+    final firstActivePeriod = (activeFilterPeriod.isNotEmpty && activeFilterPeriod.toUpperCase() != 'ALL')
+        ? activeFilterPeriod.split(',').first.trim()
+        : '202610';
+    String defaultPeriod = initialPeriod ?? (firstActivePeriod.isNotEmpty ? firstActivePeriod : '202610');
+
+    String fmtNum(double v) => v % 1 == 0 ? v.toInt().toString() : v.toString();
 
     if (targetToEdit != null) {
       if (targetToEdit.kategoriSkema == 'KONSUMSI' || targetToEdit.kategoriSkema == 'DISTRIBUTOR') {
@@ -203,28 +222,34 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
       selectedDistributorId = targetToEdit.distributorId;
       selectedBrandId = targetToEdit.brandId;
       selectedUserId = targetToEdit.userId;
-      selectedTargetType = targetToEdit.targetType;
-      defaultQuota = targetToEdit.targetQuota % 1 == 0 ? targetToEdit.targetQuota.toInt().toString() : targetToEdit.targetQuota.toString();
-      defaultOutlet = targetToEdit.targetOutlet?.toString() ?? targetToEdit.targetQuota.toInt().toString();
+      selectedTargetType = selectedScheme == 'TARGET_DEPO'
+          ? 'SELL_IN'
+          : (selectedScheme == 'TARGET_AREA' ? 'SELL_OUT' : targetToEdit.targetType);
+      defaultQuota = fmtNum(targetToEdit.targetQuota);
+      defaultOutlet = targetToEdit.targetOutlet?.toString() ?? '';
       defaultPeriod = targetToEdit.period;
     } else {
-      selectedScheme = switch (_activeTabIndex) {
-        0 => 'TARGET_DEPO',
-        1 => 'TARGET_AREA',
-        2 => 'INDUSTRI',
-        _ => 'SURABAYA',
-      };
-      selectedDistributorId = masterState.distributors.isNotEmpty ? masterState.distributors.first.id : null;
-      selectedBrandId = masterState.brands.isNotEmpty ? masterState.brands.first.id : null;
+      selectedScheme = isBundlePreFill
+          ? 'DISTRIBUTOR_TERPADU'
+          : switch (_activeTabIndex) {
+              0 => 'DISTRIBUTOR_TERPADU',
+              1 => 'DISTRIBUTOR_TERPADU',
+              2 => 'INDUSTRI',
+              _ => 'SURABAYA',
+            };
+      selectedDistributorId = initialDistributorId ?? (sortedDistributors.isNotEmpty ? sortedDistributors.first.id : null);
+      selectedBrandId = initialBrandId ?? (masterState.brands.isNotEmpty ? masterState.brands.first.id : null);
       selectedUserId = userState.users.isNotEmpty ? userState.users.first.id : null;
       selectedTargetType = selectedScheme == 'INDUSTRI' ? 'SELL_IN' : 'SELL_OUT';
-      defaultQuota = selectedScheme == 'TARGET_AREA' ? '1500' : '5000';
-      defaultOutlet = selectedScheme == 'TARGET_AREA' ? '25' : '50';
+      defaultQuota = initialDepoSellIn != null
+          ? fmtNum(initialDepoSellIn)
+          : (selectedScheme == 'DISTRIBUTOR_TERPADU' ? '' : '5000');
+      defaultOutlet = selectedScheme == 'DISTRIBUTOR_TERPADU' ? '' : '50';
     }
 
     DistributorModel? currentDist = selectedDistributorId != null
-        ? masterState.distributors.where((d) => d.id == selectedDistributorId).firstOrNull
-        : (masterState.distributors.isNotEmpty ? masterState.distributors.first : null);
+        ? sortedDistributors.where((d) => d.id == selectedDistributorId).firstOrNull
+        : (sortedDistributors.isNotEmpty ? sortedDistributors.first : null);
 
     List<DepoModel> dialogDepos = masterState.depos.where((dp) => dp.distributorId == selectedDistributorId).toList();
     if (dialogDepos.isEmpty && currentDist != null && currentDist.depos.isNotEmpty) {
@@ -236,6 +261,8 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
 
     if (targetToEdit != null && targetToEdit.depoId != null) {
       selectedDepoId = targetToEdit.depoId;
+    } else if (initialDepoId != null) {
+      selectedDepoId = initialDepoId;
     } else {
       selectedDepoId = dialogDepos.isNotEmpty ? dialogDepos.first.id : null;
     }
@@ -270,9 +297,30 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
     final yearCtrl = TextEditingController(
       text: defaultPeriod.length >= 4 ? defaultPeriod.substring(0, 4) : DateTime.now().year.toString(),
     );
+    final Map<int, TextEditingController> areaSellOutCtrls = {};
+    final Map<int, TextEditingController> areaAoCtrls = {};
+
+    void syncAreaControllers(List<AreaModel> areas) {
+      for (final a in areas) {
+        final initSo = initialAreaSellOut?[a.id];
+        final initAo = initialAreaAo?[a.id];
+        areaSellOutCtrls.putIfAbsent(
+          a.id,
+          () => TextEditingController(text: initSo != null && initSo > 0 ? fmtNum(initSo) : ''),
+        );
+        areaAoCtrls.putIfAbsent(
+          a.id,
+          () => TextEditingController(text: initAo != null && initAo > 0 ? initAo.toString() : ''),
+        );
+      }
+    }
+
+    syncAreaControllers(dialogAreas);
+
     bool isFullYearMode = false;
     bool isLoadingDepos = false;
     bool isLoadingAreas = false;
+    bool isSubmitting = false;
     bool didInitialFetch = false;
 
     Future<void> loadAreasForDepo(int? depoId, StateSetter setDialogState) async {
@@ -290,7 +338,9 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
           queryParameters: {'depo_id': depoId, 'limit': 500},
         );
         final List raw = res.data['data'] ?? (res.data is List ? res.data : []);
-        final fetched = raw.map((e) => AreaModel.fromJson(e)).toList();
+        final fetched = raw.map((e) => AreaModel.fromJson(e)).toList()
+          ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        syncAreaControllers(fetched);
         setDialogState(() {
           dialogAreas = fetched;
           if (selectedAreaId == null || !dialogAreas.any((a) => a.id == selectedAreaId)) {
@@ -320,7 +370,8 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
           queryParameters: {'distributor_id': distId, 'limit': 500},
         );
         final List raw = res.data['data'] ?? (res.data is List ? res.data : []);
-        final fetched = raw.map((e) => DepoModel.fromJson(e)).toList();
+        final fetched = raw.map((e) => DepoModel.fromJson(e)).toList()
+          ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
         int? nextDepoId = selectedDepoId;
         if (nextDepoId == null || !fetched.any((d) => d.id == nextDepoId)) {
           nextDepoId = fetched.isNotEmpty ? fetched.first.id : null;
@@ -347,27 +398,31 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
             Future.microtask(() => loadDeposForDistributor(selectedDistributorId, setDialogState));
           }
 
+          final isDistributorBundle = !isEdit && selectedScheme == 'DISTRIBUTOR_TERPADU';
           final isTargetDepo = selectedScheme == 'TARGET_DEPO';
           final isTargetArea = selectedScheme == 'TARGET_AREA';
-          final isDistributor = isTargetDepo || isTargetArea;
-          final isOutletMetric = selectedTargetType == 'AO' || selectedTargetType == 'NOO';
+          final isDistributor = isDistributorBundle || isTargetDepo || isTargetArea;
+          final isOutletMetric = !isDistributor && (selectedTargetType == 'AO' || selectedTargetType == 'NOO');
 
-          // Auto-detect sales personil
-          UserModel? detectedSales;
-          String detectedRoleText = '';
-          if (isTargetDepo && selectedDistributorId != null) {
+          // Auto-detect ASM untuk Depo
+          UserModel? detectedAsm;
+          if (isDistributor && selectedDistributorId != null) {
             final asmAssign = assignState.distributorAssignments
                 .where((a) => a.distributorId == selectedDistributorId && (a.user?.position?.code.toUpperCase() == 'ASM') && a.isActive)
                 .firstOrNull;
-            detectedSales = asmAssign?.user;
-            detectedRoleText = 'ASM Penanggung Jawab Depo';
-          } else if (isTargetArea && selectedAreaId != null) {
-            final spvAssign = assignState.distributorAssignments
-                .where((a) => a.areaId == selectedAreaId && a.isActive)
-                .firstOrNull;
-            detectedSales = spvAssign?.user;
-            detectedRoleText = 'SPV Penanggung Jawab Area';
+            detectedAsm = asmAssign?.user;
           }
+
+          // Helper auto-detect SPV untuk Area tertentu
+          UserModel? detectSpvForArea(int? areaId) {
+            if (areaId == null) return null;
+            final spvAssign = assignState.distributorAssignments
+                .where((a) => a.areaId == areaId && a.isActive)
+                .firstOrNull;
+            return spvAssign?.user;
+          }
+
+          final detectedSpv = isTargetArea ? detectSpvForArea(selectedAreaId) : null;
 
           return AlertDialog(
             backgroundColor: colors.bgDialog,
@@ -389,16 +444,20 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                     children: [
                       Text(
                         isEdit
-                            ? 'Ubah ${isTargetArea ? 'Target Area (SPV)' : (isTargetDepo ? 'Target Depo (ASM)' : 'Target Kuota')}'
-                            : 'Input ${isTargetArea ? 'Target Area (SPV)' : (isTargetDepo ? 'Target Depo (ASM)' : 'Target Kuota')}',
+                            ? 'Ubah ${isTargetArea ? 'Target Area (Sell-Out & AO)' : (isTargetDepo ? 'Target Depo (Sell-In)' : 'Target Kuota')}'
+                            : (isDistributorBundle
+                                ? 'Input Target Distributor Terpadu'
+                                : 'Input Target ${selectedScheme == 'INDUSTRI' ? 'Industri (B2B)' : 'Sales Surabaya'}'),
                         style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 18),
                       ),
                       Text(
-                        isTargetDepo
-                            ? 'Setting kuota mandiri untuk tingkat Depo (ASM)'
-                            : (isTargetArea
-                                ? 'Setting kuota mandiri untuk tingkat Area (SPV)'
-                                : 'Tetapkan kuota penjualan per personil sales'),
+                        isDistributorBundle
+                            ? 'Isi Target Sell-In Depo (ASM) dan Sell-Out + AO seluruh Area (SPV) sekaligus'
+                            : (isTargetDepo
+                                ? 'Target Sell-In (Kg) tingkat Depo untuk ASM'
+                                : (isTargetArea
+                                    ? 'Target Sell-Out (Kg) & Active Outlet (Toko) tingkat Area untuk SPV/ASC'
+                                    : 'Tetapkan kuota penjualan per personil sales')),
                         style: GoogleFonts.inter(color: colors.textMuted, fontSize: 12),
                       ),
                     ],
@@ -407,50 +466,57 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
               ],
             ),
             content: SizedBox(
-              width: 540,
+              width: isDistributorBundle ? 640 : 540,
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 1. Pilih Jenis Target (Terpisah: Target Depo sendiri, Target Area sendiri)
+                    // 1. Pilih Jenis Target
                     Text('Jenis Target *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
                       initialValue: selectedScheme,
                       dropdownColor: colors.bgElevated,
                       isExpanded: true,
-                      style: TextStyle(color: colors.textPrimary, fontSize: 14),
+                      style: TextStyle(color: colors.textPrimary, fontSize: 13.5),
                       decoration: InputDecoration(
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         filled: true,
                         fillColor: colors.bgElevated,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       ),
-                      items: const [
-                        DropdownMenuItem(value: 'TARGET_DEPO', child: Text('Target Depo (ASM)')),
-                        DropdownMenuItem(value: 'TARGET_AREA', child: Text('Target Area (SPV)')),
-                        DropdownMenuItem(value: 'INDUSTRI', child: Text('Target Industri (B2B)')),
-                        DropdownMenuItem(value: 'SURABAYA', child: Text('Target Sales Surabaya (TO / Canvasing)')),
-                      ],
+                      items: isEdit
+                          ? const [
+                              DropdownMenuItem(value: 'TARGET_DEPO', child: Text('Target Depo — Sell-In (ASM)', overflow: TextOverflow.ellipsis)),
+                              DropdownMenuItem(value: 'TARGET_AREA', child: Text('Target Area — Sell-Out & AO (SPV/ASC)', overflow: TextOverflow.ellipsis)),
+                              DropdownMenuItem(value: 'INDUSTRI', child: Text('Target Industri (B2B)', overflow: TextOverflow.ellipsis)),
+                              DropdownMenuItem(value: 'SURABAYA', child: Text('Target Sales Surabaya (TO / Canvasing)', overflow: TextOverflow.ellipsis)),
+                            ]
+                          : const [
+                              DropdownMenuItem(
+                                value: 'DISTRIBUTOR_TERPADU',
+                                child: Text('Target Distributor (Depo Sell-In + Area Sell-Out & AO)', overflow: TextOverflow.ellipsis),
+                              ),
+                              DropdownMenuItem(value: 'INDUSTRI', child: Text('Target Industri (B2B)', overflow: TextOverflow.ellipsis)),
+                              DropdownMenuItem(value: 'SURABAYA', child: Text('Target Sales Surabaya (TO / Canvasing)', overflow: TextOverflow.ellipsis)),
+                            ],
                       onChanged: isEdit
                           ? null
                           : (val) {
                               if (val != null) {
                                 setDialogState(() {
                                   selectedScheme = val;
-                                  if (val == 'TARGET_DEPO') {
+                                  if (val == 'DISTRIBUTOR_TERPADU') {
+                                    selectedTargetType = 'SELL_IN';
+                                    quotaCtrl.text = '';
+                                  } else if (val == 'INDUSTRI') {
+                                    selectedTargetType = 'SELL_IN';
+                                    quotaCtrl.text = '5000';
+                                  } else if (val == 'SURABAYA') {
                                     selectedTargetType = 'SELL_OUT';
                                     quotaCtrl.text = '5000';
                                     outletCtrl.text = '50';
-                                  } else if (val == 'TARGET_AREA') {
-                                    selectedTargetType = 'SELL_OUT';
-                                    quotaCtrl.text = '1500';
-                                    outletCtrl.text = '25';
-                                  } else if (val == 'INDUSTRI') {
-                                    selectedTargetType = 'SELL_IN';
-                                  } else if (val == 'SURABAYA') {
-                                    selectedTargetType = 'SELL_OUT';
                                   }
                                 });
                               }
@@ -463,104 +529,372 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                       Text('Pilih Distributor *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 6),
                       DropdownButtonFormField<int>(
-                        initialValue: selectedDistributorId,
+                        initialValue: sortedDistributors.any((d) => d.id == selectedDistributorId) ? selectedDistributorId : null,
                         dropdownColor: colors.bgElevated,
                         isExpanded: true,
-                        style: TextStyle(color: colors.textPrimary, fontSize: 14),
+                        style: TextStyle(color: colors.textPrimary, fontSize: 13.5),
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(LucideIcons.building2, size: 18),
+                          prefixIcon: const Icon(LucideIcons.building2, size: 17),
+                          prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           filled: true,
                           fillColor: colors.bgElevated,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
                         ),
-                        items: masterState.distributors.map((d) {
+                        items: sortedDistributors.map((d) {
                           return DropdownMenuItem<int>(
                             value: d.id,
                             child: Text('${d.name} (${d.code})', overflow: TextOverflow.ellipsis),
                           );
                         }).toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setDialogState(() {
-                              selectedDistributorId = val;
-                              currentDist = masterState.distributors.where((d) => d.id == val).firstOrNull;
-                            });
-                            loadDeposForDistributor(val, setDialogState);
-                          }
-                        },
+                        onChanged: isEdit
+                            ? null
+                            : (val) {
+                                if (val != null) {
+                                  setDialogState(() {
+                                    selectedDistributorId = val;
+                                    currentDist = sortedDistributors.where((d) => d.id == val).firstOrNull;
+                                  });
+                                  loadDeposForDistributor(val, setDialogState);
+                                }
+                              },
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 12),
 
-                      // Pilih Depo
+                      // Depo + Brand berdampingan
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            isTargetArea ? 'Pilih Depo Induk *' : 'Pilih Depo *',
-                            style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text('Pilih Depo *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+                                    if (isLoadingDepos) ...[
+                                      const SizedBox(width: 6),
+                                      const SizedBox(width: 11, height: 11, child: CircularProgressIndicator(strokeWidth: 2)),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                DropdownButtonFormField<int>(
+                                  key: ValueKey('dialog_depo_${selectedDistributorId}_${selectedDepoId}_${dialogDepos.length}'),
+                                  initialValue: dialogDepos.any((d) => d.id == selectedDepoId) ? selectedDepoId : null,
+                                  dropdownColor: colors.bgElevated,
+                                  isExpanded: true,
+                                  style: TextStyle(color: colors.textPrimary, fontSize: 13),
+                                  decoration: InputDecoration(
+                                    prefixIcon: const Icon(LucideIcons.home, size: 16),
+                                    prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                    filled: true,
+                                    fillColor: colors.bgElevated,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+                                  ),
+                                  items: dialogDepos.map((d) {
+                                    return DropdownMenuItem<int>(
+                                      value: d.id,
+                                      child: Text('${d.name} (${d.code})', overflow: TextOverflow.ellipsis),
+                                    );
+                                  }).toList(),
+                                  onChanged: isEdit
+                                      ? null
+                                      : (val) {
+                                          if (val != null) {
+                                            setDialogState(() {
+                                              selectedDepoId = val;
+                                              currentDepo = dialogDepos.where((d) => d.id == val).firstOrNull;
+                                            });
+                                            loadAreasForDepo(val, setDialogState);
+                                          }
+                                        },
+                                ),
+                              ],
+                            ),
                           ),
-                          if (isLoadingDepos) ...[
-                            const SizedBox(width: 8),
-                            const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2)),
-                          ],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Pilih Brand Produk *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 6),
+                                DropdownButtonFormField<int>(
+                                  initialValue: masterState.brands.any((b) => b.id == selectedBrandId) ? selectedBrandId : null,
+                                  dropdownColor: colors.bgElevated,
+                                  isExpanded: true,
+                                  style: TextStyle(color: colors.textPrimary, fontSize: 13),
+                                  decoration: InputDecoration(
+                                    prefixIcon: const Icon(LucideIcons.tag, size: 16, color: Color(0xFF24968B)),
+                                    prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                    filled: true,
+                                    fillColor: colors.bgElevated,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+                                  ),
+                                  items: masterState.brands.map((b) {
+                                    return DropdownMenuItem<int>(
+                                      value: b.id,
+                                      child: Text('${b.name} (${b.code})', overflow: TextOverflow.ellipsis),
+                                    );
+                                  }).toList(),
+                                  onChanged: (val) {
+                                    if (val != null) setDialogState(() => selectedBrandId = val);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 6),
-                      DropdownButtonFormField<int>(
-                        key: ValueKey('dialog_depo_${selectedDistributorId}_${selectedDepoId}_${dialogDepos.length}'),
-                        initialValue: dialogDepos.any((d) => d.id == selectedDepoId) ? selectedDepoId : null,
-                        dropdownColor: colors.bgElevated,
-                        isExpanded: true,
-                        style: TextStyle(color: colors.textPrimary, fontSize: 14),
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(LucideIcons.home, size: 18),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          filled: true,
-                          fillColor: colors.bgElevated,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        ),
-                        items: dialogDepos.map((d) {
-                          return DropdownMenuItem<int>(
-                            value: d.id,
-                            child: Text('${d.name} (${d.code})', overflow: TextOverflow.ellipsis),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setDialogState(() {
-                              selectedDepoId = val;
-                              currentDepo = dialogDepos.where((d) => d.id == val).firstOrNull;
-                            });
-                            loadAreasForDepo(val, setDialogState);
-                          }
-                        },
-                      ),
                       const SizedBox(height: 14),
 
-                      // Khusus Target Area: Pilih Area
-                      if (isTargetArea) ...[
-                        Row(
-                          children: [
-                            Text('Pilih Area (SPV) *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
-                            if (isLoadingAreas) ...[
-                              const SizedBox(width: 8),
-                              const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2)),
+                      // ========================================================
+                      // MODE TAMBAH TERPADU: Depo (Sell-In) + Semua Area (Sell-Out & AO)
+                      // ========================================================
+                      if (isDistributorBundle) ...[
+                        // Bagian 1: Target Depo (Sell-In)
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: colors.bgElevated,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.35)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(LucideIcons.crown, size: 16, color: AppColors.primaryLight),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      '1. Target Depo — Sell-In (ASM)',
+                                      style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13.5),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      detectedAsm != null ? 'ASM: ${detectedAsm.name}' : 'ASM: Otomatis',
+                                      style: const TextStyle(color: AppColors.primaryLight, fontSize: 11, fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              TextField(
+                                controller: quotaCtrl,
+                                keyboardType: TextInputType.number,
+                                style: TextStyle(color: colors.textPrimary, fontSize: 13.5),
+                                decoration: InputDecoration(
+                                  labelText: 'Target Sell-In Depo (Kg)',
+                                  hintText: 'Contoh: 135000 (kosongkan jika hanya input Area)',
+                                  prefixIcon: const Icon(LucideIcons.truck, size: 17),
+                                  prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                  suffixText: 'Kg',
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                  filled: true,
+                                  fillColor: colors.bgCard,
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                                ),
+                              ),
                             ],
-                          ],
+                          ),
                         ),
+                        const SizedBox(height: 12),
+
+                        // Bagian 2: Daftar Target Area (Sell-Out & AO sekaligus)
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: colors.bgElevated,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: colors.border),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(LucideIcons.mapPin, size: 16, color: AppColors.warning),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      '2. Target Area — Sell-Out (Kg) & AO (Toko)',
+                                      style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13.5),
+                                    ),
+                                  ),
+                                  if (isLoadingAreas)
+                                    const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                                  else
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.warning.withValues(alpha: 0.14),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        '${dialogAreas.length} Area',
+                                        style: const TextStyle(color: AppColors.warning, fontSize: 11, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              if (dialogAreas.isEmpty && !isLoadingAreas)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  child: Text(
+                                    'Belum ada Area terdaftar pada Depo ini. Anda tetap dapat menyimpan Target Sell-In Depo di atas.',
+                                    style: TextStyle(color: colors.textMuted, fontSize: 12, fontStyle: FontStyle.italic),
+                                  ),
+                                )
+                              else
+                                ...dialogAreas.map((area) {
+                                  final spv = detectSpvForArea(area.id);
+                                  final soCtrl = areaSellOutCtrls.putIfAbsent(area.id, () => TextEditingController());
+                                  final aoCtrl = areaAoCtrls.putIfAbsent(area.id, () => TextEditingController());
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: colors.bgCard,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: colors.border),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          flex: 5,
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                area.name,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600, fontSize: 12.5),
+                                              ),
+                                              Text(
+                                                '${area.code}${spv != null ? ' • SPV: ${spv.name}' : ''}',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(color: colors.textMuted, fontSize: 11),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          flex: 4,
+                                          child: TextField(
+                                            controller: soCtrl,
+                                            keyboardType: TextInputType.number,
+                                            style: TextStyle(color: colors.textPrimary, fontSize: 12.5),
+                                            decoration: InputDecoration(
+                                              labelText: 'Sell-Out (Kg)',
+                                              hintText: '0',
+                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                              filled: true,
+                                              fillColor: colors.bgInput,
+                                              isDense: true,
+                                              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          flex: 3,
+                                          child: TextField(
+                                            controller: aoCtrl,
+                                            keyboardType: TextInputType.number,
+                                            style: TextStyle(color: colors.textPrimary, fontSize: 12.5),
+                                            decoration: InputDecoration(
+                                              labelText: 'AO (Toko)',
+                                              hintText: '0',
+                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                              filled: true,
+                                              fillColor: colors.bgInput,
+                                              isDense: true,
+                                              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ] else if (isTargetDepo) ...[
+                        // MODE EDIT DEPO: Langsung input Target Sell-In (Kg) tanpa dropdown metrik
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: colors.bgElevated,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: colors.border),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(LucideIcons.crown, size: 18, color: AppColors.primaryLight),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  detectedAsm != null
+                                      ? 'ASM Penanggung Jawab: ${detectedAsm.name} (@${detectedAsm.username})'
+                                      : 'ASM Penanggung Jawab: Otomatis mengikuti assignment aktif',
+                                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: colors.textPrimary),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Text('Target Sell-In Depo (Kg) *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 6),
+                        TextField(
+                          controller: quotaCtrl,
+                          keyboardType: TextInputType.number,
+                          style: TextStyle(color: colors.textPrimary, fontSize: 14),
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(LucideIcons.truck, size: 18),
+                            suffixText: 'Kg',
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            filled: true,
+                            fillColor: colors.bgElevated,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ] else if (isTargetArea) ...[
+                        // MODE EDIT AREA: Pilih Area + langsung 2 input Sell-Out (Kg) & AO (Toko)
+                        Text('Area (SPV / ASC) *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<int>(
                           key: ValueKey('dialog_area_${selectedDepoId}_${selectedAreaId}_${dialogAreas.length}'),
                           initialValue: dialogAreas.any((a) => a.id == selectedAreaId) ? selectedAreaId : null,
                           dropdownColor: colors.bgElevated,
                           isExpanded: true,
-                          style: TextStyle(color: colors.textPrimary, fontSize: 14),
+                          style: TextStyle(color: colors.textPrimary, fontSize: 13.5),
                           decoration: InputDecoration(
-                            prefixIcon: const Icon(LucideIcons.mapPin, size: 18, color: AppColors.warning),
+                            prefixIcon: const Icon(LucideIcons.mapPin, size: 17, color: AppColors.warning),
+                            prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                             filled: true,
                             fillColor: colors.bgElevated,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
                           ),
                           items: dialogAreas.map((a) {
                             return DropdownMenuItem<int>(
@@ -568,77 +902,78 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                               child: Text('${a.name} (${a.code})', overflow: TextOverflow.ellipsis),
                             );
                           }).toList(),
-                          onChanged: (val) {
-                            if (val != null) {
-                              setDialogState(() => selectedAreaId = val);
-                            }
+                          onChanged: isEdit ? null : (val) {
+                            if (val != null) setDialogState(() => selectedAreaId = val);
                           },
                         ),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: colors.bgElevated,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: colors.border),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(LucideIcons.userCheck, size: 18, color: AppColors.warning),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  detectedSpv != null
+                                      ? 'SPV / ASC Area: ${detectedSpv.name} (@${detectedSpv.username})'
+                                      : 'SPV / ASC Area: Otomatis mengikuti assignment aktif',
+                                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: colors.textPrimary),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                         const SizedBox(height: 14),
-                      ],
-
-                      // Pilih Brand
-                      Text('Pilih Brand Produk *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 6),
-                      DropdownButtonFormField<int>(
-                        initialValue: selectedBrandId,
-                        dropdownColor: colors.bgElevated,
-                        isExpanded: true,
-                        style: TextStyle(color: colors.textPrimary, fontSize: 14),
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(LucideIcons.tag, size: 18, color: Color(0xFF24968B)),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          filled: true,
-                          fillColor: colors.bgElevated,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        ),
-                        items: masterState.brands.map((b) {
-                          return DropdownMenuItem<int>(
-                            value: b.id,
-                            child: Text('${b.name} (${b.code})', overflow: TextOverflow.ellipsis),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) setDialogState(() => selectedBrandId = val);
-                        },
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Info Sales Penanggung Jawab sesuai unit (ASM untuk Depo, SPV untuk Area)
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: colors.bgElevated,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: colors.border),
-                        ),
-                        child: Row(
+                        Row(
                           children: [
-                            Icon(
-                              isTargetDepo ? LucideIcons.crown : LucideIcons.userCheck,
-                              size: 20,
-                              color: isTargetDepo ? AppColors.primaryLight : AppColors.warning,
-                            ),
-                            const SizedBox(width: 10),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    detectedRoleText.isNotEmpty
-                                        ? detectedRoleText
-                                        : (isTargetDepo ? 'Posisi ASM (Area Sales Manager)' : 'Posisi SPV (Sales Supervisor)'),
-                                    style: TextStyle(fontSize: 11, color: colors.textMuted, fontWeight: FontWeight.bold),
+                                  Text('Target Sell-Out Area (Kg) *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 6),
+                                  TextField(
+                                    controller: quotaCtrl,
+                                    keyboardType: TextInputType.number,
+                                    style: TextStyle(color: colors.textPrimary, fontSize: 14),
+                                    decoration: InputDecoration(
+                                      prefixIcon: const Icon(LucideIcons.scale, size: 17),
+                                      prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                      suffixText: 'Kg',
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                      filled: true,
+                                      fillColor: colors.bgElevated,
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                                    ),
                                   ),
-                                  Text(
-                                    detectedSales != null
-                                        ? '${detectedSales.name} (@${detectedSales.username})'
-                                        : '(Otomatis mengikuti assignment ${isTargetDepo ? 'ASM' : 'SPV'} aktif)',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: detectedSales != null ? colors.textPrimary : colors.textMuted,
-                                      fontStyle: detectedSales != null ? FontStyle.normal : FontStyle.italic,
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Target AO (Toko) *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 6),
+                                  TextField(
+                                    controller: outletCtrl,
+                                    keyboardType: TextInputType.number,
+                                    style: TextStyle(color: colors.textPrimary, fontSize: 14),
+                                    decoration: InputDecoration(
+                                      prefixIcon: const Icon(LucideIcons.store, size: 17),
+                                      prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                      suffixText: 'Toko',
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                      filled: true,
+                                      fillColor: colors.bgElevated,
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
                                     ),
                                   ),
                                 ],
@@ -646,19 +981,20 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 14),
+                        const SizedBox(height: 14),
+                      ],
                     ] else ...[
-                      // Non-distributor: pilih sales langsung
+                      // Non-distributor (Industri / Surabaya): pilih sales & metrik
                       Text('Pilih Sales Personil *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 6),
                       DropdownButtonFormField<int>(
-                        initialValue: selectedUserId,
+                        initialValue: userState.users.any((u) => u.id == selectedUserId) ? selectedUserId : null,
                         dropdownColor: colors.bgElevated,
                         isExpanded: true,
                         style: TextStyle(color: colors.textPrimary, fontSize: 14),
                         decoration: InputDecoration(
                           prefixIcon: const Icon(LucideIcons.user, size: 18),
+                          prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           filled: true,
                           fillColor: colors.bgElevated,
@@ -675,97 +1011,77 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                         },
                       ),
                       const SizedBox(height: 14),
+
+                      Text('Pilih Metrik Target *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 6),
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedTargetType,
+                        dropdownColor: colors.bgElevated,
+                        isExpanded: true,
+                        style: TextStyle(color: colors.textPrimary, fontSize: 14),
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          filled: true,
+                          fillColor: colors.bgElevated,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        ),
+                        items: selectedScheme == 'INDUSTRI'
+                            ? const [
+                                DropdownMenuItem(value: 'SELL_IN', child: Text('Sell-In (Kg / Tonase)')),
+                                DropdownMenuItem(value: 'NOO', child: Text('New Open Outlet (NOO)')),
+                              ]
+                            : const [
+                                DropdownMenuItem(value: 'SELL_OUT', child: Text('Sell-Out (Kg / Box)')),
+                                DropdownMenuItem(value: 'AO', child: Text('Active Outlet (AO Toko)')),
+                              ],
+                        onChanged: (val) {
+                          if (val != null) setDialogState(() => selectedTargetType = val);
+                        },
+                      ),
+                      const SizedBox(height: 14),
+
+                      if (!isOutletMetric)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Besaran Kuota Volume (Kg / Box) *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: quotaCtrl,
+                              style: TextStyle(color: colors.textPrimary, fontSize: 14),
+                              decoration: InputDecoration(
+                                prefixIcon: const Icon(LucideIcons.scale, size: 18),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                filled: true,
+                                fillColor: colors.bgElevated,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              ),
+                              keyboardType: TextInputType.number,
+                            ),
+                          ],
+                        )
+                      else
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Target Jumlah Toko / Outlet ($selectedTargetType) *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: outletCtrl,
+                              style: TextStyle(color: colors.textPrimary, fontSize: 14),
+                              decoration: InputDecoration(
+                                prefixIcon: const Icon(LucideIcons.store, size: 18),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                filled: true,
+                                fillColor: colors.bgElevated,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              ),
+                              keyboardType: TextInputType.number,
+                            ),
+                          ],
+                        ),
+                      const SizedBox(height: 14),
                     ],
-
-                    // Metrik Target
-                    Text('Pilih Metrik Target *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedTargetType,
-                      dropdownColor: colors.bgElevated,
-                      isExpanded: true,
-                      style: TextStyle(color: colors.textPrimary, fontSize: 14),
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        filled: true,
-                        fillColor: colors.bgElevated,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      ),
-                      items: isDistributor
-                          ? const [
-                              DropdownMenuItem(value: 'SELL_OUT', child: Text('Sell-Out (Kg / Box)')),
-                              DropdownMenuItem(value: 'SELL_IN', child: Text('Sell-In (Kg / Box)')),
-                              DropdownMenuItem(value: 'AO', child: Text('Active Outlet (AO Toko)')),
-                            ]
-                          : (selectedScheme == 'INDUSTRI'
-                              ? const [
-                                  DropdownMenuItem(value: 'SELL_IN', child: Text('Sell-In (Kg / Tonase)')),
-                                  DropdownMenuItem(value: 'NOO', child: Text('New Open Outlet (NOO)')),
-                                ]
-                              : const [
-                                  DropdownMenuItem(value: 'SELL_OUT', child: Text('Sell-Out (Kg / Box)')),
-                                  DropdownMenuItem(value: 'AO', child: Text('Active Outlet (AO Toko)')),
-                                ]),
-                      onChanged: (val) {
-                        if (val != null) setDialogState(() => selectedTargetType = val);
-                      },
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Besaran Angka Target (Murni 1 Field sesuai Jenis Target yang dipilih)
-                    if (!isOutletMetric)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isTargetDepo
-                                ? 'Besaran Target Depo (Kg / Box) *'
-                                : (isTargetArea ? 'Besaran Target Area (Kg / Box) *' : 'Besaran Kuota Volume (Kg / Box) *'),
-                            style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 6),
-                          TextField(
-                            controller: quotaCtrl,
-                            style: TextStyle(color: colors.textPrimary, fontSize: 14),
-                            decoration: InputDecoration(
-                              prefixIcon: const Icon(LucideIcons.scale, size: 18),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                              filled: true,
-                              fillColor: colors.bgElevated,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                            ),
-                            keyboardType: TextInputType.number,
-                          ),
-                        ],
-                      )
-                    else
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isTargetDepo
-                                ? 'Target Jumlah Toko / Outlet Depo ($selectedTargetType) *'
-                                : (isTargetArea
-                                    ? 'Target Jumlah Toko / Outlet Area ($selectedTargetType) *'
-                                    : 'Target Jumlah Toko / Outlet ($selectedTargetType) *'),
-                            style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 6),
-                          TextField(
-                            controller: outletCtrl,
-                            style: TextStyle(color: colors.textPrimary, fontSize: 14),
-                            decoration: InputDecoration(
-                              prefixIcon: const Icon(LucideIcons.store, size: 18),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                              filled: true,
-                              fillColor: colors.bgElevated,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                            ),
-                            keyboardType: TextInputType.number,
-                          ),
-                        ],
-                      ),
-                    const SizedBox(height: 14),
 
                     // Periode Pilihan: Bulanan (1 Bulan) vs 1 Tahun Penuh (12 Bulan)
                     if (!isEdit) ...[
@@ -890,7 +1206,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(ctx),
+                onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
                 child: Text('Batal', style: TextStyle(color: colors.textMuted)),
               ),
               ElevatedButton.icon(
@@ -899,84 +1215,156 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                icon: Icon(isEdit ? LucideIcons.check : LucideIcons.save, size: 16, color: Colors.white),
+                icon: isSubmitting
+                    ? const SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Icon(isEdit ? LucideIcons.check : LucideIcons.save, size: 16, color: Colors.white),
                 label: Text(
-                  isEdit
-                      ? 'Simpan Perubahan'
-                      : (isFullYearMode ? 'Simpan Target 1 Tahun (12 Bulan)' : 'Simpan Target'),
+                  isSubmitting
+                      ? 'Menyimpan...'
+                      : (isEdit
+                          ? 'Simpan Perubahan'
+                          : (isFullYearMode ? 'Simpan Target 1 Tahun (12 Bulan)' : 'Simpan Target')),
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                 ),
-                onPressed: () async {
-                  final period = periodCtrl.text.trim().isEmpty ? '202610' : periodCtrl.text.trim();
-                  final year = yearCtrl.text.trim().isEmpty ? '2026' : yearCtrl.text.trim();
-                  final quotaVal = double.tryParse(quotaCtrl.text.replaceAll(',', '.')) ?? 0.0;
-                  final outletVal = int.tryParse(outletCtrl.text);
+                onPressed: isSubmitting
+                    ? null
+                    : () async {
+                        final period = periodCtrl.text.trim().isEmpty ? '202610' : periodCtrl.text.trim();
+                        final year = yearCtrl.text.trim().isEmpty ? '2026' : yearCtrl.text.trim();
+                        final quotaVal = double.tryParse(quotaCtrl.text.trim().replaceAll(',', '.')) ?? 0.0;
+                        final outletVal = int.tryParse(outletCtrl.text.trim());
 
-                  if (isDistributor && selectedDistributorId == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Wajib memilih Distributor!'), backgroundColor: AppColors.danger),
-                    );
-                    return;
-                  }
-                  if (isDistributor && selectedDepoId == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Wajib memilih Depo!'), backgroundColor: AppColors.danger),
-                    );
-                    return;
-                  }
-                  if (isTargetArea && selectedAreaId == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Wajib memilih Area!'), backgroundColor: AppColors.danger),
-                    );
-                    return;
-                  }
+                        if (isDistributor && selectedDistributorId == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Wajib memilih Distributor!'), backgroundColor: AppColors.danger),
+                          );
+                          return;
+                        }
+                        if (isDistributor && selectedDepoId == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Wajib memilih Depo!'), backgroundColor: AppColors.danger),
+                          );
+                          return;
+                        }
+                        if (isDistributor && selectedBrandId == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Wajib memilih Brand!'), backgroundColor: AppColors.danger),
+                          );
+                          return;
+                        }
+                        if (isTargetArea && selectedAreaId == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Wajib memilih Area!'), backgroundColor: AppColors.danger),
+                          );
+                          return;
+                        }
 
-                  final targetLevel = isTargetDepo ? 'DEPO' : (isTargetArea ? 'AREA' : 'SALES');
+                        if (isDistributorBundle) {
+                          final areaPayloadList = <Map<String, dynamic>>[];
+                          for (final area in dialogAreas) {
+                            final so = double.tryParse((areaSellOutCtrls[area.id]?.text ?? '').trim().replaceAll(',', '.')) ?? 0.0;
+                            final ao = int.tryParse((areaAoCtrls[area.id]?.text ?? '').trim()) ?? 0;
+                            if (so > 0 || ao > 0) {
+                              areaPayloadList.add({
+                                'area_id': area.id,
+                                'user_id': detectSpvForArea(area.id)?.id,
+                                'sell_out': so,
+                                'ao': ao,
+                              });
+                            }
+                          }
+                          if (quotaVal <= 0 && areaPayloadList.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Isi minimal 1 nilai Target Sell-In Depo atau Target Area (Sell-Out / AO)!'),
+                                backgroundColor: AppColors.danger,
+                              ),
+                            );
+                            return;
+                          }
 
-                  final success = isEdit
-                      ? await ref.read(masterTargetProvider.notifier).updateTarget(
-                          id: targetToEdit.id,
-                          userId: isDistributor ? (detectedSales?.id ?? targetToEdit.userId) : selectedUserId,
-                          distributorId: isDistributor ? selectedDistributorId : null,
-                          depoId: isDistributor ? selectedDepoId : null,
-                          areaId: isTargetArea ? selectedAreaId : null,
-                          brandId: isDistributor ? selectedBrandId : null,
-                          level: targetLevel,
-                          kategoriSkema: isDistributor ? 'KONSUMSI' : selectedScheme,
-                          targetType: selectedTargetType,
-                          period: period,
-                          targetQuota: isOutletMetric ? (outletVal?.toDouble() ?? 0.0) : quotaVal,
-                          targetOutlet: isOutletMetric ? outletVal : null,
-                        )
-                      : await ref.read(masterTargetProvider.notifier).saveTarget(
-                          userId: isDistributor ? (detectedSales?.id) : selectedUserId,
-                          distributorId: isDistributor ? selectedDistributorId : null,
-                          depoId: isDistributor ? selectedDepoId : null,
-                          areaId: isTargetArea ? selectedAreaId : null,
-                          brandId: isDistributor ? selectedBrandId : null,
-                          level: targetLevel,
-                          kategoriSkema: isDistributor ? 'KONSUMSI' : selectedScheme,
-                          targetType: selectedTargetType,
-                          period: period,
-                          isFullYear: isFullYearMode,
-                          year: year,
-                          targetQuota: isOutletMetric ? (outletVal?.toDouble() ?? 0.0) : quotaVal,
-                          targetOutlet: isOutletMetric ? outletVal : null,
-                        );
+                          setDialogState(() => isSubmitting = true);
+                          final success = await ref.read(masterTargetProvider.notifier).saveDistributorBundle(
+                                distributorId: selectedDistributorId!,
+                                depoId: selectedDepoId!,
+                                brandId: selectedBrandId!,
+                                period: period,
+                                isFullYear: isFullYearMode,
+                                year: year,
+                                asmUserId: detectedAsm?.id,
+                                depoSellInQuota: quotaVal > 0 ? quotaVal : null,
+                                areaTargets: areaPayloadList,
+                              );
 
-                  if (ctx.mounted) Navigator.pop(ctx);
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (mounted) {
+                            _hierarchyKey.currentState?.reload();
+                            final msg = ref.read(masterTargetProvider).successMessage ??
+                                ref.read(masterTargetProvider).errorMessage ??
+                                (success ? 'Target berhasil disimpan!' : 'Gagal menyimpan target');
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(msg),
+                                backgroundColor: success ? AppColors.success : AppColors.danger,
+                              ),
+                            );
+                          }
+                          return;
+                        }
 
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(success
-                            ? (isEdit ? 'Target kuota berhasil diperbarui!' : 'Target kuota berhasil disimpan!')
-                            : 'Gagal memproses target kuota'),
-                        backgroundColor: success ? AppColors.success : AppColors.danger,
-                      ),
-                    );
-                  }
-                },
+                        setDialogState(() => isSubmitting = true);
+                        final targetLevel = isTargetDepo ? 'DEPO' : (isTargetArea ? 'AREA' : 'SALES');
+                        final effectiveTargetType = isTargetDepo
+                            ? 'SELL_IN'
+                            : (isTargetArea ? 'SELL_OUT' : selectedTargetType);
+                        final effectiveQuota = isOutletMetric ? (outletVal?.toDouble() ?? 0.0) : quotaVal;
+                        final effectiveOutlet = isTargetArea
+                            ? (outletVal ?? 0)
+                            : (isOutletMetric ? outletVal : null);
+
+                        final success = isEdit
+                            ? await ref.read(masterTargetProvider.notifier).updateTarget(
+                                  id: targetToEdit.id,
+                                  userId: isTargetDepo
+                                      ? (detectedAsm?.id ?? targetToEdit.userId)
+                                      : (isTargetArea ? (detectedSpv?.id ?? targetToEdit.userId) : selectedUserId),
+                                  distributorId: isDistributor ? selectedDistributorId : null,
+                                  depoId: isDistributor ? selectedDepoId : null,
+                                  areaId: isTargetArea ? selectedAreaId : null,
+                                  brandId: isDistributor ? selectedBrandId : null,
+                                  level: targetLevel,
+                                  kategoriSkema: isDistributor ? 'KONSUMSI' : selectedScheme,
+                                  targetType: effectiveTargetType,
+                                  period: period,
+                                  targetQuota: effectiveQuota,
+                                  targetOutlet: effectiveOutlet,
+                                )
+                            : await ref.read(masterTargetProvider.notifier).saveTarget(
+                                  userId: selectedUserId,
+                                  level: targetLevel,
+                                  kategoriSkema: selectedScheme,
+                                  targetType: effectiveTargetType,
+                                  period: period,
+                                  isFullYear: isFullYearMode,
+                                  year: year,
+                                  targetQuota: effectiveQuota,
+                                  targetOutlet: effectiveOutlet,
+                                );
+
+                        if (ctx.mounted) Navigator.pop(ctx);
+
+                        if (mounted) {
+                          _hierarchyKey.currentState?.reload();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(success
+                                  ? (isEdit ? 'Target kuota berhasil diperbarui!' : 'Target kuota berhasil disimpan!')
+                                  : 'Gagal memproses target kuota'),
+                              backgroundColor: success ? AppColors.success : AppColors.danger,
+                            ),
+                          );
+                        }
+                      },
               ),
             ],
           );
@@ -1043,10 +1431,14 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                 ),
                 onPressed: () {
                   final activePeriod = ref.read(masterTargetProvider).selectedPeriod;
+                  final activeDistId = _hierarchyKey.currentState?.activeDistributorId;
+                  final activeBrandId = _hierarchyKey.currentState?.activeBrandId;
                   ref.read(bulkUploadProvider.notifier).downloadTemplate(
                     entity: 'master_target_distributor',
                     withData: true,
                     period: activePeriod,
+                    distributorId: activeDistId,
+                    brandId: activeBrandId,
                   );
                 },
               );
@@ -1201,6 +1593,24 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
           key: _hierarchyKey,
           period: ref.read(masterTargetProvider).selectedPeriod,
           onEdit: (t) => _showTargetFormDialog(targetToEdit: t),
+          onEditDepoBundle: ({
+            required distributorId,
+            required depoId,
+            brandId,
+            period,
+            initialDepoSellIn,
+            initialAreaSellOut,
+            initialAreaAo,
+          }) =>
+              _showTargetFormDialog(
+                initialDistributorId: distributorId,
+                initialDepoId: depoId,
+                initialBrandId: brandId,
+                initialPeriod: period,
+                initialDepoSellIn: initialDepoSellIn,
+                initialAreaSellOut: initialAreaSellOut,
+                initialAreaAo: initialAreaAo,
+              ),
           onDelete: (t) async {
             final confirmed = await showConfirmDeleteDialog(
               context: context,

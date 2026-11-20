@@ -6,9 +6,11 @@ use App\Models\Area;
 use App\Models\Brand;
 use App\Models\Depo;
 use App\Models\Distributor;
+use App\Models\IndustriCustomer;
 use App\Models\MasterTarget;
 use App\Models\Region;
 use App\Models\SellinDistributor;
+use App\Models\SellinIndustri;
 use App\Models\SelloutDistributor;
 use App\Models\User;
 use App\Services\BatchImportService;
@@ -27,18 +29,27 @@ class BulkUploadTemplateExport implements Export, WithMultipleSheets
     protected string $entity;
     protected bool $withData;
     protected ?string $period;
+    protected ?int $distributorId;
+    protected ?int $brandId;
 
-    public function __construct(string $entity, bool $withData = false, ?string $period = null)
-    {
+    public function __construct(
+        string $entity,
+        bool $withData = false,
+        ?string $period = null,
+        ?int $distributorId = null,
+        ?int $brandId = null
+    ) {
         $this->entity = BatchImportService::normalizeEntity($entity);
         $this->withData = $withData;
         $this->period = $period;
+        $this->distributorId = $distributorId;
+        $this->brandId = $brandId;
     }
 
     public function sheets(): array
     {
         return [
-            new BulkUploadDataSheet($this->entity, $this->withData, $this->period),
+            new BulkUploadDataSheet($this->entity, $this->withData, $this->period, $this->distributorId, $this->brandId),
             new BulkUploadGuideSheet($this->entity),
         ];
     }
@@ -49,7 +60,9 @@ class BulkUploadDataSheet implements FromArray, ShouldAutoSize, WithHeadings, Wi
     public function __construct(
         protected string $entity,
         protected bool $withData = false,
-        protected ?string $period = null
+        protected ?string $period = null,
+        protected ?int $distributorId = null,
+        protected ?int $brandId = null
     ) {}
 
     public function title(): string
@@ -69,18 +82,46 @@ class BulkUploadDataSheet implements FromArray, ShouldAutoSize, WithHeadings, Wi
                 'sap_doc_no',
             ],
             'sellout_distributor' => [
-                'depo_code',
-                'brand_code',
-                'period',
-                'volume_kg',
-                'active_outlet_count',
+                'Faktur',
+                'Tanggal',
+                'Bulan',
+                'KodeDistributor',
+                'NamaDistributor',
+                'Depo',
+                'AreaCode',
+                'KodeCustomer',
+                'NamaCustomer',
+                'Alamat',
+                'JenisBarang',
+                'JenisSales',
+                'ITM',
+                'NamaBarang',
+                'Barang',
+                'SalesKg',
+                'DPP',
+                'Kota/Kab',
+                'Kecamatan',
+                'SalesmanDist',
+                'PIC',
+                'TipeOutlet',
             ],
             'sellin_industri' => [
-                'username',
+                'customer_code',
                 'customer_name',
+                'username',
                 'period',
-                'tonase',
+                'volume_kg',
+                'nominal',
+                'is_noo',
                 'sap_so_no',
+            ],
+            'industri_customer' => [
+                'customer_code',
+                'customer_name',
+                'city',
+                'customer_type',
+                'first_transaction_period',
+                'sales_username',
             ],
             'sellout_sales_surabaya' => [
                 'sales_username',
@@ -148,12 +189,62 @@ class BulkUploadDataSheet implements FromArray, ShouldAutoSize, WithHeadings, Wi
                 ['DST01', 'BRD02', '202610', 8500, 212500000, 'SAP-SI-202610-011'],
             ],
             'sellout_distributor' => [
-                ['DP01', 'BRD01', '202610', 12000, 45],
-                ['DP02', 'BRD02', '202610', 6500, 30],
+                [
+                    '1983-07-26',
+                    '2026-07-01',
+                    7,
+                    'C110003678',
+                    'INDO PRIMA, CV',
+                    'PONTIANAK',
+                    'AR00100',
+                    '1932-03-01',
+                    'MARI MART',
+                    'JL. DR. WAHIDIN ( UJUNG BANGET )',
+                    'KAPAL',
+                    'SELL OUT',
+                    'B13',
+                    'KOP 150 @ 3KG / BAL',
+                    'GARAM CAP KAPAL 150GR @3KG/BAL',
+                    3,
+                    20670,
+                    'PONTIANAK',
+                    '',
+                    'JACKY CHEDORRY',
+                    'DANNY',
+                    'RETAIL',
+                ],
+                [
+                    '0318/07/26',
+                    '2026-07-03',
+                    7,
+                    'C110003678',
+                    'INDO PRIMA, CV',
+                    'PONTIANAK',
+                    'AR00100',
+                    'HKC0001',
+                    'HKC PLASTIK',
+                    'JL. JURUSAN ANJUNGAN SETELAH KANTOR CAMAT',
+                    'KAPAL',
+                    'SELL OUT',
+                    'B13',
+                    'KOP 150 @ 3KG / BAL',
+                    'GARAM CAP KAPAL 150GR @3KG/BAL',
+                    3,
+                    20670,
+                    'SEI PINYU',
+                    '',
+                    'JACKY CHEDORRY',
+                    'DANNY',
+                    'RETAIL',
+                ],
             ],
             'sellin_industri' => [
-                ['dewi_industri', 'PT Roti Nusantara Jaya', '202610', 25.5, 'SO-IND-202610-201'],
-                ['dewi_industri', 'CV Biskuit Makmur Sentosa', '202610', 18.0, 'SO-IND-202610-202'],
+                ['CUST-IND-01', 'PT Roti Nusantara Jaya', 'andre_spv', '202611', 50000, 750000000, '0', 'SO-IND-202611-201'],
+                ['CUST-IND-02', 'CV Biskuit Makmur Sentosa', 'andre_spv', '202611', 10000, 160000000, '1', 'SO-IND-202611-202'],
+            ],
+            'industri_customer' => [
+                ['CUST-IND-01', 'PT Roti Nusantara Jaya', 'Surabaya', 'EXISTING', '202504', 'andre_spv'],
+                ['CUST-IND-02', 'CV Biskuit Makmur Sentosa', 'Sidoarjo', 'NEW', '', 'andre_spv'],
             ],
             'sellout_sales_surabaya' => [
                 ['eko_surabaya', 'admin', '202610', 3200, 38],
@@ -201,20 +292,48 @@ class BulkUploadDataSheet implements FromArray, ShouldAutoSize, WithHeadings, Wi
             'distributor' => $this->getDistributorData(),
             'sellin_distributor' => $this->getSellinDistributorData(),
             'sellout_distributor' => $this->getSelloutDistributorData(),
+            'sellin_industri' => $this->getSellinIndustriData(),
+            'industri_customer' => $this->getIndustriCustomerData(),
             default => [],
         };
     }
 
+    private function parsePeriodList(): array
+    {
+        $raw = trim((string) $this->period);
+        if ($raw === '' || strtoupper($raw) === 'ALL') {
+            return [];
+        }
+
+        return collect(explode(',', $raw))
+            ->map(fn ($p) => preg_replace('/[^0-9]/', '', $p))
+            ->filter(fn ($p) => strlen($p) === 6)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+    }
+
     private function getMasterTargetData(): array
     {
-        $q = MasterTarget::with(['distributor', 'depo', 'area', 'brand', 'user']);
-        if ($this->period && $this->period !== 'ALL') {
-            $q->where('period', $this->period);
+        $periodList = $this->parsePeriodList();
+        $q = MasterTarget::with(['distributor', 'depo', 'area', 'brand', 'user'])
+            ->whereIn('kategori_skema', ['KONSUMSI', 'DISTRIBUTOR']);
+
+        if (! empty($periodList)) {
+            $q->whereIn('period', $periodList);
+        }
+        if ($this->distributorId) {
+            $q->where('distributor_id', $this->distributorId);
+        }
+        if ($this->brandId) {
+            $q->where('brand_id', $this->brandId);
         }
 
         return $q->orderBy('period')
             ->orderBy('distributor_id')
             ->orderBy('depo_id')
+            ->orderByRaw('CASE WHEN level = \'DEPO\' THEN 0 ELSE 1 END')
             ->orderBy('area_id')
             ->get()
             ->map(function ($t) {
@@ -274,20 +393,81 @@ class BulkUploadDataSheet implements FromArray, ShouldAutoSize, WithHeadings, Wi
         })->toArray();
     }
 
-    private function getSelloutDistributorData(): array
+    private function getSellinIndustriData(): array
     {
-        $q = SelloutDistributor::with(['depo', 'brand']);
+        $q = SellinIndustri::with(['user', 'industriCustomer']);
         if ($this->period && $this->period !== 'ALL') {
             $q->where('period', $this->period);
         }
 
         return $q->get()->map(function ($s) {
+            $volKg = (float) ($s->volume_kg > 0 ? $s->volume_kg : $s->tonase);
             return [
-                $s->depo?->code ?? '',
-                $s->brand?->code ?? '',
+                $s->industriCustomer?->customer_code ?? ($s->customer_code ?? ''),
+                $s->industriCustomer?->customer_name ?? $s->customer_name,
+                $s->user?->username ?? '',
                 $s->period,
+                $volKg,
+                (float) ($s->nominal ?? 0),
+                $s->is_noo === null ? '' : ($s->is_noo ? '1' : '0'),
+                $s->sap_so_no ?? '',
+            ];
+        })->toArray();
+    }
+
+    private function getIndustriCustomerData(): array
+    {
+        return IndustriCustomer::with(['assignments' => fn ($q) => $q->where('is_active', true)->with('user')])
+            ->orderBy('customer_name')
+            ->get()
+            ->map(function ($c) {
+                $firstAssign = $c->assignments->first();
+                return [
+                    $c->customer_code,
+                    $c->customer_name,
+                    $c->city ?? '',
+                    $c->customer_type,
+                    $c->first_transaction_period ?? '',
+                    $firstAssign?->user?->username ?? '',
+                ];
+            })
+            ->toArray();
+    }
+
+    private function getSelloutDistributorData(): array
+    {
+        $q = SelloutDistributor::with(['distributor', 'depo', 'area', 'brand']);
+        if ($this->period && $this->period !== 'ALL') {
+            $q->where('period', $this->period);
+        }
+
+        return $q->get()->map(function ($s) {
+            $txDate = $s->transaction_date ? $s->transaction_date->format('Y-m-d') : '';
+            $bulan = $s->bulan ?? ($s->period ? (int) substr((string) $s->period, 4, 2) : '');
+
+            return [
+                $s->faktur ?? '',
+                $txDate,
+                $bulan,
+                $s->depo?->code ?? ($s->distributor?->code ?? ''),
+                $s->distributor?->name ?? '',
+                $s->depo?->name ?? '',
+                $s->area?->code ?? '',
+                $s->customer_code ?? '',
+                $s->customer_name ?? '',
+                $s->alamat ?? '',
+                $s->brand?->code ?? ($s->brand?->name ?? ''),
+                $s->jenis_sales ?? 'SELL OUT',
+                $s->item_code ?? '',
+                $s->item_name ?? '',
+                $s->item_desc ?? '',
                 (float) $s->volume_kg,
-                (int) $s->active_outlet_count,
+                (float) ($s->nominal ?? 0),
+                $s->kota_kab ?? '',
+                $s->kecamatan ?? '',
+                $s->salesman_dist ?? '',
+                $s->pic ?? '',
+                $s->tipe_outlet ?? '',
             ];
         })->toArray();
     }
@@ -366,10 +546,17 @@ class BulkUploadGuideSheet implements FromArray, ShouldAutoSize, WithStyles, Wit
 
         // Areas
         $rows[] = [''];
-        $rows[] = ['E. KODE AREA (depo_code -> area_code)'];
-        $rows[] = ['area_code', 'Nama Area', 'Kode Depo Induk', 'area_id'];
-        foreach (Area::with('depo:id,code')->orderBy('code')->limit(200)->get(['id', 'code', 'name', 'depo_id']) as $ar) {
-            $rows[] = [$ar->code, $ar->name, $ar->depo?->code ?? '-', $ar->id];
+        $rows[] = ['E. KODE AREA & RELASI DEPO / DISTRIBUTOR (AreaCode)'];
+        $rows[] = ['AreaCode', 'Nama Area', 'Depo', 'KodeDistributor (SAP Depo)', 'NamaDistributor', 'area_id'];
+        foreach (Area::with('depo.distributor')->orderBy('code')->limit(300)->get() as $ar) {
+            $rows[] = [
+                $ar->code,
+                $ar->name,
+                $ar->depo?->name ?? '-',
+                $ar->depo?->code ?? '-',
+                $ar->depo?->distributor?->name ?? '-',
+                $ar->id,
+            ];
         }
 
         // Users / Sales
@@ -395,18 +582,46 @@ class BulkUploadGuideSheet implements FromArray, ShouldAutoSize, WithStyles, Wit
                 ['sap_doc_no', 'OPSIONAL', 'Teks', 'SAP-SI-202610-010', 'Nomor dokumen referensi SAP'],
             ],
             'sellout_distributor' => [
-                ['depo_code', 'WAJIB', 'Teks (Kode)', 'DP01', 'Kode depo sesuai Master Depo (atau gunakan kolom depo_id)'],
-                ['brand_code', 'WAJIB', 'Teks (Kode)', 'BRD01', 'Kode brand produk sesuai Master Brand (atau gunakan kolom brand_id)'],
-                ['period', 'WAJIB', 'YYYYMM (6 digit)', '202610', 'Periode bulan transaksi (contoh: 202610)'],
-                ['volume_kg', 'WAJIB', 'Angka / Desimal', '12000', 'Total volume Sell-Out dalam satuan Kg'],
-                ['active_outlet_count', 'WAJIB', 'Angka Bulat', '45', 'Jumlah toko/outlet aktif (Active Outlet / AO)'],
+                ['Faktur', 'WAJIB', 'Teks', '1983-07-26', 'Nomor faktur penjualan/retur distributor (tidak boleh kosong)'],
+                ['Tanggal', 'WAJIB', 'Tanggal (YYYY-MM-DD)', '2026-07-01', 'Tanggal faktur valid (wajib format YYYY-MM-DD atau DD/MM/YYYY)'],
+                ['Bulan', 'WAJIB', 'Angka Bulat (1-12)', '7', 'Bulan transaksi 1 s/d 12 (wajib sinkron dengan bulan pada kolom Tanggal)'],
+                ['KodeDistributor', 'WAJIB', 'Teks (Kode)', 'C110003678', 'Kode SAP Depo/Distributor sesuai Master Distributor (wajib sinkron dengan AreaCode)'],
+                ['NamaDistributor', 'WAJIB', 'Teks', 'INDO PRIMA, CV', 'Nama perusahaan Distributor sesuai Master Distributor (wajib sinkron dengan AreaCode)'],
+                ['Depo', 'WAJIB', 'Teks', 'PONTIANAK', 'Nama atau kode Depo sesuai Master Depo (wajib sinkron dengan AreaCode)'],
+                ['AreaCode', 'WAJIB', 'Teks (Kode Area)', 'AR00100', 'Kode Area sesuai Master Distributor & Area (lihat daftar di bawah, wajib sinkron dengan Depo & Distributor)'],
+                ['KodeCustomer', 'WAJIB', 'Teks (Kode)', '1932-03-01', 'Kode toko/outlet pembeli (digunakan untuk perhitungan Active Outlet / AO unik)'],
+                ['NamaCustomer', 'WAJIB', 'Teks', 'MARI MART', 'Nama toko/outlet pembeli (tidak boleh kosong)'],
+                ['Alamat', 'WAJIB', 'Teks', 'JL. DR. WAHIDIN', 'Alamat toko/outlet pembeli (tidak boleh kosong)'],
+                ['JenisBarang', 'WAJIB', 'Teks (Kode Brand)', 'KAPAL', 'Kode/nama Brand sesuai Master Brand (contoh: KAPAL, JEMPOL, TANGAN, LAYAR, GARAMI)'],
+                ['JenisSales', 'WAJIB', 'SELL OUT', 'SELL OUT', 'Wajib berisi SELL OUT'],
+                ['ITM', 'WAJIB', 'Teks (Kode Item)', 'B13', 'Kode item produk (tidak boleh kosong)'],
+                ['NamaBarang', 'WAJIB', 'Teks', 'KOP 150 @ 3KG / BAL', 'Nama kemasan barang (tidak boleh kosong)'],
+                ['Barang', 'WAJIB', 'Teks', 'GARAM CAP KAPAL 150GR @3KG/BAL', 'Deskripsi lengkap barang (tidak boleh kosong)'],
+                ['SalesKg', 'WAJIB', 'Angka / Desimal', '3', 'Volume penjualan dalam Kg (positif untuk penjualan, negatif untuk retur, tidak boleh 0)'],
+                ['DPP', 'WAJIB', 'Angka / Desimal', '20670', 'Nilai penjualan sebelum pajak (Rupiah)'],
+                ['Kota/Kab', 'WAJIB', 'Teks', 'PONTIANAK', 'Kota / Kabupaten lokasi outlet (tidak boleh kosong)'],
+                ['Kecamatan', 'OPSIONAL', 'Teks', '', 'Kecamatan lokasi outlet (boleh dikosongkan jika tidak tersedia)'],
+                ['SalesmanDist', 'WAJIB', 'Teks', 'JACKY CHEDORRY', 'Nama salesman distributor (tidak boleh kosong)'],
+                ['PIC', 'WAJIB', 'Teks', 'DANNY', 'Nama PIC (tidak boleh kosong)'],
+                ['TipeOutlet', 'WAJIB', 'Teks', 'RETAIL', 'Tipe outlet (contoh: RETAIL, MINI MARKET, GROSIR, SEMI GROSIR, END USER)'],
             ],
             'sellin_industri' => [
-                ['username', 'WAJIB', 'Teks (Username)', 'dewi_industri', 'Username sales industri (atau gunakan kolom user_id berisi ID angka user)'],
+                ['customer_code', 'OPSIONAL', 'Teks (Kode)', 'CUST-IND-01', 'Kode Customer Industri sesuai Master Customer Industri (utama untuk relasi & deteksi NOO)'],
                 ['customer_name', 'WAJIB', 'Teks', 'PT Roti Nusantara Jaya', 'Nama pelanggan / pabrik B2B industri'],
-                ['period', 'WAJIB', 'YYYYMM (6 digit)', '202610', 'Periode bulan transaksi (contoh: 202610)'],
-                ['tonase', 'WAJIB', 'Angka / Desimal', '25.5', 'Total volume penjualan dalam satuan Ton'],
-                ['sap_so_no', 'OPSIONAL', 'Teks', 'SO-IND-202610-201', 'Nomor Sales Order (SO) SAP'],
+                ['username', 'OPSIONAL', 'Teks (Username)', 'andre_spv', 'Username sales industri (otomatis diambil dari penugasan customer jika dikosongkan)'],
+                ['period', 'WAJIB', 'YYYYMM (6 digit)', '202611', 'Periode bulan transaksi (contoh: 202611)'],
+                ['volume_kg', 'WAJIB', 'Angka / Desimal', '50000', 'Total volume pembelian dalam satuan Kilogram (Kg) — alias kolom tonase juga didukung'],
+                ['nominal', 'OPSIONAL', 'Angka', '750000000', 'Nilai rupiah transaksi (opsional)'],
+                ['is_noo', 'OPSIONAL', '1 / 0 / Kosong', '', 'Kosongkan untuk deteksi NOO otomatis (transaksi pertama tahun berjalan). Isi 1 (NOO) atau 0 (Existing) untuk override manual.'],
+                ['sap_so_no', 'OPSIONAL', 'Teks', 'SO-IND-202611-201', 'Nomor Sales Order (SO) SAP'],
+            ],
+            'industri_customer' => [
+                ['customer_code', 'WAJIB', 'Teks Unik', 'CUST-IND-01', 'Kode unik Customer Industri'],
+                ['customer_name', 'WAJIB', 'Teks', 'PT Roti Nusantara Jaya', 'Nama perusahaan / pabrik Customer Industri'],
+                ['city', 'OPSIONAL', 'Teks', 'Surabaya', 'Kota lokasi customer'],
+                ['customer_type', 'WAJIB', 'NEW / EXISTING', 'NEW', 'Status customer: NEW (berpotensi NOO saat transaksi pertama) atau EXISTING'],
+                ['first_transaction_period', 'OPSIONAL', 'YYYYMM (6 digit)', '202504', 'Periode transaksi pertama historis (kosongkan untuk customer baru)'],
+                ['sales_username', 'OPSIONAL', 'Teks (Username)', 'andre_spv', 'Username sales ASM/SPV/ASC untuk auto-assign ke customer ini'],
             ],
             'sellout_sales_surabaya' => [
                 ['sales_username', 'WAJIB', 'Teks (Username)', 'eko_surabaya', 'Username sales TO/Canvasing Surabaya (atau gunakan kolom sales_id)'],

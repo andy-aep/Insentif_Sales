@@ -32,9 +32,15 @@ class AreaController extends Controller
     {
         $validated = $request->validate([
             'depo_id' => 'required|exists:depos,id',
-            'code' => 'required|string|max:50|unique:areas,code',
+            'code' => 'nullable|string|max:50|unique:areas,code',
             'name' => 'required|string|max:150',
         ]);
+
+        if (empty($validated['code'])) {
+            $validated['code'] = DistributorController::nextSequentialCode(Area::class, 'AR', 5);
+        } else {
+            $validated['code'] = strtoupper(trim($validated['code']));
+        }
 
         $area = Area::create($validated);
 

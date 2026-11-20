@@ -13,8 +13,15 @@ class SellinDistributor extends Model
     protected $fillable = [
         'batch_id',
         'distributor_id',
+        'depo_id',
+        'user_id',
+        'sap_slp_code',
+        'sap_slp_name',
         'brand_id',
+        'item_code',
+        'item_name',
         'period',
+        'transaction_date',
         'volume_kg',
         'nominal',
         'sap_doc_no',
@@ -23,6 +30,8 @@ class SellinDistributor extends Model
     protected function casts(): array
     {
         return [
+            'sap_slp_code' => 'integer',
+            'transaction_date' => 'date:Y-m-d',
             'volume_kg' => 'decimal:2',
             'nominal' => 'decimal:2',
         ];
@@ -31,6 +40,16 @@ class SellinDistributor extends Model
     public function distributor(): BelongsTo
     {
         return $this->belongsTo(Distributor::class);
+    }
+
+    public function depo(): BelongsTo
+    {
+        return $this->belongsTo(Depo::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function brand(): BelongsTo

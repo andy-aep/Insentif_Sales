@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/responsive_table.dart';
 import '../../../data/models/upload_batch_model.dart';
+import '../../master_data/providers/master_data_provider.dart';
 import '../providers/bulk_upload_provider.dart';
 
 class BulkUploadScreen extends ConsumerStatefulWidget {
@@ -16,19 +17,83 @@ class BulkUploadScreen extends ConsumerStatefulWidget {
 }
 
 class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
+  final TextEditingController _selloutPeriodCtrl = TextEditingController();
+  final TextEditingController _historyPeriodCtrl = TextEditingController();
+  final TextEditingController _historySearchCtrl = TextEditingController();
+  String _historyEntityFilter = 'ALL';
+  String _historyStatusFilter = 'ALL';
+  int _historyPage = 1;
+  int _historyPerPage = 10;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      final md = ref.read(masterDataProvider);
+      if (md.distributors.isEmpty) {
+        ref.read(masterDataProvider.notifier).fetchAllMasterData();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _selloutPeriodCtrl.dispose();
+    _historyPeriodCtrl.dispose();
+    _historySearchCtrl.dispose();
+    super.dispose();
+  }
+
   final Map<String, String> _entityOptions = {
     'sellout_distributor': 'Transaksi: Sell-Out Distributor',
+    'sellin_industri': 'Transaksi: Sell-In Industri (Kg & NOO)',
+    'industri_customer': 'Master: Customer & Assignment Sales Industri',
     'distributor': 'Master: Distributor, Depo & Area',
     'master_target_distributor': 'Master: Target Distributor (Depo & Area)',
   };
 
   final Map<String, List<Map<String, String>>> _entityColumnGuides = {
     'sellout_distributor': [
-      {'col': 'depo_code', 'req': 'WAJIB', 'ex': 'DP01', 'desc': 'Kode Depo sesuai Master'},
-      {'col': 'brand_code', 'req': 'WAJIB', 'ex': 'BRD01', 'desc': 'Kode Brand sesuai Master'},
-      {'col': 'period', 'req': 'WAJIB', 'ex': '202610', 'desc': 'Periode YYYYMM (6 digit)'},
-      {'col': 'volume_kg', 'req': 'WAJIB', 'ex': '12000', 'desc': 'Volume Sell-Out (Kg)'},
-      {'col': 'active_outlet_count', 'req': 'WAJIB', 'ex': '45', 'desc': 'Jumlah Active Outlet (AO)'},
+      {'col': 'Faktur', 'req': 'WAJIB', 'ex': '1983-07-26', 'desc': 'Nomor faktur penjualan/retur (tidak boleh kosong)'},
+      {'col': 'Tanggal', 'req': 'WAJIB', 'ex': '2026-07-01', 'desc': 'Tanggal faktur valid (YYYY-MM-DD / DD/MM/YYYY)'},
+      {'col': 'Bulan', 'req': 'WAJIB', 'ex': '7', 'desc': 'Bulan 1-12 (wajib sinkron dengan bulan pada Tanggal)'},
+      {'col': 'KodeDistributor', 'req': 'WAJIB', 'ex': 'C110003678', 'desc': 'Kode SAP Depo/Distributor sesuai Master Distributor'},
+      {'col': 'NamaDistributor', 'req': 'WAJIB', 'ex': 'INDO PRIMA, CV', 'desc': 'Nama Distributor sesuai Master Distributor'},
+      {'col': 'Depo', 'req': 'WAJIB', 'ex': 'PONTIANAK', 'desc': 'Nama atau kode Depo sesuai Master Depo'},
+      {'col': 'AreaCode', 'req': 'WAJIB', 'ex': 'AR00100 / LUAR', 'desc': 'Kode Area (ARxxxxx) sesuai Master, atau isi LUAR / OUT_AREA untuk penjualan luar area (non-insentif)'},
+      {'col': 'KodeCustomer', 'req': 'WAJIB', 'ex': '1932-03-01', 'desc': 'Kode toko/outlet pembeli (perhitungan Active Outlet / AO)'},
+      {'col': 'NamaCustomer', 'req': 'WAJIB', 'ex': 'MARI MART', 'desc': 'Nama toko/outlet pembeli'},
+      {'col': 'Alamat', 'req': 'WAJIB', 'ex': 'JL. DR. WAHIDIN', 'desc': 'Alamat toko/outlet pembeli'},
+      {'col': 'JenisBarang', 'req': 'WAJIB', 'ex': 'KAPAL', 'desc': 'Kode/nama Brand sesuai Master Brand'},
+      {'col': 'JenisSales', 'req': 'WAJIB', 'ex': 'SELL OUT', 'desc': 'Wajib berisi SELL OUT'},
+      {'col': 'ITM', 'req': 'WAJIB', 'ex': 'B13', 'desc': 'Kode item produk'},
+      {'col': 'NamaBarang', 'req': 'WAJIB', 'ex': 'KOP 150 @ 3KG / BAL', 'desc': 'Nama kemasan barang'},
+      {'col': 'Barang', 'req': 'WAJIB', 'ex': 'GARAM CAP KAPAL 150GR @3KG/BAL', 'desc': 'Deskripsi lengkap barang'},
+      {'col': 'SalesKg', 'req': 'WAJIB', 'ex': '3 / -15', 'desc': 'Volume penjualan Kg (angka valid, tidak boleh 0)'},
+      {'col': 'DPP', 'req': 'WAJIB', 'ex': '20670', 'desc': 'Nilai penjualan sebelum pajak (Rp)'},
+      {'col': 'Kota/Kab', 'req': 'WAJIB', 'ex': 'PONTIANAK', 'desc': 'Kota / Kabupaten lokasi outlet'},
+      {'col': 'Kecamatan', 'req': 'OPSIONAL', 'ex': '(boleh kosong)', 'desc': 'Kecamatan lokasi outlet'},
+      {'col': 'SalesmanDist', 'req': 'WAJIB', 'ex': 'JACKY CHEDORRY', 'desc': 'Nama salesman distributor'},
+      {'col': 'PIC', 'req': 'WAJIB', 'ex': 'DANNY', 'desc': 'Nama PIC'},
+      {'col': 'TipeOutlet', 'req': 'WAJIB', 'ex': 'RETAIL', 'desc': 'Tipe outlet (RETAIL, MINI MARKET, GROSIR, dll)'},
+    ],
+    'sellin_industri': [
+      {'col': 'customer_code', 'req': 'WAJIB', 'ex': 'CUST-IND-01', 'desc': 'Kode Customer Industri (atau isi customer_name)'},
+      {'col': 'customer_name', 'req': 'OPSIONAL', 'ex': 'PT Roti Nusantara Jaya', 'desc': 'Nama Customer Industri'},
+      {'col': 'username', 'req': 'OPSIONAL', 'ex': 'andre_spv', 'desc': 'Username sales PIC (kosong = pakai Assignment aktif)'},
+      {'col': 'period', 'req': 'WAJIB', 'ex': '202611', 'desc': 'Periode YYYYMM (6 digit)'},
+      {'col': 'volume_kg', 'req': 'WAJIB', 'ex': '50000', 'desc': 'Volume Sell-In Industri (Kg)'},
+      {'col': 'nominal', 'req': 'OPSIONAL', 'ex': '750000000', 'desc': 'Nilai penjualan (Rp)'},
+      {'col': 'is_noo', 'req': 'OPSIONAL', 'ex': '0 / 1 / kosong', 'desc': '1 = NOO, 0 = Repeat, kosong = Auto sistem'},
+      {'col': 'sap_so_no', 'req': 'OPSIONAL', 'ex': 'SO-IND-202611-201', 'desc': 'Nomor Sales Order SAP'},
+    ],
+    'industri_customer': [
+      {'col': 'customer_code', 'req': 'WAJIB', 'ex': 'CUST-IND-01', 'desc': 'Kode unik Customer Industri'},
+      {'col': 'customer_name', 'req': 'WAJIB', 'ex': 'PT Roti Nusantara Jaya', 'desc': 'Nama Customer / Pabrik Industri'},
+      {'col': 'city', 'req': 'OPSIONAL', 'ex': 'Surabaya', 'desc': 'Kota / area domisili customer'},
+      {'col': 'customer_type', 'req': 'OPSIONAL', 'ex': 'NEW / EXISTING', 'desc': 'Default NEW jika kosong'},
+      {'col': 'first_transaction_period', 'req': 'OPSIONAL', 'ex': '202504', 'desc': 'Periode transaksi awal (YYYYMM)'},
+      {'col': 'sales_username', 'req': 'OPSIONAL', 'ex': 'andre_spv', 'desc': 'Username sales PIC untuk auto-assign customer'},
     ],
     'distributor': [
       {'col': 'region_code', 'req': 'OPSIONAL', 'ex': 'EAST', 'desc': 'Kode Region (EAST / WEST)'},
@@ -77,93 +142,23 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
   }
 
   Future<void> _pickFile() async {
+    final isSellout = ref.read(bulkUploadProvider).selectedEntity == 'sellout_distributor';
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['xlsx', 'xls', 'csv'],
+      allowMultiple: !isSellout,
       withData: true,
     );
 
     if (result != null && result.files.isNotEmpty) {
-      final file = result.files.first;
-      if (file.bytes != null) {
-        ref.read(bulkUploadProvider.notifier).setFile(
-              file.name,
-              file.size,
-              file.bytes!,
-            );
+      final picked = result.files
+          .where((f) => f.bytes != null)
+          .map((f) => SelectedUploadFile(name: f.name, size: f.size, bytes: f.bytes!))
+          .toList();
+      if (picked.isNotEmpty) {
+        ref.read(bulkUploadProvider.notifier).setFiles(picked);
       }
     }
-  }
-
-  void _showRollbackConfirmation(UploadBatchModel batch) {
-    final colors = context.colors;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: colors.bgDialog,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: colors.border),
-        ),
-        title: Row(
-          children: [
-            const Icon(LucideIcons.alertTriangle, color: AppColors.danger, size: 22),
-            const SizedBox(width: 10),
-            Text(
-              'Konfirmasi Rollback Batch',
-              style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Apakah Anda yakin ingin membatalkan (rollback) seluruh data yang di-import dari batch ini?',
-              style: GoogleFonts.inter(color: colors.textSecondary, fontSize: 13.5),
-            ),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: colors.bgSubtle,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('ID Batch: ${batch.id}', style: TextStyle(color: colors.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text('Entitas: ${_formatEntityLabel(batch.entity)}', style: TextStyle(color: colors.textSecondary, fontSize: 12)),
-                  Text('File Asli: ${batch.originalFilename ?? '-'}', style: TextStyle(color: colors.textSecondary, fontSize: 12)),
-                  Text('Total Baris: ${batch.totalRows} baris (${batch.successRows} berhasil)', style: TextStyle(color: colors.textSecondary, fontSize: 12)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              'Perhatian: Seluruh record yang telah tersimpan dari file ini akan dihapus dari database.',
-              style: GoogleFonts.inter(color: const Color(0xFFD9534F), fontSize: 11.5),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Batal', style: GoogleFonts.inter(color: colors.textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger, foregroundColor: Colors.white),
-            onPressed: () {
-              Navigator.pop(ctx);
-              ref.read(bulkUploadProvider.notifier).rollback(batch.id);
-            },
-            child: Text('Ya, Rollback', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showDeleteBatchConfirmation(UploadBatchModel batch) {
@@ -191,7 +186,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Apakah Anda yakin ingin menghapus permanen riwayat batch ini?',
+              'Apakah Anda yakin ingin menghapus permanen batch upload ini beserta seluruh datanya?',
               style: GoogleFonts.inter(color: colors.textSecondary, fontSize: 13.5),
             ),
             const SizedBox(height: 14),
@@ -208,12 +203,13 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                   const SizedBox(height: 4),
                   Text('Entitas: ${_formatEntityLabel(batch.entity)}', style: TextStyle(color: colors.textSecondary, fontSize: 12)),
                   Text('File Asli: ${batch.originalFilename ?? '-'}', style: TextStyle(color: colors.textSecondary, fontSize: 12)),
+                  Text('Total Baris: ${batch.totalRows} baris (${batch.successRows} berhasil)', style: TextStyle(color: colors.textSecondary, fontSize: 12)),
                 ],
               ),
             ),
             const SizedBox(height: 14),
             Text(
-              'Perhatian: Jika batch belum di-rollback, data yang telah di-import akan otomatis dihapus dari database bersama riwayatnya.',
+              'Perhatian: Menghapus batch ini akan otomatis me-rollback (menghapus) seluruh data transaksi/master yang di-import dari database beserta file Excel dan riwayatnya.',
               style: GoogleFonts.inter(color: const Color(0xFFD9534F), fontSize: 11.5),
             ),
           ],
@@ -229,7 +225,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
               Navigator.pop(ctx);
               ref.read(bulkUploadProvider.notifier).deleteBatch(batch.id);
             },
-            child: Text('Ya, Hapus Permanen', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+            child: Text('Ya, Hapus Data & Riwayat', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -497,6 +493,99 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                     ),
                   ),
                 ),
+                if (state.selectedEntity == 'sellout_distributor') ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(LucideIcons.shieldCheck, size: 16, color: AppColors.primaryLight),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Aturan Ketat Sell-Out: 1 File Excel = 1 Bulan (Periode) & 1 Distributor',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: colors.textPrimary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Sistem memverifikasi bahwa seluruh baris memiliki pengkodean valid (AreaCode, KodeDistributor, KodeCustomer, ITM, JenisBarang), DPP & SalesKg non-nol, serta hanya berasal dari 1 bulan dan 1 distributor.',
+                          style: GoogleFonts.inter(fontSize: 11.5, color: colors.textSecondary),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            SizedBox(
+                              width: 190,
+                              child: TextField(
+                                controller: _selloutPeriodCtrl,
+                                maxLength: 6,
+                                style: GoogleFonts.inter(color: colors.textPrimary, fontSize: 13),
+                                decoration: InputDecoration(
+                                  counterText: '',
+                                  labelText: 'Periode Bulan (YYYYMM)',
+                                  hintText: 'Contoh: 202610',
+                                  prefixIcon: Icon(LucideIcons.calendar, size: 15, color: colors.textMuted),
+                                  prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                  filled: true,
+                                  fillColor: colors.bgInput,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                ),
+                                onChanged: (v) => notifier.setSelloutPeriod(v),
+                              ),
+                            ),
+                            SizedBox(
+                              width: 320,
+                              child: DropdownButtonFormField<int?>(
+                                initialValue: state.selectedDistributorId,
+                                isExpanded: true,
+                                dropdownColor: colors.bgCard,
+                                style: GoogleFonts.inter(color: colors.textPrimary, fontSize: 13),
+                                decoration: InputDecoration(
+                                  labelText: 'Distributor (Opsional / Kunci Validasi)',
+                                  prefixIcon: Icon(LucideIcons.building2, size: 15, color: colors.textMuted),
+                                  prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                  filled: true,
+                                  fillColor: colors.bgInput,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                ),
+                                items: [
+                                  const DropdownMenuItem<int?>(
+                                    value: null,
+                                    child: Text('Deteksi otomatis dari file (wajib 1 distributor)', overflow: TextOverflow.ellipsis),
+                                  ),
+                                  ...ref.watch(masterDataProvider).distributors.map(
+                                        (d) => DropdownMenuItem<int?>(
+                                          value: d.id,
+                                          child: Text('${d.code} — ${d.name}', overflow: TextOverflow.ellipsis),
+                                        ),
+                                      ),
+                                ],
+                                onChanged: (v) => notifier.setSelloutDistributorId(v),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
 
                 // Panduan Kolom Modul Terpilih
@@ -646,8 +735,8 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                         const SizedBox(height: 6),
                         Text(
                           state.selectedFileSize != null
-                              ? 'Ukuran: ${_formatFileSize(state.selectedFileSize!)} • Format Didukung: .xlsx, .xls, .csv'
-                              : 'Format didukung: Microsoft Excel (.xlsx, .xls) atau CSV (Hingga 500.000+ Baris • Max 200MB)',
+                              ? 'Total Ukuran: ${_formatFileSize(state.selectedFileSize!)} • Bisa pilih banyak file sekaligus (.xlsx, .xls, .csv)'
+                              : 'Mendukung Multi-File Upload sekaligus (.xlsx, .xls, .csv) • Kapasitas ratusan ribu baris (Max 200MB/file)',
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             color: colors.textMuted,
@@ -657,6 +746,41 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                     ),
                   ),
                 ),
+
+                if (state.selectedFiles.length > 1) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colors.bgSubtle,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: colors.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Daftar File yang Akan Diunggah (${state.selectedFiles.length} file):',
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: colors.textPrimary),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: state.selectedFiles.asMap().entries.map((entry) {
+                            final idx = entry.key;
+                            final f = entry.value;
+                            return Chip(
+                              avatar: const Icon(LucideIcons.fileSpreadsheet, size: 14, color: AppColors.primary),
+                              label: Text('${f.name} (${_formatFileSize(f.size)})', style: const TextStyle(fontSize: 11.5)),
+                              onDeleted: state.isUploading ? null : () => notifier.removeFileAt(idx),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
 
                 if (state.isUploading) ...[
                   const SizedBox(height: 16),
@@ -671,9 +795,10 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    state.uploadProgress < 0.9
-                        ? 'Mengunggah file ke server (${(state.uploadProgress * 100).toStringAsFixed(0)}%)...'
-                        : 'Memproses & menyimpan ratusan ribu baris ke database secara bulk (Streaming Engine)...',
+                    state.uploadStatusText ??
+                        (state.uploadProgress < 0.9
+                            ? 'Mengunggah file ke server (${(state.uploadProgress * 100).toStringAsFixed(0)}%)...'
+                            : 'Memproses & menyimpan ribuan baris ke database secara bulk (Streaming Engine)...'),
                     style: GoogleFonts.inter(fontSize: 12, color: AppColors.primaryLight, fontWeight: FontWeight.w500),
                   ),
                 ],
@@ -720,192 +845,476 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
           ),
           const SizedBox(height: 28),
 
-          // Riwayat Batch & Rollback Table
-          Container(
-            decoration: BoxDecoration(
-              color: colors.bgCard,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: colors.border, width: 1.2),
-              boxShadow: colors.cardShadows,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
-                    children: [
-                      Text(
-                        'Riwayat Upload Batch & Audit Log',
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(color: colors.bgSubtle, borderRadius: BorderRadius.circular(10)),
-                        child: Text(
-                          '${state.batches.length} Batch',
-                          style: TextStyle(color: colors.textSecondary, fontSize: 11),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Divider(height: 1, color: colors.border),
+          // Riwayat Batch & Audit Log Table (Compact 5 Columns + Filter + Pagination)
+          Builder(
+            builder: (context) {
+              final periodFilter = _historyPeriodCtrl.text.trim().toLowerCase();
+              final queryFilter = _historySearchCtrl.text.trim().toLowerCase();
 
-                if (state.isLoadingHistory)
-                  const Padding(
-                    padding: EdgeInsets.all(40),
-                    child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
-                  )
-                else if (state.batches.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 20),
-                    child: Center(
+              final filteredBatches = state.batches.where((batch) {
+                if (_historyEntityFilter != 'ALL' && batch.entity != _historyEntityFilter) {
+                  return false;
+                }
+                if (_historyStatusFilter != 'ALL' && batch.status.toUpperCase() != _historyStatusFilter) {
+                  return false;
+                }
+                if (periodFilter.isNotEmpty && !(batch.period ?? '').toLowerCase().contains(periodFilter)) {
+                  return false;
+                }
+                if (queryFilter.isNotEmpty) {
+                  final haystack = [
+                    batch.id,
+                    batch.originalFilename ?? '',
+                    batch.distributorCode ?? '',
+                    batch.distributorName ?? '',
+                    batch.period ?? '',
+                    _formatEntityLabel(batch.entity),
+                  ].join(' ').toLowerCase();
+                  if (!haystack.contains(queryFilter)) {
+                    return false;
+                  }
+                }
+                return true;
+              }).toList();
+
+              final totalItems = filteredBatches.length;
+              final totalPages = totalItems == 0 ? 1 : ((totalItems - 1) ~/ _historyPerPage) + 1;
+              final safePage = _historyPage.clamp(1, totalPages);
+              final startIndex = totalItems == 0 ? 0 : (safePage - 1) * _historyPerPage;
+              final endIndex = (startIndex + _historyPerPage).clamp(0, totalItems);
+              final pagedBatches = totalItems == 0
+                  ? <UploadBatchModel>[]
+                  : filteredBatches.sublist(startIndex, endIndex);
+
+              return Container(
+                decoration: BoxDecoration(
+                  color: colors.bgCard,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: colors.border, width: 1.2),
+                  boxShadow: colors.cardShadows,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(20),
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(LucideIcons.history, size: 40, color: colors.textMuted),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Belum Ada Riwayat Batch Upload',
-                            style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'File transaksi yang Anda upload akan dicatat di sini dengan audit log lengkap.',
-                            style: GoogleFonts.inter(color: colors.textSecondary, fontSize: 12.5),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            alignment: WrapAlignment.spaceBetween,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Riwayat Upload Batch & Audit Log',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: colors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(color: colors.bgSubtle, borderRadius: BorderRadius.circular(10)),
+                                    child: Text(
+                                      '$totalItems / ${state.batches.length} Batch',
+                                      style: TextStyle(color: colors.textSecondary, fontSize: 11, fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  // Dropdown Entitas
+                                  SizedBox(
+                                    width: 210,
+                                    child: DropdownButtonFormField<String>(
+                                      initialValue: _historyEntityFilter,
+                                      isExpanded: true,
+                                      dropdownColor: colors.bgCard,
+                                      style: GoogleFonts.inter(color: colors.textPrimary, fontSize: 12),
+                                      decoration: InputDecoration(
+                                        prefixIcon: Icon(LucideIcons.layers, size: 14, color: colors.textMuted),
+                                        prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                        filled: true,
+                                        fillColor: colors.bgInput,
+                                        isDense: true,
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                      ),
+                                      items: [
+                                        const DropdownMenuItem(
+                                          value: 'ALL',
+                                          child: Text('Semua Entitas', overflow: TextOverflow.ellipsis),
+                                        ),
+                                        ..._entityOptions.entries.map(
+                                          (e) => DropdownMenuItem(
+                                            value: e.key,
+                                            child: Text(e.value, overflow: TextOverflow.ellipsis),
+                                          ),
+                                        ),
+                                      ],
+                                      onChanged: (val) {
+                                        if (val != null) {
+                                          setState(() {
+                                            _historyEntityFilter = val;
+                                            _historyPage = 1;
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  // Dropdown Status
+                                  SizedBox(
+                                    width: 145,
+                                    child: DropdownButtonFormField<String>(
+                                      initialValue: _historyStatusFilter,
+                                      isExpanded: true,
+                                      dropdownColor: colors.bgCard,
+                                      style: GoogleFonts.inter(color: colors.textPrimary, fontSize: 12),
+                                      decoration: InputDecoration(
+                                        prefixIcon: Icon(LucideIcons.filter, size: 14, color: colors.textMuted),
+                                        prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                        filled: true,
+                                        fillColor: colors.bgInput,
+                                        isDense: true,
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                      ),
+                                      items: const [
+                                        DropdownMenuItem(value: 'ALL', child: Text('Semua Status', overflow: TextOverflow.ellipsis)),
+                                        DropdownMenuItem(value: 'COMPLETED', child: Text('COMPLETED', overflow: TextOverflow.ellipsis)),
+                                        DropdownMenuItem(value: 'FAILED', child: Text('FAILED', overflow: TextOverflow.ellipsis)),
+                                      ],
+                                      onChanged: (val) {
+                                        if (val != null) {
+                                          setState(() {
+                                            _historyStatusFilter = val;
+                                            _historyPage = 1;
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  // Filter Periode
+                                  SizedBox(
+                                    width: 130,
+                                    child: TextField(
+                                      controller: _historyPeriodCtrl,
+                                      maxLength: 6,
+                                      onChanged: (_) => setState(() => _historyPage = 1),
+                                      style: GoogleFonts.inter(color: colors.textPrimary, fontSize: 12),
+                                      decoration: InputDecoration(
+                                        counterText: '',
+                                        hintText: 'Periode (202610)',
+                                        prefixIcon: Icon(LucideIcons.calendar, size: 14, color: colors.textMuted),
+                                        prefixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                        filled: true,
+                                        fillColor: colors.bgInput,
+                                        isDense: true,
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                                      ),
+                                    ),
+                                  ),
+                                  // Live Search
+                                  SizedBox(
+                                    width: 215,
+                                    child: TextField(
+                                      controller: _historySearchCtrl,
+                                      onChanged: (_) => setState(() => _historyPage = 1),
+                                      style: GoogleFonts.inter(color: colors.textPrimary, fontSize: 12),
+                                      decoration: InputDecoration(
+                                        hintText: 'Ketik nama file / distributor...',
+                                        prefixIcon: Icon(LucideIcons.search, size: 14, color: colors.textMuted),
+                                        prefixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                        suffixIcon: _historySearchCtrl.text.isNotEmpty
+                                            ? IconButton(
+                                                icon: Icon(LucideIcons.x, size: 13, color: colors.textMuted),
+                                                padding: EdgeInsets.zero,
+                                                constraints: const BoxConstraints(),
+                                                onPressed: () {
+                                                  _historySearchCtrl.clear();
+                                                  setState(() => _historyPage = 1);
+                                                },
+                                              )
+                                            : null,
+                                        filled: true,
+                                        fillColor: colors.bgInput,
+                                        isDense: true,
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                                      ),
+                                    ),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed: state.isLoadingHistory
+                                        ? null
+                                        : () => notifier.fetchHistory(
+                                              period: _historyPeriodCtrl.text,
+                                              query: _historySearchCtrl.text,
+                                            ),
+                                    icon: const Icon(LucideIcons.refreshCw, size: 13),
+                                    label: const Text('Segarkan', style: TextStyle(fontSize: 12)),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
-                  )
-                else
-                  ResponsiveTableCard(
-                    minWidth: 1000,
-                    child: DataTable(
-                      headingRowColor: WidgetStateProperty.all(colors.bgTableHead),
-                      dataRowMinHeight: 52,
-                      dataRowMaxHeight: 70,
-                      columns: [
-                        DataColumn(label: Text('ID Batch', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.w600))),
-                        DataColumn(label: Text('Entitas', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.w600))),
-                        DataColumn(label: Text('File Asli', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.w600))),
-                        DataColumn(label: Text('Baris Total / Sukses / Gagal', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.w600))),
-                        DataColumn(label: Text('Status', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.w600))),
-                        DataColumn(label: Text('Waktu Upload', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.w600))),
-                        DataColumn(label: Text('Aksi', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.w600))),
-                      ],
-                      rows: state.batches.map((batch) {
-                        final isAlreadyRolledBack = batch.status.toUpperCase() == 'ROLLED_BACK';
+                    Divider(height: 1, color: colors.border),
 
-                        return DataRow(
-                          cells: [
-                            // ID Batch
-                            DataCell(
+                    if (state.isLoadingHistory)
+                      const Padding(
+                        padding: EdgeInsets.all(40),
+                        child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+                      )
+                    else if (filteredBatches.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 20),
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(LucideIcons.history, size: 40, color: colors.textMuted),
+                              const SizedBox(height: 12),
                               Text(
-                                batch.id.length > 8 ? '${batch.id.substring(0, 8)}...' : batch.id,
-                                style: GoogleFonts.sourceCodePro(
-                                  color: AppColors.primaryLight,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                state.batches.isEmpty ? 'Belum Ada Riwayat Batch Upload' : 'Tidak Ada Batch Sesuai Filter',
+                                style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15),
                               ),
-                            ),
-                            // Entitas
-                            DataCell(
+                              const SizedBox(height: 4),
                               Text(
-                                _formatEntityLabel(batch.entity),
-                                style: GoogleFonts.inter(color: colors.textPrimary, fontSize: 13),
+                                state.batches.isEmpty
+                                    ? 'File transaksi yang Anda upload akan dicatat di sini dengan audit log lengkap.'
+                                    : 'Coba ubah filter Entitas, Status, Periode, atau kata kunci pencarian.',
+                                style: GoogleFonts.inter(color: colors.textSecondary, fontSize: 12.5),
                               ),
-                            ),
-                            // File Asli
-                            DataCell(
-                              ConstrainedBox(
-                                constraints: const BoxConstraints(maxWidth: 180),
-                                child: Tooltip(
-                                  message: batch.originalFilename ?? '-',
-                                  child: Text(
-                                    batch.originalFilename ?? '-',
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.inter(color: colors.textSecondary, fontSize: 12.5),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            // Row statistics
-                            DataCell(
-                              Row(
-                                children: [
-                                  Text('${batch.totalRows} baris ', style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w500)),
-                                  Text('(${batch.successRows} sukses, ', style: const TextStyle(color: AppColors.success, fontSize: 12)),
-                                  Text('${batch.failedRows} gagal)', style: const TextStyle(color: AppColors.danger, fontSize: 12)),
-                                ],
-                              ),
-                            ),
-                            // Status Badge
-                            DataCell(_buildStatusBadge(context, batch.status)),
-                            // Created At
-                            DataCell(
-                              Text(batch.createdAt, style: GoogleFonts.inter(color: colors.textMuted, fontSize: 12)),
-                            ),
-                            // Action: Unduh Excel, Rollback, Hapus
-                            DataCell(
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // 1. Unduh Excel File Batch Ini
-                                  IconButton(
-                                    icon: const Icon(LucideIcons.download, size: 16, color: AppColors.primaryLight),
-                                    tooltip: 'Unduh Excel Batch Ini (${batch.originalFilename ?? 'file.xlsx'})',
-                                    onPressed: () => ref.read(bulkUploadProvider.notifier).downloadBatchFile(
-                                      batch.id,
-                                      batch.originalFilename ?? 'batch_${batch.id}.xlsx',
+                            ],
+                          ),
+                        ),
+                      )
+                    else ...[
+                      ResponsiveTableCard(
+                        minWidth: 740,
+                        child: DataTable(
+                          headingRowColor: WidgetStateProperty.all(colors.bgTableHead),
+                          columnSpacing: 16,
+                          horizontalMargin: 16,
+                          dataRowMinHeight: 54,
+                          dataRowMaxHeight: 72,
+                          columns: [
+                            DataColumn(label: Text('File & Distributor', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.w600, fontSize: 12.5))),
+                            DataColumn(label: Text('Entitas & Waktu', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.w600, fontSize: 12.5))),
+                            DataColumn(label: Text('Hasil Baris', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.w600, fontSize: 12.5))),
+                            DataColumn(label: Text('Status', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.w600, fontSize: 12.5))),
+                            DataColumn(label: Text('Aksi', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.w600, fontSize: 12.5))),
+                          ],
+                          rows: pagedBatches.map((batch) {
+                            final shortId = batch.id.length > 8 ? batch.id.substring(0, 8) : batch.id;
+
+                            return DataRow(
+                              cells: [
+                                // 1. File Asli + Distributor & Periode
+                                DataCell(
+                                  ConstrainedBox(
+                                    constraints: const BoxConstraints(maxWidth: 260),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Tooltip(
+                                          message: batch.originalFilename ?? '-',
+                                          child: Text(
+                                            batch.originalFilename ?? '-',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.inter(
+                                              color: colors.textPrimary,
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                        if ((batch.period != null && batch.period!.isNotEmpty) ||
+                                            (batch.distributorName != null && batch.distributorName!.isNotEmpty))
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 2),
+                                            child: Text(
+                                              [
+                                                if (batch.period != null && batch.period!.isNotEmpty) 'Periode: ${batch.period}',
+                                                if (batch.distributorName != null && batch.distributorName!.isNotEmpty)
+                                                  '${batch.distributorCode ?? ''} ${batch.distributorName}'.trim(),
+                                              ].join(' • '),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: GoogleFonts.inter(color: AppColors.primaryLight, fontSize: 11, fontWeight: FontWeight.w500),
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(width: 4),
-                                  // 2. Rollback Data Batch
-                                  if (!isAlreadyRolledBack)
-                                    OutlinedButton.icon(
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: AppColors.danger,
-                                        side: BorderSide(color: AppColors.danger.withValues(alpha: 0.5)),
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                ),
+                                // 2. Entitas & Waktu + Short ID
+                                DataCell(
+                                  ConstrainedBox(
+                                    constraints: const BoxConstraints(maxWidth: 210),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          _formatEntityLabel(batch.entity),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.inter(color: colors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '${batch.createdAt} • #$shortId',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.sourceCodePro(color: colors.textMuted, fontSize: 11),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                // 3. Hasil Baris
+                                DataCell(
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        '${batch.totalRows} baris',
+                                        style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600, fontSize: 12.5),
                                       ),
-                                      icon: const Icon(LucideIcons.rotateCcw, size: 13),
-                                      label: const Text('Rollback', style: TextStyle(fontSize: 12)),
-                                      onPressed: () => _showRollbackConfirmation(batch),
-                                    )
-                                  else
-                                    Container(
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text('${batch.successRows} sukses', style: const TextStyle(color: AppColors.success, fontSize: 11)),
+                                          if (batch.failedRows > 0) ...[
+                                            Text(', ', style: TextStyle(color: colors.textMuted, fontSize: 11)),
+                                            Text('${batch.failedRows} gagal', style: const TextStyle(color: AppColors.danger, fontSize: 11, fontWeight: FontWeight.w600)),
+                                          ],
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // 4. Status Badge
+                                DataCell(_buildStatusBadge(context, batch.status)),
+                                // 5. Aksi: Unduh Excel & Hapus (Rollback + Delete in 1 action)
+                                DataCell(
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(LucideIcons.download, size: 15, color: AppColors.primaryLight),
+                                        tooltip: 'Unduh Excel (${batch.originalFilename ?? 'file.xlsx'})',
+                                        visualDensity: VisualDensity.compact,
+                                        onPressed: () => ref.read(bulkUploadProvider.notifier).downloadBatchFile(
+                                          batch.id,
+                                          batch.originalFilename ?? 'batch_${batch.id}.xlsx',
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      OutlinedButton.icon(
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: AppColors.danger,
+                                          side: BorderSide(color: AppColors.danger.withValues(alpha: 0.45)),
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                          minimumSize: Size.zero,
+                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        ),
+                                        icon: const Icon(LucideIcons.trash2, size: 13),
+                                        label: const Text('Hapus', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600)),
+                                        onPressed: () => _showDeleteBatchConfirmation(batch),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      Divider(height: 1, color: colors.border),
+                      // Pagination Footer
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        child: Wrap(
+                          spacing: 12,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.spaceBetween,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              'Menampilkan ${startIndex + 1}–$endIndex dari $totalItems batch',
+                              style: GoogleFonts.inter(color: colors.textSecondary, fontSize: 12),
+                            ),
+                            Wrap(
+                              spacing: 8,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text('Baris/hal:', style: GoogleFonts.inter(color: colors.textMuted, fontSize: 12)),
+                                ...[10, 25, 50].map((size) {
+                                  final selected = _historyPerPage == size;
+                                  return InkWell(
+                                    borderRadius: BorderRadius.circular(6),
+                                    onTap: () => setState(() {
+                                      _historyPerPage = size;
+                                      _historyPage = 1;
+                                    }),
+                                    child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: colors.bgSubtle,
+                                        color: selected ? AppColors.primary : colors.bgSubtle,
                                         borderRadius: BorderRadius.circular(6),
                                       ),
-                                      child: Text('Di-rollback', style: GoogleFonts.inter(color: colors.textMuted, fontSize: 11.5)),
+                                      child: Text(
+                                        '$size',
+                                        style: TextStyle(
+                                          color: selected ? Colors.white : colors.textSecondary,
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
                                     ),
-                                  const SizedBox(width: 4),
-                                  // 3. Hapus Batch Permanen
-                                  IconButton(
-                                    icon: Icon(LucideIcons.trash2, size: 15, color: AppColors.danger.withValues(alpha: 0.8)),
-                                    tooltip: 'Hapus Riwayat & Data Batch Ini',
-                                    onPressed: () => _showDeleteBatchConfirmation(batch),
-                                  ),
-                                ],
-                              ),
+                                  );
+                                }),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(LucideIcons.chevronLeft, size: 16),
+                                  visualDensity: VisualDensity.compact,
+                                  onPressed: safePage > 1 ? () => setState(() => _historyPage = safePage - 1) : null,
+                                ),
+                                Text(
+                                  'Hal $safePage / $totalPages',
+                                  style: GoogleFonts.inter(color: colors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                                ),
+                                IconButton(
+                                  icon: const Icon(LucideIcons.chevronRight, size: 16),
+                                  visualDensity: VisualDensity.compact,
+                                  onPressed: safePage < totalPages ? () => setState(() => _historyPage = safePage + 1) : null,
+                                ),
+                              ],
                             ),
                           ],
-                        );
-                      }).toList(),
-                    ),
-                  ),
-              ],
-            ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            },
           ),
         ],
       ),

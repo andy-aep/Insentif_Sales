@@ -4,18 +4,37 @@ class BrandModel {
   final int id;
   final String code;
   final String name;
+  final List<String> itemCodes;
 
-  BrandModel({required this.id, required this.code, required this.name});
+  BrandModel({
+    required this.id,
+    required this.code,
+    required this.name,
+    this.itemCodes = const [],
+  });
 
   factory BrandModel.fromJson(Map<String, dynamic> json) {
+    final rawItems = json['items'] as List? ?? [];
+    final codes = rawItems
+        .whereType<Map>()
+        .map((i) => (i['item_code'] ?? '').toString().trim())
+        .where((c) => c.isNotEmpty)
+        .toList();
+
     return BrandModel(
       id: json['id'] is int ? json['id'] : int.tryParse(json['id'].toString()) ?? 0,
       code: json['code'] ?? '',
       name: json['name'] ?? '',
+      itemCodes: codes,
     );
   }
 
-  Map<String, dynamic> toJson() => {'id': id, 'code': code, 'name': name};
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'code': code,
+        'name': name,
+        'item_codes': itemCodes,
+      };
 }
 
 class RegionModel {
@@ -384,5 +403,95 @@ class SalesDistributorAssignmentModel {
     'is_active': isActive,
     'notes': notes,
   };
+}
+
+// -----------------------------------------------------------------------
+// Industri Customer & Sales Assignment Models
+// -----------------------------------------------------------------------
+
+class IndustriCustomerModel {
+  final int id;
+  final String customerCode;
+  final String customerName;
+  final String? city;
+  final String customerType; // NEW or EXISTING
+  final String? firstTransactionPeriod;
+  final bool isActive;
+  final List<SalesIndustriAssignmentModel> assignments;
+
+  IndustriCustomerModel({
+    required this.id,
+    required this.customerCode,
+    required this.customerName,
+    this.city,
+    this.customerType = 'NEW',
+    this.firstTransactionPeriod,
+    this.isActive = true,
+    this.assignments = const [],
+  });
+
+  factory IndustriCustomerModel.fromJson(Map<String, dynamic> json) {
+    final rawAssignments = json['assignments'] as List? ?? [];
+    return IndustriCustomerModel(
+      id: json['id'] is int ? json['id'] : int.tryParse(json['id'].toString()) ?? 0,
+      customerCode: json['customer_code']?.toString() ?? '',
+      customerName: json['customer_name']?.toString() ?? '',
+      city: json['city']?.toString(),
+      customerType: json['customer_type']?.toString() ?? 'NEW',
+      firstTransactionPeriod: json['first_transaction_period']?.toString(),
+      isActive: json['is_active'] == null || json['is_active'] == true || json['is_active'] == 1 || json['is_active'] == '1',
+      assignments: rawAssignments
+          .whereType<Map<String, dynamic>>()
+          .map((a) => SalesIndustriAssignmentModel.fromJson(a))
+          .toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'customer_code': customerCode,
+    'customer_name': customerName,
+    'city': city,
+    'customer_type': customerType,
+    'first_transaction_period': firstTransactionPeriod,
+    'is_active': isActive,
+  };
+}
+
+class SalesIndustriAssignmentModel {
+  final int id;
+  final int userId;
+  final int industriCustomerId;
+  final String? period;
+  final bool isActive;
+  final String? notes;
+  final UserModel? user;
+  final IndustriCustomerModel? customer;
+
+  SalesIndustriAssignmentModel({
+    required this.id,
+    required this.userId,
+    required this.industriCustomerId,
+    this.period,
+    this.isActive = true,
+    this.notes,
+    this.user,
+    this.customer,
+  });
+
+  factory SalesIndustriAssignmentModel.fromJson(Map<String, dynamic> json) {
+    return SalesIndustriAssignmentModel(
+      id: json['id'] is int ? json['id'] : int.tryParse(json['id'].toString()) ?? 0,
+      userId: json['user_id'] is int ? json['user_id'] : int.tryParse(json['user_id'].toString()) ?? 0,
+      industriCustomerId: json['industri_customer_id'] is int
+          ? json['industri_customer_id']
+          : int.tryParse(json['industri_customer_id']?.toString() ?? '0') ?? 0,
+      period: json['period']?.toString(),
+      isActive: json['is_active'] == null || json['is_active'] == true || json['is_active'] == 1 || json['is_active'] == '1',
+      notes: json['notes']?.toString(),
+      user: json['user'] != null ? UserModel.fromJson(json['user']) : null,
+      customer: json['customer'] != null ? IndustriCustomerModel.fromJson(json['customer']) : null,
+    );
+  }
 }
 

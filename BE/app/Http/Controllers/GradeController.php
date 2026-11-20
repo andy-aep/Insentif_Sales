@@ -26,6 +26,7 @@ class GradeController extends Controller
             'grade_name' => 'required|string|max:100',
             'target_from' => 'required|numeric|min:0',
             'target_to' => 'required|numeric|gte:target_from',
+            'multiplier_rate' => 'nullable|numeric|min:0',
         ]);
 
         if (empty($validated['id_grade'])) {
@@ -54,6 +55,7 @@ class GradeController extends Controller
             'grade_name' => 'sometimes|required|string|max:100',
             'target_from' => 'sometimes|required|numeric|min:0',
             'target_to' => 'sometimes|required|numeric|gte:target_from',
+            'multiplier_rate' => 'nullable|numeric|min:0',
         ]);
 
         $grade->update($validated);

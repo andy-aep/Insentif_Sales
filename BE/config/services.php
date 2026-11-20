@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'sap' => [
+        'base_url' => rtrim((string) env('SAP_API_BASE_URL', 'http://103.18.133.187:3100'), '/'),
+        'timeout' => (int) env('SAP_API_TIMEOUT', 15),
+    ],
+
 ];

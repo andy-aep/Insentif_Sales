@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\DistributorBreakdownExport;
 use App\Exports\IncentiveCalculationExport;
 use App\Models\Area;
 use App\Models\IncentiveCalculation;
 use App\Models\MasterTarget;
+use App\Models\Position;
 use App\Models\SalesDistributorAssignment;
 use App\Models\SellinDistributor;
 use App\Models\SelloutDistributor;
@@ -27,20 +29,32 @@ class IncentiveCalculationController extends Controller
     {
         $validated = $request->validate([
             'kategori_skema' => 'required|in:KONSUMSI,INDUSTRI,SURABAYA',
-            'period' => 'required|string|size:6',
+            'period' => 'required|string|max:300',
             'position_id' => 'nullable|integer|exists:positions,id',
             'user_id' => 'nullable|integer|exists:users,id',
         ]);
 
         $authUserId = $request->user()->id;
+        $periods = collect(explode(',', (string) $validated['period']))
+            ->map(fn ($p) => preg_replace('/[^0-9]/', '', $p))
+            ->filter(fn ($p) => strlen($p) === 6)
+            ->unique()
+            ->values();
+        if ($periods->isEmpty()) {
+            $periods = collect([preg_replace('/[^0-9]/', '', (string) $validated['period'])]);
+        }
 
-        $results = $this->calculationService->execute(
-            $validated['kategori_skema'],
-            $validated['period'],
-            $authUserId,
-            isset($validated['position_id']) ? (int) $validated['position_id'] : null,
-            isset($validated['user_id']) ? (int) $validated['user_id'] : null
-        );
+        $results = collect();
+        foreach ($periods as $p) {
+            $res = $this->calculationService->execute(
+                $validated['kategori_skema'],
+                $p,
+                $authUserId,
+                isset($validated['position_id']) ? (int) $validated['position_id'] : null,
+                isset($validated['user_id']) ? (int) $validated['user_id'] : null
+            );
+            $results = $results->merge($res);
+        }
 
         $totalPayout = $results->sum('final_reward');
         $totalPersonil = $results->pluck('user_id')->unique()->count();
@@ -60,11 +74,51 @@ class IncentiveCalculationController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $authUser = $request->user()?->load('role');
+        $isSalesOnly = strtolower($authUser?->role?->name ?? '') === 'sales';
+        $scopedUserId = $isSalesOnly ? $authUser->id : $request->user_id;
+
+        $periods = collect(explode(',', (string) $request->period))
+            ->map(fn ($p) => preg_replace('/[^0-9]/', '', $p))
+            ->filter(fn ($p) => strlen($p) === 6)
+            ->unique()
+            ->values();
+
+        // Otomatis jalankan kalkulasi saat menu dibuka / ganti periode tanpa perlu klik Kunci Hitungan
+        if ($request->filled('kategori_skema') && $periods->isNotEmpty()) {
+            $kategori = strtoupper((string) $request->kategori_skema);
+            if ($kategori === 'DISTRIBUTOR') {
+                $kategori = 'KONSUMSI';
+            }
+            if (in_array($kategori, ['KONSUMSI', 'INDUSTRI', 'SURABAYA'], true)) {
+                foreach ($periods as $p) {
+                    try {
+                        $this->calculationService->execute(
+                            $kategori,
+                            $p,
+                            (int) ($authUser?->id ?? 1),
+                            $request->filled('position_id') ? (int) $request->position_id : null,
+                            $scopedUserId ? (int) $scopedUserId : null
+                        );
+                    } catch (\Throwable) {
+                    }
+                }
+            }
+        }
+
         $calculations = IncentiveCalculation::with(['user.position', 'targetHeader', 'grade', 'gradeBobot', 'calculatedBy'])
             ->when($request->kategori_skema, fn ($q) => $q->where('kategori_skema', $request->kategori_skema))
-            ->when($request->period, fn ($q) => $q->where('period', $request->period))
+            ->when($request->period, function ($q) use ($request, $periods) {
+                if ($periods->count() > 1) {
+                    $q->whereIn('period', $periods->all());
+                } elseif ($periods->count() === 1) {
+                    $q->where('period', $periods->first());
+                } else {
+                    $q->where('period', $request->period);
+                }
+            })
             ->when($request->position_id, fn ($q) => $q->whereHas('user', fn ($u) => $u->where('position_id', $request->position_id)))
-            ->when($request->user_id, fn ($q) => $q->where('user_id', $request->user_id))
+            ->when($scopedUserId, fn ($q) => $q->where('user_id', $scopedUserId))
             ->orderBy('user_id')
             ->orderBy('target_header_id')
             ->paginate($request->integer('per_page', 100));
@@ -76,17 +130,35 @@ class IncentiveCalculationController extends Controller
     {
         $request->validate([
             'kategori_skema' => 'nullable|in:KONSUMSI,INDUSTRI,SURABAYA',
-            'period' => 'nullable|string|size:6',
+            'period' => 'nullable|string|max:300',
             'position_id' => 'nullable|integer',
             'user_id' => 'nullable|integer',
+            'search' => 'nullable|string',
         ]);
 
-        $kategoriSkema = $request->query('kategori_skema');
-        $period = $request->query('period');
+        $kategoriSkema = strtoupper((string) ($request->query('kategori_skema') ?: 'KONSUMSI'));
+        $rawPeriod = (string) ($request->query('period') ?? '');
+        $firstPeriod = collect(explode(',', $rawPeriod))
+            ->map(fn ($p) => preg_replace('/[^0-9]/', '', $p))
+            ->filter(fn ($p) => strlen($p) === 6)
+            ->first();
+        $period = $firstPeriod ?: ($rawPeriod !== '' ? $rawPeriod : date('Ym'));
         $positionId = $request->query('position_id') ? (int) $request->query('position_id') : null;
         $userId = $request->query('user_id') ? (int) $request->query('user_id') : null;
 
-        $fileName = 'incentive_report_'.($kategoriSkema ?? 'ALL').'_'.($period ?? date('Ym')).'.xlsx';
+        $fileName = 'incentive_report_'.($kategoriSkema ?: 'KONSUMSI').'_'.str_replace(',', '_', $rawPeriod !== '' ? $rawPeriod : $period).'.xlsx';
+
+        if ($kategoriSkema === 'KONSUMSI') {
+            if (! $request->filled('period')) {
+                $request->merge(['period' => $period]);
+            }
+            $payload = $this->buildDistributorBreakdownPayload($request);
+
+            return Excel::download(
+                new DistributorBreakdownExport($payload['data']),
+                $fileName
+            );
+        }
 
         return Excel::download(
             new IncentiveCalculationExport($kategoriSkema, $period, $positionId, $userId),
@@ -96,68 +168,118 @@ class IncentiveCalculationController extends Controller
 
     public function distributorBreakdown(Request $request): JsonResponse
     {
+        return response()->json($this->buildDistributorBreakdownPayload($request));
+    }
+
+    /**
+     * @return array{meta: array<string, mixed>, data: array<int, array<string, mixed>>}
+     */
+    protected function buildDistributorBreakdownPayload(Request $request): array
+    {
         $request->validate([
-            'period' => 'required|string|size:6',
+            'period' => 'required|string|max:300',
             'position_id' => 'nullable|integer',
             'user_id' => 'nullable|integer',
             'search' => 'nullable|string',
         ]);
 
-        $cleanPeriod = preg_replace('/[^0-9]/', '', $request->period);
-        $year = substr($cleanPeriod, 0, 4);
-        $month = (int) substr($cleanPeriod, 4, 2);
-        $periodFormatted = "{$month}/{$year}";
+        $periods = collect(explode(',', (string) $request->period))
+            ->map(fn ($p) => preg_replace('/[^0-9]/', '', $p))
+            ->filter(fn ($p) => strlen($p) === 6)
+            ->unique()
+            ->sort()
+            ->values();
+        if ($periods->isEmpty()) {
+            $fallback = preg_replace('/[^0-9]/', '', (string) $request->period);
+            $periods = collect([$fallback !== '' ? $fallback : date('Ym')]);
+        }
+        $cleanPeriod = (string) $periods->first();
+        $periodList = $periods->all();
+        $formatPeriod = static function (string $p): string {
+            if (strlen($p) !== 6) {
+                return $p;
+            }
+            $yr = substr($p, 0, 4);
+            $mo = (int) substr($p, 4, 2);
+
+            return "{$mo}/{$yr}";
+        };
+        $periodFormatted = $periods->map($formatPeriod)->implode(', ');
 
         $positionId = $request->filled('position_id') ? (int) $request->position_id : null;
         $userId = $request->filled('user_id') ? (int) $request->user_id : null;
         $search = $request->filled('search') ? trim(strtolower($request->search)) : null;
 
-        // TargetHeaders for KONSUMSI
-        $asmHeader = TargetHeader::where('kategori_skema', 'KONSUMSI')
-            ->where('sales_type', 1)
+        // TargetHeaders for KONSUMSI (3 header per posisi: SELL_IN, SELL_OUT, AO)
+        $konsumsiHeaders = TargetHeader::where('kategori_skema', 'KONSUMSI')
             ->where('aktif', true)
             ->with('grades.bobots')
-            ->first();
+            ->get();
 
-        $spvSoHeader = TargetHeader::where('kategori_skema', 'KONSUMSI')
-            ->where('sales_type', 2)
-            ->whereIn('type', ['Sell-Out', 'SELL_OUT'])
-            ->where('aktif', true)
-            ->with('grades.bobots')
-            ->first();
-
-        $spvAoHeader = TargetHeader::where('kategori_skema', 'KONSUMSI')
-            ->where('sales_type', 2)
-            ->whereIn('type', ['AO', 'ACTIVE_OUTLET', 'Active Outlet'])
-            ->where('aktif', true)
-            ->with('grades.bobots')
-            ->first();
+        $resolveHeadersForSalesType = function (int $salesType) use ($konsumsiHeaders): array {
+            $forType = $konsumsiHeaders->where('sales_type', $salesType);
+            $findMetric = function (string $metric) use ($forType): ?TargetHeader {
+                return $forType->first(function ($h) use ($metric) {
+                    $t = strtoupper(str_replace(['-', ' '], '_', trim((string) $h->type)));
+                    $isAo = in_array($t, ['AO', 'ACTIVE_OUTLET', 'OUTLET'], true) || str_contains($t, 'AO') || str_contains($t, 'OUTLET');
+                    $isSo = str_contains($t, 'OUT') && ! $isAo;
+                    $isSi = ! $isAo && ! $isSo;
+                    return match ($metric) {
+                        'SI' => $isSi,
+                        'SO' => $isSo,
+                        'AO' => $isAo,
+                        default => false,
+                    };
+                });
+            };
+            return [
+                'si' => $findMetric('SI'),
+                'so' => $findMetric('SO'),
+                'ao' => $findMetric('AO'),
+            ];
+        };
 
         $selectedUser = $userId ? User::with('position')->find($userId) : null;
-        $userPosCode = strtoupper($selectedUser->position?->code ?? '');
-        $isSpv = $selectedUser && $userPosCode === 'SPV';
-        $isAsm = $selectedUser && $userPosCode === 'ASM';
+        $selectedPos = $positionId ? Position::find($positionId) : null;
+        $userPosCode = strtoupper($selectedUser?->position?->code ?? $selectedPos?->code ?? '');
+        $filterPosCode = strtoupper($selectedPos?->code ?? '');
+        $isSpv = $selectedUser && in_array(strtoupper($selectedUser->position?->code ?? ''), ['SPV', 'ASC'], true);
+        $isAsm = $selectedUser && strtoupper($selectedUser->position?->code ?? '') === 'ASM';
+
+        $activeSalesType = (int) ($selectedUser?->position_id
+            ?? $positionId
+            ?? (Position::where('code', 'ASM')->value('id') ?? 1));
+        $activeHeaders = $resolveHeadersForSalesType($activeSalesType);
+        if (! $activeHeaders['si'] && ! $activeHeaders['so'] && ! $activeHeaders['ao'] && in_array($userPosCode, ['ASC', 'SPV'], true)) {
+            $spvPosId = (int) (Position::where('code', 'SPV')->value('id') ?? 0);
+            if ($spvPosId > 0) {
+                $activeHeaders = $resolveHeadersForSalesType($spvPosId);
+            }
+        }
+        $posSiHeader = $activeHeaders['si'];
+        $posSoHeader = $activeHeaders['so'];
+        $posAoHeader = $activeHeaders['ao'];
 
         // Preload active assignments for ASM and SPV
         $asmAssignments = SalesDistributorAssignment::whereNotNull('distributor_id')
             ->whereHas('user.position', fn ($q) => $q->where('code', 'ASM'))
             ->where('is_active', true)
-            ->where(fn ($q) => $q->where('period', $cleanPeriod)->orWhereNull('period'))
+            ->where(fn ($q) => $q->whereIn('period', $periodList)->orWhereNull('period'))
             ->with('user:id,name')
             ->get()
             ->keyBy('distributor_id');
 
         $spvAssignments = SalesDistributorAssignment::whereNotNull('area_id')
-            ->whereHas('user.position', fn ($q) => $q->where('code', 'SPV'))
+            ->whereHas('user.position', fn ($q) => $q->whereIn('code', ['SPV', 'ASC']))
             ->where('is_active', true)
-            ->where(fn ($q) => $q->where('period', $cleanPeriod)->orWhereNull('period'))
+            ->where(fn ($q) => $q->whereIn('period', $periodList)->orWhereNull('period'))
             ->with('user:id,name')
             ->get()
             ->keyBy('area_id');
 
         // 1. Get relevant DEPO target rows
         $depoQuery = MasterTarget::with(['distributor', 'depo', 'brand', 'user.position'])
-            ->where('period', $cleanPeriod)
+            ->whereIn('period', $periodList)
             ->where('kategori_skema', 'KONSUMSI')
             ->where('level', 'DEPO');
 
@@ -166,7 +288,7 @@ class IncentiveCalculationController extends Controller
         if ($isAsm) {
             $assignedDistIds = SalesDistributorAssignment::where('user_id', $userId)
                 ->where('is_active', true)
-                ->where(fn ($q) => $q->where('period', $cleanPeriod)->orWhereNull('period'))
+                ->where(fn ($q) => $q->whereIn('period', $periodList)->orWhereNull('period'))
                 ->pluck('distributor_id')
                 ->filter()
                 ->unique();
@@ -180,14 +302,14 @@ class IncentiveCalculationController extends Controller
         } elseif ($isSpv) {
             $assignedAreaIds = SalesDistributorAssignment::where('user_id', $userId)
                 ->where('is_active', true)
-                ->where(fn ($q) => $q->where('period', $cleanPeriod)->orWhereNull('period'))
+                ->where(fn ($q) => $q->whereIn('period', $periodList)->orWhereNull('period'))
                 ->pluck('area_id')
                 ->filter()
                 ->unique();
 
             $assignedDepoIds = Area::whereIn('id', $assignedAreaIds)->pluck('depo_id')->filter()->unique();
 
-            $spvDepoIds = MasterTarget::where('period', $cleanPeriod)
+            $spvDepoIds = MasterTarget::whereIn('period', $periodList)
                 ->where('kategori_skema', 'KONSUMSI')
                 ->where('level', 'AREA')
                 ->where(function ($q) use ($userId, $assignedAreaIds) {
@@ -201,11 +323,11 @@ class IncentiveCalculationController extends Controller
                 ->unique();
 
             $depoQuery->whereIn('depo_id', $spvDepoIds);
-        } elseif ($positionId == 1) { // Filter Posisi ASM
+        } elseif ($filterPosCode === 'ASM') {
             $asmUserIds = User::whereHas('position', fn ($q) => $q->where('code', 'ASM'))->pluck('id');
             $assignedDistIds = SalesDistributorAssignment::whereIn('user_id', $asmUserIds)
                 ->where('is_active', true)
-                ->where(fn ($q) => $q->where('period', $cleanPeriod)->orWhereNull('period'))
+                ->where(fn ($q) => $q->whereIn('period', $periodList)->orWhereNull('period'))
                 ->pluck('distributor_id')
                 ->filter()
                 ->unique();
@@ -216,16 +338,16 @@ class IncentiveCalculationController extends Controller
                     $q->orWhereIn('distributor_id', $assignedDistIds);
                 }
             });
-        } elseif ($positionId == 2) { // Filter Posisi SPV
-            $spvUserIds = User::whereHas('position', fn ($q) => $q->where('code', 'SPV'))->pluck('id');
+        } elseif (in_array($filterPosCode, ['SPV', 'ASC'], true)) {
+            $spvUserIds = User::whereHas('position', fn ($q) => $q->where('code', $filterPosCode))->pluck('id');
             $spvAreaIds = SalesDistributorAssignment::whereIn('user_id', $spvUserIds)
                 ->where('is_active', true)
-                ->where(fn ($q) => $q->where('period', $cleanPeriod)->orWhereNull('period'))
+                ->where(fn ($q) => $q->whereIn('period', $periodList)->orWhereNull('period'))
                 ->pluck('area_id')
                 ->filter()
                 ->unique();
 
-            $spvDepoIds = MasterTarget::where('period', $cleanPeriod)
+            $spvDepoIds = MasterTarget::whereIn('period', $periodList)
                 ->where('kategori_skema', 'KONSUMSI')
                 ->where('level', 'AREA')
                 ->where(function ($q) use ($spvUserIds, $spvAreaIds) {
@@ -243,19 +365,31 @@ class IncentiveCalculationController extends Controller
 
         $depoTargets = $depoQuery->get();
 
-        // Realization records cache with fast hash map indexing
-        $allSellin = SellinDistributor::where('period', $cleanPeriod)->get();
-        $allSellout = SelloutDistributor::where('period', $cleanPeriod)->get();
+        // Realization records cache with SQL aggregation (hemat memori untuk multi-periode)
+        $allSellin = SellinDistributor::whereIn('period', $periodList)
+            ->select(['period', 'distributor_id', 'depo_id', 'brand_id', 'user_id', 'transaction_date', 'volume_kg'])
+            ->get();
+        $allSellout = SelloutDistributor::whereIn('period', $periodList)
+            ->where('is_out_of_area', false)
+            ->selectRaw('period, depo_id, area_id, brand_id, COALESCE(SUM(volume_kg), 0) as volume_kg, COALESCE(SUM(active_outlet_count), 0) as active_outlet_count')
+            ->groupBy('period', 'depo_id', 'area_id', 'brand_id')
+            ->get();
 
-        $sellinByDistBrand = $allSellin->groupBy(fn ($s) => $s->distributor_id . '_' . ($s->brand_id ?? 0));
-        $sellinByDist = $allSellin->groupBy('distributor_id');
+        $sellinByDistBrand = $allSellin->groupBy(fn ($s) => $s->period . '_' . $s->distributor_id . '_' . ($s->brand_id ?? 0));
+        $sellinByDist = $allSellin->groupBy(fn ($s) => $s->period . '_' . $s->distributor_id);
+        $hasDepoLevelSellin = $allSellin->whereNotNull('depo_id')->isNotEmpty();
+        $sellinByDepoBrand = $allSellin->whereNotNull('depo_id')->groupBy(fn ($s) => $s->period . '_' . $s->depo_id . '_' . ($s->brand_id ?? 0));
+        $sellinByDepo = $allSellin->whereNotNull('depo_id')->groupBy(fn ($s) => $s->period . '_' . $s->depo_id);
 
-        $selloutByDepoBrand = $allSellout->groupBy(fn ($s) => $s->depo_id . '_' . ($s->brand_id ?? 0));
-        $selloutByDepo = $allSellout->groupBy('depo_id');
+        $selloutByDepoBrand = $allSellout->groupBy(fn ($s) => $s->period . '_' . $s->depo_id . '_' . ($s->brand_id ?? 0));
+        $selloutByDepo = $allSellout->groupBy(fn ($s) => $s->period . '_' . $s->depo_id);
+        $hasAreaLevelSellout = $allSellout->whereNotNull('area_id')->isNotEmpty();
+        $selloutByAreaBrand = $allSellout->whereNotNull('area_id')->groupBy(fn ($s) => $s->period . '_' . $s->area_id . '_' . ($s->brand_id ?? 0));
+        $selloutByArea = $allSellout->whereNotNull('area_id')->groupBy(fn ($s) => $s->period . '_' . $s->area_id);
 
         // 2. Get relevant AREA target rows
         $areaQuery = MasterTarget::with(['area', 'brand', 'user.position'])
-            ->where('period', $cleanPeriod)
+            ->whereIn('period', $periodList)
             ->where('kategori_skema', 'KONSUMSI')
             ->where('level', 'AREA');
 
@@ -266,11 +400,11 @@ class IncentiveCalculationController extends Controller
                     $q->orWhereIn('area_id', $assignedAreaIds);
                 }
             });
-        } elseif ($positionId == 2) {
-            $spvUserIds = User::whereHas('position', fn ($q) => $q->where('code', 'SPV'))->pluck('id');
+        } elseif (in_array($filterPosCode, ['SPV', 'ASC'], true)) {
+            $spvUserIds = User::whereHas('position', fn ($q) => $q->where('code', $filterPosCode))->pluck('id');
             $spvAreaIds = SalesDistributorAssignment::whereIn('user_id', $spvUserIds)
                 ->where('is_active', true)
-                ->where(fn ($q) => $q->where('period', $cleanPeriod)->orWhereNull('period'))
+                ->where(fn ($q) => $q->whereIn('period', $periodList)->orWhereNull('period'))
                 ->pluck('area_id')
                 ->filter()
                 ->unique();
@@ -283,9 +417,10 @@ class IncentiveCalculationController extends Controller
             });
         }
 
-        $allAreaTargets = $areaQuery->get()->groupBy(fn ($a) => $a->depo_id . '_' . ($a->brand_id ?? 0));
+        $allAreaTargets = $areaQuery->get()->groupBy(fn ($a) => $a->period . '_' . $a->depo_id . '_' . ($a->brand_id ?? 0));
 
         $cardItems = [];
+        $uniquePersonil = [];
         $totalGrandReward = 0;
         $totalGrandTargetSi = 0;
         $totalGrandRealSi = 0;
@@ -295,6 +430,8 @@ class IncentiveCalculationController extends Controller
         $totalGrandRealAo = 0;
 
         foreach ($depoTargets as $dt) {
+            $dtPeriod = (string) $dt->period;
+            $dtPeriodFormatted = $formatPeriod($dtPeriod);
             $distName = $dt->distributor?->name ?? '-';
             $depoName = $dt->depo?->name ?? '-';
             $brandName = $dt->brand?->name ?? '-';
@@ -308,27 +445,62 @@ class IncentiveCalculationController extends Controller
                 if (!$match) continue;
             }
 
-            // Sell-In (O(1) hash map lookup)
+            if ($asmName !== '-' && ! $isSpv && ! in_array($filterPosCode, ['SPV', 'ASC'], true)) {
+                $uniquePersonil[strtolower($asmName)] = true;
+            }
+
+            // Sell-In (utamakan depo_id + filter masa aktif ASM jika transaction_date tersedia)
             $targetSi = (float) $dt->target_quota;
-            $matchedSiRecords = $dt->brand_id
-                ? ($sellinByDistBrand->get($dt->distributor_id . '_' . $dt->brand_id) ?? collect())
-                : ($sellinByDist->get($dt->distributor_id) ?? collect());
+            if ($hasDepoLevelSellin && $dt->depo_id) {
+                $matchedSiRecords = $dt->brand_id
+                    ? ($sellinByDepoBrand->get($dtPeriod . '_' . $dt->depo_id . '_' . $dt->brand_id) ?? collect())
+                    : ($sellinByDepo->get($dtPeriod . '_' . $dt->depo_id) ?? collect());
+            } else {
+                $matchedSiRecords = $dt->brand_id
+                    ? ($sellinByDistBrand->get($dtPeriod . '_' . $dt->distributor_id . '_' . $dt->brand_id) ?? collect())
+                    : ($sellinByDist->get($dtPeriod . '_' . $dt->distributor_id) ?? collect());
+            }
+
+            $asmUser = $dt->user ?? $asmAssignments->get($dt->distributor_id)?->user;
+            if ($asmUser) {
+                $from = $asmUser->aktif_from ? $asmUser->aktif_from->format('Y-m-d') : null;
+                $to = $asmUser->aktif_to ? $asmUser->aktif_to->format('Y-m-d') : null;
+                $matchedSiRecords = $matchedSiRecords->filter(function ($s) use ($from, $to, $asmUser) {
+                    if ($s->user_id && (int) $s->user_id === (int) $asmUser->id) {
+                        return true;
+                    }
+                    if (! $s->transaction_date) {
+                        return true;
+                    }
+                    $d = $s->transaction_date->format('Y-m-d');
+                    if ($from && $d < $from) {
+                        return false;
+                    }
+                    if ($to && $d > $to) {
+                        return false;
+                    }
+
+                    return true;
+                });
+            }
+
             $realSi = (float) $matchedSiRecords->sum('volume_kg');
             $achSiPct = $targetSi > 0 ? round(($realSi / $targetSi) * 100, 1) : 0.0;
 
-            $rewardSi = $this->calculateRewardForMetric($asmHeader, $targetSi, $realSi);
+            $siEval = $this->evaluateMetricReward($posSiHeader, $targetSi, $realSi);
+            $rewardSi = $siEval['reward'];
+            $siPassed = $siEval['passed'];
 
             // Areas
-            $areaGroupKey = $dt->depo_id . '_' . ($dt->brand_id ?? 0);
+            $areaGroupKey = $dtPeriod . '_' . $dt->depo_id . '_' . ($dt->brand_id ?? 0);
             $areaTargets = $allAreaTargets->get($areaGroupKey) ?? collect();
 
             if ($areaTargets->isEmpty()) {
-                $areaTargets = $allAreaTargets->get($dt->depo_id . '_0') ?? collect();
+                $areaTargets = $allAreaTargets->get($dtPeriod . '_' . $dt->depo_id . '_0') ?? collect();
             }
 
             $areaList = [];
             $depoTotalAreaReward = 0;
-            $areaNo = 1;
 
             foreach ($areaTargets as $at) {
                 $areaName = $at->area?->name ?? '-';
@@ -336,13 +508,23 @@ class IncentiveCalculationController extends Controller
                 $spvName = $at->user?->name ?? $spvAssignments->get($at->area_id)?->user?->name ?? '-';
                 $areaBrandName = $at->brand?->name ?? $brandName;
 
+                if ($spvName !== '-' && ($isSpv || in_array($filterPosCode, ['SPV', 'ASC'], true))) {
+                    $uniquePersonil[strtolower($spvName)] = true;
+                }
+
                 $targetSo = (float) $at->target_quota;
                 $targetAo = (int) $at->target_outlet;
 
-                // Sell-Out & AO (O(1) hash map lookup)
-                $matchedSoRecords = $at->brand_id
-                    ? ($selloutByDepoBrand->get($dt->depo_id . '_' . $at->brand_id) ?? collect())
-                    : ($selloutByDepo->get($dt->depo_id) ?? collect());
+                // Sell-Out & AO (O(1) hash map lookup: utamakan area_id jika tersedia, fallback ke depo_id)
+                if ($hasAreaLevelSellout && $at->area_id) {
+                    $matchedSoRecords = $at->brand_id
+                        ? ($selloutByAreaBrand->get($dtPeriod . '_' . $at->area_id . '_' . $at->brand_id) ?? collect())
+                        : ($selloutByArea->get($dtPeriod . '_' . $at->area_id) ?? collect());
+                } else {
+                    $matchedSoRecords = $at->brand_id
+                        ? ($selloutByDepoBrand->get($dtPeriod . '_' . $dt->depo_id . '_' . $at->brand_id) ?? collect())
+                        : ($selloutByDepo->get($dtPeriod . '_' . $dt->depo_id) ?? collect());
+                }
 
                 $realSo = (float) $matchedSoRecords->sum('volume_kg');
                 $realAo = (int) $matchedSoRecords->sum('active_outlet_count');
@@ -350,14 +532,19 @@ class IncentiveCalculationController extends Controller
                 $achSoPct = $targetSo > 0 ? round(($realSo / $targetSo) * 100, 1) : 0.0;
                 $achAoPct = $targetAo > 0 ? round(($realAo / $targetAo) * 100, 1) : 0.0;
 
-                $rewardSo = $this->calculateRewardForMetric($spvSoHeader, $targetSo, $realSo);
-                $rewardAo = $this->calculateRewardForMetric($spvAoHeader, (float) $targetAo, (float) $realAo);
+                $soEval = $this->evaluateMetricReward($posSoHeader, $targetSo, $realSo);
+                $rewardSo = $soEval['reward'];
+                $soPassed = $soEval['passed'];
+
+                $aoEval = $this->evaluateMetricReward($posAoHeader, (float) $targetAo, (float) $realAo);
+                // Aturan 3: AO minimal wajib >= min% DAN salah satu/keduanya SI atau SO tercapai
+                $rewardAo = ($siPassed || $soPassed) ? $aoEval['reward'] : 0.0;
                 $subtotalAreaReward = $rewardSo + $rewardAo;
 
                 $depoTotalAreaReward += $subtotalAreaReward;
 
                 $areaList[] = [
-                    'no' => $areaNo++,
+                    'no' => 0,
                     'area_name' => $areaName,
                     'area_code' => $areaCode,
                     'brand_name' => $areaBrandName,
@@ -370,6 +557,7 @@ class IncentiveCalculationController extends Controller
                     'ao_real' => $realAo,
                     'ao_ach_pct' => $achAoPct,
                     'ao_reward' => $rewardAo,
+                    'sell_in_spv_reward' => $isSpv ? $rewardSi : 0.0,
                     'subtotal_area_reward' => $subtotalAreaReward,
                 ];
 
@@ -379,10 +567,13 @@ class IncentiveCalculationController extends Controller
                 $totalGrandRealAo += $realAo;
             }
 
-            $cardTotalReward = $isSpv ? $depoTotalAreaReward : $rewardSi;
-            if (!$isSpv && !$isAsm && $rewardSi <= 0 && $depoTotalAreaReward > 0) {
-                $cardTotalReward = $depoTotalAreaReward;
+            usort($areaList, static fn ($a, $b) => strcasecmp((string) $a['area_name'], (string) $b['area_name']));
+            foreach ($areaList as $idx => &$arItem) {
+                $arItem['no'] = $idx + 1;
             }
+            unset($arItem);
+
+            $cardTotalReward = $rewardSi + $depoTotalAreaReward;
 
             $totalGrandReward += $cardTotalReward;
             $totalGrandTargetSi += $targetSi;
@@ -394,8 +585,8 @@ class IncentiveCalculationController extends Controller
                 'depo_name' => $depoName,
                 'brand_name' => $brandName,
                 'asm_name' => $asmName,
-                'period' => $cleanPeriod,
-                'period_formatted' => $periodFormatted,
+                'period' => $dtPeriod,
+                'period_formatted' => $dtPeriodFormatted,
                 'sell_in_target' => $targetSi,
                 'sell_in_real' => $realSi,
                 'sell_in_ach_pct' => $achSiPct,
@@ -406,14 +597,24 @@ class IncentiveCalculationController extends Controller
             ];
         }
 
-        return response()->json([
+        usort($cardItems, static function ($a, $b) {
+            return strcasecmp((string) $a['distributor_name'], (string) $b['distributor_name'])
+                ?: strcasecmp((string) $a['depo_name'], (string) $b['depo_name'])
+                ?: strcasecmp((string) $a['brand_name'], (string) $b['brand_name'])
+                ?: strcmp((string) $a['period'], (string) $b['period']);
+        });
+
+        $totalPersonilCount = $selectedUser ? 1 : count($uniquePersonil);
+
+        return [
             'meta' => [
-                'period' => $cleanPeriod,
+                'period' => $periods->implode(','),
                 'period_formatted' => $periodFormatted,
                 'position_id' => $positionId,
                 'user_id' => $userId,
                 'user_name' => $selectedUser?->name,
                 'user_role' => $userPosCode,
+                'total_personil' => $totalPersonilCount,
                 'total_depos' => count($cardItems),
                 'total_areas' => collect($cardItems)->sum('areas_count'),
                 'total_target_sell_in' => $totalGrandTargetSi,
@@ -425,49 +626,134 @@ class IncentiveCalculationController extends Controller
                 'total_reward' => $totalGrandReward,
             ],
             'data' => $cardItems,
-        ]);
+        ];
     }
 
-    protected function calculateRewardForMetric(?TargetHeader $header, float $target, float $real): float
+    /**
+     * Evaluasi reward per metrik tanpa cap realisasi:
+     * - Cek min_achievement_pct pada TargetHeader.
+     * - Model pengali=true: Realisasi * Bobot Tier * (Bobot Header / 100).
+     * - Model pengali=false (AO Nominal Tetap): Nominal Tier * (Bobot Header / 100).
+     *
+     * @return array{reward: float, passed: bool}
+     */
+    protected function evaluateMetricReward(?TargetHeader $header, float $target, float $real): array
     {
-        if (!$header || $target <= 0) return 0.0;
+        if (! $header || $target <= 0) {
+            return ['reward' => 0.0, 'passed' => false];
+        }
 
         $matchedGrade = $header->grades->first(function ($grade) use ($target) {
             return $target >= (float) $grade->target_from && $target <= (float) $grade->target_to;
         });
 
-        if (!$matchedGrade && $header->grades->isNotEmpty()) {
-            $maxGrade = $header->grades->sortByDesc(fn($g) => (float) $g->target_to)->first();
-            $minGrade = $header->grades->sortBy(fn($g) => (float) $g->target_from)->first();
+        if (! $matchedGrade && $header->grades->isNotEmpty()) {
+            $maxGrade = $header->grades->sortByDesc(fn ($g) => (float) $g->target_to)->first();
+            $minGrade = $header->grades->sortBy(fn ($g) => (float) $g->target_from)->first();
             $matchedGrade = $target > (float) $maxGrade->target_to ? $maxGrade : $minGrade;
         }
 
-        if (!$matchedGrade) return 0.0;
+        if (! $matchedGrade) {
+            return ['reward' => 0.0, 'passed' => false];
+        }
 
         $achPct = ($real / $target) * 100.0;
+        $minAchPct = (float) ($header->min_achievement_pct ?? 0);
+        if ($achPct < $minAchPct) {
+            return ['reward' => 0.0, 'passed' => false];
+        }
+
         $matchedBobot = $matchedGrade->bobots->first(function ($tier) use ($achPct) {
             return $achPct >= (float) $tier->percent_from && $achPct <= (float) $tier->percent_to;
         });
 
-        if (!$matchedBobot && $matchedGrade->bobots->isNotEmpty()) {
-            $minPercent = (float) $matchedGrade->bobots->min(fn($t) => (float) $t->percent_from);
+        if (! $matchedBobot && $matchedGrade->bobots->isNotEmpty()) {
+            $minPercent = (float) $matchedGrade->bobots->min(fn ($t) => (float) $t->percent_from);
             if ($achPct >= $minPercent) {
                 $matchedBobot = $matchedGrade->bobots
-                    ->filter(fn($t) => $achPct >= (float) $t->percent_from)
-                    ->sortByDesc(fn($t) => (float) $t->percent_from)
+                    ->filter(fn ($t) => $achPct >= (float) $t->percent_from)
+                    ->sortByDesc(fn ($t) => (float) $t->percent_from)
                     ->first();
             }
         }
 
-        if (!$matchedBobot) return 0.0;
+        if (! $matchedBobot) {
+            return ['reward' => 0.0, 'passed' => false];
+        }
 
         $headerBobotFactor = (float) $header->bobot / 100.0;
-        if ($matchedBobot->pengali) {
-            $capThreshold = $target * ((float) $matchedBobot->percent_to / 100.0);
-            $cappedReal = min($real, $capThreshold);
-            return (float) $matchedBobot->bobot * $cappedReal * $headerBobotFactor;
-        } else {
-            return (float) $matchedBobot->nominal * $headerBobotFactor;
-        }
+        $reward = $matchedBobot->pengali
+            ? (float) $matchedBobot->bobot * $real * $headerBobotFactor
+            : (float) $matchedBobot->nominal * $headerBobotFactor;
+
+        return ['reward' => $reward, 'passed' => true];
+    }
+
+    protected function calculateRewardForMetric(?TargetHeader $header, float $target, float $real): float
+    {
+        return $this->evaluateMetricReward($header, $target, $real)['reward'];
+    }
+
+    /**
+     * Breakdown audit lengkap per Sales Industri (ASM / SPV / ASC): Sell-In, NOO, Customer, dan Rumus Transparan.
+     */
+    public function industriBreakdown(Request $request): JsonResponse
+    {
+        $request->validate([
+            'period' => 'required|string|size:6',
+            'position_id' => 'nullable|integer|exists:positions,id',
+            'user_id' => 'nullable|integer|exists:users,id',
+            'search' => 'nullable|string',
+        ]);
+
+        $evaluated = $this->calculationService->evaluateIndustriForPeriod(
+            $request->period,
+            $request->filled('position_id') ? (int) $request->position_id : null,
+            $request->filled('user_id') ? (int) $request->user_id : null,
+            $request->filled('search') ? trim((string) $request->search) : null,
+            true
+        );
+
+        // Hapus key internal header_records agar payload bersih
+        $cards = collect($evaluated['cards'])->map(function ($card) {
+            unset($card['header_records']);
+            return $card;
+        })->values();
+
+        return response()->json([
+            'meta' => $evaluated['meta'],
+            'data' => $cards,
+        ]);
+    }
+
+    /**
+     * Breakdown audit lengkap Sales Surabaya (TO, SM, dan ASC beserta tabel rincian bawahan).
+     */
+    public function surabayaBreakdown(Request $request): JsonResponse
+    {
+        $request->validate([
+            'period' => 'required|string|size:6',
+            'position_id' => 'nullable|integer|exists:positions,id',
+            'user_id' => 'nullable|integer|exists:users,id',
+            'search' => 'nullable|string',
+        ]);
+
+        $evaluated = $this->calculationService->evaluateSurabayaForPeriod(
+            $request->period,
+            $request->filled('position_id') ? (int) $request->position_id : null,
+            $request->filled('user_id') ? (int) $request->user_id : null,
+            $request->filled('search') ? trim((string) $request->search) : null,
+            true
+        );
+
+        $cards = collect($evaluated['cards'])->map(function ($card) {
+            unset($card['header_records']);
+            return $card;
+        })->values();
+
+        return response()->json([
+            'meta' => $evaluated['meta'],
+            'data' => $cards,
+        ]);
     }
 }

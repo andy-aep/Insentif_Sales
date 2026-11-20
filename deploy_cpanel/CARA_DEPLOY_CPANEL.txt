@@ -1,0 +1,24 @@
+PANDUAN DEPLOY KE CPANEL (LARAVEL + FLUTTER WEB)
+=================================================
+
+Folder siap copas: deploy_cpanel/insentif_be/
+Di dalamnya sudah termasuk:
+- Backend Laravel + vendor/
+- .env (sudah dikonfigurasi untuk PostgreSQL: susantimegah_sales_insentif)
+- public/ (sudah berisi hasil build Flutter Web + Laravel index.php & .htaccess)
+
+LANGKAH DEPLOY DI CPANEL:
+1. Compress folder `insentif_be` menjadi `insentif_be.zip`, upload ke cPanel (misal `/home/susantimegah/insentif_be`), lalu Extract.
+2. Arahkan Document Root domain/subdomain di cPanel (Menu Domains) ke:
+   `/home/susantimegah/insentif_be/public`
+   (Atau jika memakai `public_html`, pindahkan isi `insentif_be/public/*` ke `public_html/` dan sesuaikan path `../insentif_be/` di `public_html/index.php`).
+3. Buka Terminal cPanel, masuk ke folder `insentif_be`, lalu jalankan:
+   - `chmod -R 775 storage bootstrap/cache`
+   - `php artisan migrate --force`
+   - (Jika database masih kosong) `php artisan db:seed --force`
+   - `php artisan storage:link`
+   - `php artisan optimize`
+
+Catatan:
+- Pastikan `APP_URL` di `.env` sudah diisi domain asli Anda (misal `https://insentif.susantimegah.com`).
+- Pastikan ekstensi PHP `pdo_pgsql` dan `pgsql` aktif di PHP Selector / MultiPHP cPanel.

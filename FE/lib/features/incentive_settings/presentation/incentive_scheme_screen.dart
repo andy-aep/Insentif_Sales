@@ -6,6 +6,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../../../data/models/target_header_model.dart';
+import '../../users_management/providers/user_management_provider.dart';
 import '../providers/incentive_scheme_provider.dart';
 
 class IncentiveSchemeScreen extends ConsumerStatefulWidget {
@@ -18,10 +19,33 @@ class IncentiveSchemeScreen extends ConsumerStatefulWidget {
 class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
   int _activeCategoryIndex = 0;
   final List<String> _categories = ['KONSUMSI', 'INDUSTRI', 'SURABAYA'];
+  final Set<int> _expandedHeaderIds = {};
 
   // Simulation test state
   double _simTarget = 15000;
   double _simRealization = 16500;
+
+  // Industri simulator state (Sell-In + NOO)
+  double _simIndSellInTarget = 40000;
+  double _simIndSellInActual = 50000;
+  final double _simIndSellInMinAch = 80;
+  double _simIndSellInWeight = 70;
+  double _simIndSellInRate = 1;
+  double _simIndNooTarget = 2;
+  double _simIndNooActual = 1;
+  double _simIndNooKg = 10000;
+  final double _simIndNooMinAch = 50;
+  double _simIndNooWeight = 30;
+  double _simIndNooRate = 100;
+
+  String _formatCleanNum(double v) {
+    return v == v.roundToDouble() ? v.toInt().toString() : v.toString();
+  }
+
+  bool _isOutletMetricType(String type) {
+    final t = type.toUpperCase();
+    return t == 'AO' || t == 'NOO' || t.contains('AO') || t.contains('OUTLET');
+  }
 
   // ---------------- Level 1 & Full Setting Form Dialog (Add & Edit) ----------------
   void _showTargetHeaderFormDialog({TargetHeaderModel? header, String? kategori}) {
@@ -275,7 +299,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Rentang Target: ${CurrencyFormatter.formatNumber(grade.targetFrom)} - ${CurrencyFormatter.formatNumber(grade.targetTo)}',
+                                  'Rentang Target: ${CurrencyFormatter.formatNumber(grade.targetFrom)} - ${CurrencyFormatter.formatNumber(grade.targetTo)} ${_isOutletMetricType(header.type) ? 'Toko / Outlet' : 'Kg'}',
                                   style: TextStyle(color: colors.textPrimary, fontSize: 13),
                                 ),
                                 const SizedBox(height: 14),
@@ -433,34 +457,68 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
     final isEdit = header != null;
     final currentKategori = header?.kategoriSkema ?? (defaultKategori ?? _categories[_activeCategoryIndex]);
 
-    final namaCtrl = TextEditingController(text: header?.nama ?? 'SELL IN - ASM');
+    final namaCtrl = TextEditingController(
+      text: header?.nama ??
+          (currentKategori == 'INDUSTRI' ? 'Insentif Sell-In Industri SPV' : 'SELL IN - ASM'),
+    );
     final bobotCtrl = TextEditingController(
+      text: header != null ? _formatCleanNum(header.bobot) : (currentKategori == 'INDUSTRI' ? '70' : '50'),
+    );
+    final minAchCtrl = TextEditingController(
       text: header != null
-          ? (header.bobot.toInt() == header.bobot ? header.bobot.toInt().toString() : header.bobot.toString())
-          : '50',
+          ? _formatCleanNum(header.minAchievementPct)
+          : (currentKategori == 'INDUSTRI' ? '80' : '0'),
     );
 
-    final positions = [
-      {'id': '1', 'name': 'Area Sales Manager (ASM)'},
-      {'id': '2', 'name': 'Sales Supervisor (SPV)'},
-      {'id': '3', 'name': 'Sales Coordinator (COORD)'},
-      {'id': '4', 'name': 'Sales Taking Order (TO)'},
-      {'id': '5', 'name': 'Sales Canvasing (CANVAS)'},
-    ];
+    final dynamicPositions = ref.read(userManagementProvider).positions;
+    final List<Map<String, String>> positions = dynamicPositions.isNotEmpty
+        ? dynamicPositions
+            .map((p) => {'id': p.id.toString(), 'name': '${p.name} (${p.code})', 'code': p.code.toUpperCase()})
+            .toList()
+        : [
+            {'id': '1', 'name': 'Area Sales Manager (ASM)', 'code': 'ASM'},
+            {'id': '2', 'name': 'Sales Supervisor (SPV)', 'code': 'SPV'},
+            {'id': '3', 'name': 'Sales Coordinator (COORD)', 'code': 'COORD'},
+            {'id': '4', 'name': 'Sales Taking Order (TO)', 'code': 'TO'},
+            {'id': '5', 'name': 'Sales Canvasing (CANVAS)', 'code': 'CANVAS'},
+            {'id': '8', 'name': 'Area Sales Coordinator (ASC)', 'code': 'ASC'},
+          ];
 
-    String selectedSalesType = '1';
+    String selectedSalesType = positions.first['id']!;
     if (header != null) {
       final match = positions.firstWhere(
-        (p) => p['id'] == header.salesType || p['name']!.toUpperCase().contains(header.salesType.toUpperCase()),
-        orElse: () => {'id': header.salesType, 'name': header.salesType},
+        (p) =>
+            p['id'] == header.salesType ||
+            p['code'] == header.salesType.toUpperCase() ||
+            p['name']!.toUpperCase().contains(header.salesType.toUpperCase()),
+        orElse: () => {'id': header.salesType, 'name': header.salesType, 'code': ''},
       );
       selectedSalesType = match['id']!;
+      if (!positions.any((p) => p['id'] == selectedSalesType)) {
+        positions.add(match);
+      }
     } else {
-      if (currentKategori == 'INDUSTRI') selectedSalesType = '2';
-      if (currentKategori == 'SURABAYA') selectedSalesType = '3';
+      final wantedCode = currentKategori == 'INDUSTRI'
+          ? 'SPV'
+          : (currentKategori == 'SURABAYA' ? 'COORD' : 'ASM');
+      final defPos = positions.firstWhere(
+        (p) => p['code'] == wantedCode,
+        orElse: () => positions.first,
+      );
+      selectedSalesType = defPos['id']!;
     }
 
-    String selectedType = header?.type ?? (currentKategori == 'SURABAYA' ? 'Sell-Out' : 'Sell-In');
+    String normalizeType(String raw) {
+      final upper = raw.toUpperCase().replaceAll('-', '_').trim();
+      if (upper == 'NOO' || upper.contains('NEW_OUTLET')) return 'NOO';
+      if (upper == 'SELL_OUT' || upper == 'SELLOUT') return 'Sell-Out';
+      if (upper == 'AO' || upper.contains('OUTLET')) return 'Active Outlet';
+      return 'Sell-In';
+    }
+
+    String selectedType = header != null
+        ? normalizeType(header.type)
+        : (currentKategori == 'SURABAYA' ? 'Sell-Out' : 'Sell-In');
     String selectedKategori = currentKategori;
     bool isAktif = header?.aktif ?? true;
 
@@ -478,6 +536,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
           name: g.gradeName,
           from: g.targetFrom,
           to: g.targetTo,
+          multiplierRate: g.multiplierRate ?? 0,
           bobots: g.gradeBobots.map((b) => _BobotDraft(
             name: b.bobotName,
             pFrom: b.percentFrom,
@@ -488,6 +547,16 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
           )).toList(),
         );
       }).toList();
+    } else if (currentKategori == 'INDUSTRI') {
+      drafts = [
+        _GradeDraft(
+          name: 'Grade 1',
+          from: 10000,
+          to: 50000,
+          multiplierRate: 1,
+          bobots: [],
+        ),
+      ];
     } else {
       // Default starter matching screenshot (Grade 1 with 3 tiers)
       drafts = [
@@ -495,6 +564,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
           name: '1',
           from: 2000,
           to: 15000,
+          multiplierRate: 0,
           bobots: [
             _BobotDraft(name: '80%', pFrom: 80, pTo: 89.9, bobot: 1.25, nominal: 0, pengali: true),
             _BobotDraft(name: '90%', pFrom: 90, pTo: 99.9, bobot: 2.0, nominal: 0, pengali: true),
@@ -649,6 +719,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                                     DropdownMenuItem(value: 'Sell-In', child: Text('Sell-In')),
                                     DropdownMenuItem(value: 'Sell-Out', child: Text('Sell-Out')),
                                     DropdownMenuItem(value: 'Active Outlet', child: Text('Active Outlet (AO)')),
+                                    DropdownMenuItem(value: 'NOO', child: Text('NOO (New Open Outlet)')),
                                   ],
                                   onChanged: (val) {
                                     if (val != null) setDialogState(() => selectedType = val);
@@ -657,12 +728,22 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                               ),
                               const SizedBox(width: 12),
                               SizedBox(
-                                width: 110,
+                                width: 105,
                                 child: TextField(
                                   controller: bobotCtrl,
                                   keyboardType: TextInputType.number,
                                   style: TextStyle(color: colors.textPrimary),
                                   decoration: const InputDecoration(labelText: 'Bobot', suffixText: '%'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              SizedBox(
+                                width: 120,
+                                child: TextField(
+                                  controller: minAchCtrl,
+                                  keyboardType: TextInputType.number,
+                                  style: TextStyle(color: colors.textPrimary),
+                                  decoration: const InputDecoration(labelText: 'Min Ach', suffixText: '%'),
                                 ),
                               ),
                             ],
@@ -733,18 +814,21 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                                 icon: const Icon(LucideIcons.plus, size: 15),
                                 label: const Text('Tambah Grade'),
                                 onPressed: () {
-                                  setDialogState(() {
-                                    drafts.add(
-                                      _GradeDraft(
-                                        name: '${drafts.length + 1}',
-                                        from: 0,
-                                        to: 0,
-                                        bobots: [
-                                          _BobotDraft(name: '100%', pFrom: 100, pTo: 120, bobot: 2.5, nominal: 0, pengali: true),
-                                        ],
-                                      ),
-                                    );
-                                  });
+                                    setDialogState(() {
+                                      drafts.add(
+                                        _GradeDraft(
+                                          name: '${drafts.length + 1}',
+                                          from: 0,
+                                          to: 0,
+                                          multiplierRate: selectedKategori == 'INDUSTRI' ? 1 : 0,
+                                          bobots: selectedKategori == 'INDUSTRI'
+                                              ? []
+                                              : [
+                                                  _BobotDraft(name: '100%', pFrom: 100, pTo: 120, bobot: 2.5, nominal: 0, pengali: true),
+                                                ],
+                                        ),
+                                      );
+                                    });
                                 },
                               ),
                             ],
@@ -782,29 +866,47 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                                     Row(
                                       children: [
                                         SizedBox(
-                                          width: 140,
+                                          width: 120,
                                           child: TextField(
                                             controller: gradeDraft.nameCtrl,
                                             style: const TextStyle(fontWeight: FontWeight.bold),
                                             decoration: const InputDecoration(labelText: 'Nama Grade (e.g. 1)'),
                                           ),
                                         ),
-                                        const SizedBox(width: 12),
+                                        const SizedBox(width: 10),
                                         Expanded(
                                           child: TextField(
                                             controller: gradeDraft.fromCtrl,
                                             keyboardType: TextInputType.number,
-                                            decoration: const InputDecoration(labelText: 'Rentang Target Dari (Kg/Unit)'),
+                                            decoration: InputDecoration(
+                                              labelText: _isOutletMetricType(selectedType) ? 'Target Dari (Toko / Outlet)' : 'Target Dari (Kg)',
+                                            ),
                                           ),
                                         ),
-                                        const SizedBox(width: 12),
+                                        const SizedBox(width: 10),
                                         Expanded(
                                           child: TextField(
                                             controller: gradeDraft.toCtrl,
                                             keyboardType: TextInputType.number,
-                                            decoration: const InputDecoration(labelText: 'Rentang Target Sampai (Kg/Unit)'),
+                                            decoration: InputDecoration(
+                                              labelText: _isOutletMetricType(selectedType) ? 'Target Sampai (Toko / Outlet)' : 'Target Sampai (Kg)',
+                                            ),
                                           ),
                                         ),
+                                        if (selectedKategori == 'INDUSTRI') ...[
+                                          const SizedBox(width: 10),
+                                          SizedBox(
+                                            width: 150,
+                                            child: TextField(
+                                              controller: gradeDraft.multiplierRateCtrl,
+                                              keyboardType: TextInputType.number,
+                                              decoration: const InputDecoration(
+                                                labelText: 'Rate Pengali',
+                                                suffixText: 'Rp/Kg',
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                         const SizedBox(width: 8),
                                         IconButton(
                                           icon: const Icon(LucideIcons.trash2, color: AppColors.danger, size: 18),
@@ -999,10 +1101,12 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                           ),
                           onPressed: () async {
                             final gradesPayload = drafts.map((g) {
+                              final rateVal = double.tryParse(g.multiplierRateCtrl.text.replaceAll(',', '.'));
                               return {
                                 'grade_name': g.nameCtrl.text.trim().isNotEmpty ? g.nameCtrl.text.trim() : 'Grade',
                                 'target_from': double.tryParse(g.fromCtrl.text.replaceAll(',', '.')) ?? 0.0,
                                 'target_to': double.tryParse(g.toCtrl.text.replaceAll(',', '.')) ?? 0.0,
+                                if (rateVal != null) 'multiplier_rate': rateVal,
                                 'bobots': g.bobots.map((b) => {
                                   'bobot_name': b.nameCtrl.text.trim().isNotEmpty ? b.nameCtrl.text.trim() : 'Tier',
                                   'percent_from': double.tryParse(b.pFromCtrl.text.replaceAll(',', '.')) ?? 0.0,
@@ -1018,8 +1122,9 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                               'nama': namaCtrl.text.trim(),
                               'kategori_skema': selectedKategori,
                               'sales_type': selectedSalesType,
-                              'type': selectedType,
+                              'type': selectedType == 'NOO' ? 'NOO' : selectedType,
                               'bobot': double.tryParse(bobotCtrl.text) ?? 100.0,
+                              'min_achievement_pct': double.tryParse(minAchCtrl.text) ?? 0.0,
                               'aktif_from': aktifFromCtrl.text.replaceAll('-', '').trim(),
                               'aktif_to': aktifToCtrl.text.replaceAll('-', '').trim(),
                               'aktif': isAktif,
@@ -1115,9 +1220,14 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
   void _showGradeFormDialog({required TargetHeaderModel header, GradeModel? grade}) {
     final colors = context.colors;
     final isEdit = grade != null;
-    final gradeNameCtrl = TextEditingController(text: grade?.gradeName ?? 'Grade Platinum');
+    final gradeNameCtrl = TextEditingController(text: grade?.gradeName ?? 'Grade 1');
     final fromCtrl = TextEditingController(text: grade != null ? (grade.targetFrom == grade.targetFrom.roundToDouble() ? grade.targetFrom.toInt().toString() : grade.targetFrom.toString()) : '10000');
     final toCtrl = TextEditingController(text: grade != null ? (grade.targetTo == grade.targetTo.roundToDouble() ? grade.targetTo.toInt().toString() : grade.targetTo.toString()) : '50000');
+    final rateCtrl = TextEditingController(
+      text: grade?.multiplierRate != null ? _formatCleanNum(grade!.multiplierRate!) : '1',
+    );
+    final isIndustriHeader = (header.kategoriSkema ?? '').toUpperCase() == 'INDUSTRI';
+    final isNooHeader = _isOutletMetricType(header.type);
 
     showDialog(
       context: context,
@@ -1149,15 +1259,27 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
               controller: fromCtrl,
               keyboardType: TextInputType.number,
               style: TextStyle(color: colors.textPrimary),
-              decoration: const InputDecoration(labelText: 'Target Kuota Dari (Kg / Unit)'),
+              decoration: InputDecoration(labelText: isNooHeader ? 'Target Kuota Dari (Toko / Outlet)' : 'Target Kuota Dari (Kg)'),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: toCtrl,
               keyboardType: TextInputType.number,
               style: TextStyle(color: colors.textPrimary),
-              decoration: const InputDecoration(labelText: 'Target Kuota Sampai (Kg / Unit)'),
+              decoration: InputDecoration(labelText: isNooHeader ? 'Target Kuota Sampai (Toko / Outlet)' : 'Target Kuota Sampai (Kg)'),
             ),
+            if (isIndustriHeader) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: rateCtrl,
+                keyboardType: TextInputType.number,
+                style: TextStyle(color: colors.textPrimary),
+                decoration: const InputDecoration(
+                  labelText: 'Rate Pengali Langsung',
+                  suffixText: 'Rp / Kg',
+                ),
+              ),
+            ],
           ],
         ),
         actions: [
@@ -1171,6 +1293,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                     double.tryParse(fromCtrl.text) ?? 0,
                     double.tryParse(toCtrl.text) ?? 0,
                     id: grade?.id,
+                    multiplierRate: isIndustriHeader ? double.tryParse(rateCtrl.text.replaceAll(',', '.')) : null,
                   );
               Navigator.pop(ctx);
             },
@@ -1340,46 +1463,93 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
           ),
           const SizedBox(height: 24),
 
-          // Category Selector Tabs
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: context.colors.bgCard,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: context.colors.border),
-                boxShadow: context.colors.cardShadows,
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(_categories.length, (index) {
-                  final cat = _categories[index];
-                  final isSelected = _activeCategoryIndex == index;
-                  return InkWell(
-                    onTap: () => setState(() => _activeCategoryIndex = index),
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: isSelected ? AppColors.primary : Colors.transparent,
+          // Category Selector Tabs + Global Expand/Collapse Toggle
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: context.colors.bgCard,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: context.colors.border),
+                    boxShadow: context.colors.cardShadows,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(_categories.length, (index) {
+                      final cat = _categories[index];
+                      final isSelected = _activeCategoryIndex == index;
+                      return InkWell(
+                        onTap: () => setState(() => _activeCategoryIndex = index),
                         borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        cat == 'KONSUMSI' ? '1. Skema Distributor (Konsumsi)' : (cat == 'INDUSTRI' ? '2. Skema Industri' : '3. Skema Surabaya'),
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                          color: isSelected ? Colors.white : context.colors.textMuted,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppColors.primary : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            cat == 'KONSUMSI' ? '1. Skema Distributor (Konsumsi)' : (cat == 'INDUSTRI' ? '2. Skema Industri' : '3. Skema Surabaya'),
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                              color: isSelected ? Colors.white : context.colors.textMuted,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  );
-                }),
+                      );
+                    }),
+                  ),
+                ),
               ),
-            ),
+              if (matchingHeaders.isNotEmpty)
+                Builder(
+                  builder: (context) {
+                    final allExpanded = matchingHeaders.every((h) => _expandedHeaderIds.contains(h.id));
+                    return OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: context.colors.textPrimary,
+                        backgroundColor: context.colors.bgCard,
+                        side: BorderSide(color: context.colors.border),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      ),
+                      icon: Icon(
+                        allExpanded ? LucideIcons.chevronsUp : LucideIcons.chevronsDown,
+                        size: 16,
+                        color: AppColors.primary,
+                      ),
+                      label: Text(
+                        allExpanded
+                            ? 'Sembunyikan Semua Grade (${matchingHeaders.length} Header)'
+                            : 'Buka Semua Grade (${matchingHeaders.length} Header)',
+                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          if (allExpanded) {
+                            for (final h in matchingHeaders) {
+                              _expandedHeaderIds.remove(h.id);
+                            }
+                          } else {
+                            for (final h in matchingHeaders) {
+                              _expandedHeaderIds.add(h.id);
+                            }
+                          }
+                        });
+                      },
+                    );
+                  },
+                ),
+            ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
           // 3-Level Display Cards for the category
           if (matchingHeaders.isEmpty)
@@ -1418,12 +1588,18 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
   }
 
   Widget _build3LevelCard(TargetHeaderModel header) {
+    final isExpanded = _expandedHeaderIds.contains(header.id);
+    final totalTiers = header.grades.fold<int>(0, (sum, g) => sum + g.gradeBobots.length);
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 24),
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: context.colors.bgCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.colors.border, width: 1.2),
+        border: Border.all(
+          color: isExpanded ? AppColors.primary.withValues(alpha: 0.45) : context.colors.border,
+          width: 1.2,
+        ),
         boxShadow: context.colors.cardShadows,
       ),
       child: Column(
@@ -1431,19 +1607,29 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
         children: [
           // Header Row
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: BoxDecoration(
               color: context.colors.bgElevated,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              border: Border(bottom: BorderSide(color: context.colors.border)),
+              borderRadius: isExpanded
+                  ? const BorderRadius.vertical(top: Radius.circular(16))
+                  : BorderRadius.circular(16),
+              border: isExpanded ? Border(bottom: BorderSide(color: context.colors.border)) : null,
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final isNarrow = constraints.maxWidth < 920;
+                final isNarrow = constraints.maxWidth < 960;
 
                 final headerInfo = InkWell(
                   borderRadius: BorderRadius.circular(8),
-                  onTap: () => _showSettingDetailDialog(header),
+                  onTap: () {
+                    setState(() {
+                      if (isExpanded) {
+                        _expandedHeaderIds.remove(header.id);
+                      } else {
+                        _expandedHeaderIds.add(header.id);
+                      }
+                    });
+                  },
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1463,7 +1649,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                             child: Text(
                               header.nama,
                               style: GoogleFonts.outfit(
-                                fontSize: 18,
+                                fontSize: 17,
                                 fontWeight: FontWeight.bold,
                                 color: context.colors.textPrimary,
                               ),
@@ -1497,6 +1683,9 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                           _buildMetaTag(LucideIcons.user, header.displaySalesType, context),
                           _buildMetaTag(LucideIcons.tag, header.type, context),
                           _buildMetaTag(LucideIcons.pieChart, 'Bobot: ${_formatDisplayNum(header.bobot)}%', context),
+                          if (header.minAchievementPct > 0 || (header.kategoriSkema ?? '').toUpperCase() == 'INDUSTRI')
+                            _buildMetaTag(LucideIcons.shieldCheck, 'Min Ach: ${_formatDisplayNum(header.minAchievementPct)}%', context),
+                          _buildMetaTag(LucideIcons.layers, '${header.grades.length} Grade • $totalTiers Tier', context),
                           _buildMetaTag(LucideIcons.calendar, '${header.formattedAktifFrom} s/d ${header.formattedAktifTo}', context),
                         ],
                       ),
@@ -1511,10 +1700,33 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                   children: [
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
+                        foregroundColor: isExpanded ? AppColors.primary : context.colors.textPrimary,
+                        backgroundColor: isExpanded ? AppColors.primary.withValues(alpha: 0.08) : Colors.transparent,
+                        side: BorderSide(color: isExpanded ? AppColors.primary : context.colors.border),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                      ),
+                      icon: Icon(isExpanded ? LucideIcons.chevronUp : LucideIcons.chevronDown, size: 15),
+                      label: Text(
+                        isExpanded ? 'Tutup Grade (${header.grades.length})' : 'Lihat Grade (${header.grades.length})',
+                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          if (isExpanded) {
+                            _expandedHeaderIds.remove(header.id);
+                          } else {
+                            _expandedHeaderIds.add(header.id);
+                          }
+                        });
+                      },
+                    ),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFF47A60),
                         side: const BorderSide(color: Color(0xFFF47A60)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                       ),
                       icon: const Icon(LucideIcons.info, size: 14, color: Color(0xFFF47A60)),
                       label: const Text('Detail', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
@@ -1525,7 +1737,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                         foregroundColor: const Color(0xFF316879),
                         side: const BorderSide(color: Color(0xFF316879)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                       ),
                       icon: const Icon(LucideIcons.copy, size: 14, color: Color(0xFF316879)),
                       label: const Text('Duplikat', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
@@ -1543,7 +1755,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                         foregroundColor: context.colors.textPrimary,
                         side: BorderSide(color: context.colors.border),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                       ),
                       icon: const Icon(LucideIcons.pencil, size: 14),
                       label: const Text('Edit', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
@@ -1573,11 +1785,14 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                         backgroundColor: const Color(0xFFF47A60),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       ),
                       icon: const Icon(LucideIcons.plus, size: 15),
                       label: const Text('Tambah Grade', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
-                      onPressed: () => _showGradeFormDialog(header: header),
+                      onPressed: () {
+                        setState(() => _expandedHeaderIds.add(header.id));
+                        _showGradeFormDialog(header: header);
+                      },
                     ),
                   ],
                 );
@@ -1605,9 +1820,10 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
             ),
           ),
 
-          // Grades and Tiers
-          Padding(
-            padding: const EdgeInsets.all(20),
+          // Grades and Tiers (shown only when expanded)
+          if (isExpanded)
+            Padding(
+              padding: const EdgeInsets.all(20),
             child: header.grades.isEmpty
                 ? Container(
                     padding: const EdgeInsets.all(24),
@@ -1662,13 +1878,32 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                                     ),
                                     const SizedBox(width: 10),
                                     Flexible(
-                                      child: Text(
-                                        'Target: ${CurrencyFormatter.formatNumber(grade.targetFrom)} – ${CurrencyFormatter.formatNumber(grade.targetTo)} Kg',
-                                        style: TextStyle(
-                                          color: context.colors.textPrimary,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 13.5,
-                                        ),
+                                      child: Wrap(
+                                        spacing: 8,
+                                        runSpacing: 4,
+                                        crossAxisAlignment: WrapCrossAlignment.center,
+                                        children: [
+                                          Text(
+                                            'Target: ${CurrencyFormatter.formatNumber(grade.targetFrom)} – ${CurrencyFormatter.formatNumber(grade.targetTo)} ${_isOutletMetricType(header.type) ? 'Toko / Outlet' : 'Kg'}',
+                                            style: TextStyle(
+                                              color: context.colors.textPrimary,
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 13.5,
+                                            ),
+                                          ),
+                                          if (grade.multiplierRate != null && grade.multiplierRate! > 0)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.success.withValues(alpha: 0.14),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                'Rate: ${CurrencyFormatter.formatRupiah(grade.multiplierRate!)} / Kg',
+                                                style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 12),
+                                              ),
+                                            ),
+                                        ],
                                       ),
                                     ),
                                   ],
@@ -1832,7 +2067,7 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                                           Padding(
                                             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                                             child: Text(
-                                              b.pengali ? 'Rp ${_formatDisplayNum(b.bobot)} / kg' : '—',
+                                              b.pengali ? 'Rp ${_formatDisplayNum(b.bobot)} / ${_isOutletMetricType(header.type) ? 'toko' : 'kg'}' : '—',
                                               style: TextStyle(
                                                 color: b.pengali ? context.colors.textPrimary : context.colors.textMuted,
                                                 fontWeight: b.pengali ? FontWeight.w600 : FontWeight.normal,
@@ -1901,6 +2136,184 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
   }
 
   Widget _buildSimulatorCard() {
+    if (_categories[_activeCategoryIndex] == 'INDUSTRI') {
+      final sellInAch = _simIndSellInTarget > 0 ? (_simIndSellInActual / _simIndSellInTarget) * 100 : 0.0;
+      final sellInPassed = _simIndSellInTarget > 0 && sellInAch >= _simIndSellInMinAch;
+      final sellInReward = sellInPassed ? (_simIndSellInActual * _simIndSellInRate) * (_simIndSellInWeight / 100.0) : 0.0;
+
+      final nooAch = _simIndNooTarget > 0 ? (_simIndNooActual / _simIndNooTarget) * 100 : 0.0;
+      final nooPassed = _simIndNooTarget > 0 && nooAch >= _simIndNooMinAch;
+      final nooReward = nooPassed ? (_simIndNooKg * _simIndNooRate) * (_simIndNooWeight / 100.0) : 0.0;
+
+      final grandTotal = sellInReward + nooReward;
+
+      return Container(
+        padding: const EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          color: context.colors.bgCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: context.colors.border, width: 1.2),
+          boxShadow: context.colors.cardShadows,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(LucideIcons.cpu, color: AppColors.warning, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Simulasi Real-time Engine Industri (Sell-In + NOO Tanpa Cap)',
+                    style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Rumus Industri: Pencapaian >= Min Achievement %, tanpa batas cap realisasi. NOO menghitung volume customer baru (Kg) x Rate x Bobot NOO.',
+              style: GoogleFonts.inter(fontSize: 12.5, color: context.colors.textMuted),
+            ),
+            const SizedBox(height: 18),
+            Wrap(
+              spacing: 16,
+              runSpacing: 14,
+              children: [
+                SizedBox(
+                  width: 160,
+                  child: TextFormField(
+                    initialValue: _formatCleanNum(_simIndSellInTarget),
+                    decoration: InputDecoration(labelText: 'Target Sell-In (Kg)', filled: true, fillColor: context.colors.bgElevated),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) => setState(() => _simIndSellInTarget = double.tryParse(v) ?? 0),
+                  ),
+                ),
+                SizedBox(
+                  width: 160,
+                  child: TextFormField(
+                    initialValue: _formatCleanNum(_simIndSellInActual),
+                    decoration: InputDecoration(labelText: 'Actual Sell-In (Kg)', filled: true, fillColor: context.colors.bgElevated),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) => setState(() => _simIndSellInActual = double.tryParse(v) ?? 0),
+                  ),
+                ),
+                SizedBox(
+                  width: 130,
+                  child: TextFormField(
+                    initialValue: _formatCleanNum(_simIndSellInRate),
+                    decoration: InputDecoration(labelText: 'Rate Sell-In', suffixText: 'Rp/Kg', filled: true, fillColor: context.colors.bgElevated),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) => setState(() => _simIndSellInRate = double.tryParse(v) ?? 0),
+                  ),
+                ),
+                SizedBox(
+                  width: 130,
+                  child: TextFormField(
+                    initialValue: _formatCleanNum(_simIndSellInWeight),
+                    decoration: InputDecoration(labelText: 'Bobot Sell-In', suffixText: '%', filled: true, fillColor: context.colors.bgElevated),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) => setState(() => _simIndSellInWeight = double.tryParse(v) ?? 0),
+                  ),
+                ),
+                SizedBox(
+                  width: 130,
+                  child: TextFormField(
+                    initialValue: _formatCleanNum(_simIndNooTarget),
+                    decoration: InputDecoration(labelText: 'Target NOO (Outlet)', filled: true, fillColor: context.colors.bgElevated),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) => setState(() => _simIndNooTarget = double.tryParse(v) ?? 0),
+                  ),
+                ),
+                SizedBox(
+                  width: 130,
+                  child: TextFormField(
+                    initialValue: _formatCleanNum(_simIndNooActual),
+                    decoration: InputDecoration(labelText: 'Actual NOO (Outlet)', filled: true, fillColor: context.colors.bgElevated),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) => setState(() => _simIndNooActual = double.tryParse(v) ?? 0),
+                  ),
+                ),
+                SizedBox(
+                  width: 150,
+                  child: TextFormField(
+                    initialValue: _formatCleanNum(_simIndNooKg),
+                    decoration: InputDecoration(labelText: 'Volume NOO (Kg)', filled: true, fillColor: context.colors.bgElevated),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) => setState(() => _simIndNooKg = double.tryParse(v) ?? 0),
+                  ),
+                ),
+                SizedBox(
+                  width: 130,
+                  child: TextFormField(
+                    initialValue: _formatCleanNum(_simIndNooRate),
+                    decoration: InputDecoration(labelText: 'Rate NOO', suffixText: 'Rp/Kg', filled: true, fillColor: context.colors.bgElevated),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) => setState(() => _simIndNooRate = double.tryParse(v) ?? 0),
+                  ),
+                ),
+                SizedBox(
+                  width: 120,
+                  child: TextFormField(
+                    initialValue: _formatCleanNum(_simIndNooWeight),
+                    decoration: InputDecoration(labelText: 'Bobot NOO', suffixText: '%', filled: true, fillColor: context.colors.bgElevated),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) => setState(() => _simIndNooWeight = double.tryParse(v) ?? 0),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: context.colors.bgElevated,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: context.colors.border),
+              ),
+              child: Wrap(
+                spacing: 28,
+                runSpacing: 12,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Sell-In: ${CurrencyFormatter.formatPercent(sellInAch)} (${sellInPassed ? "LOLOS >= $_simIndSellInMinAch%" : "GAGAL"})',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: sellInPassed ? AppColors.success : AppColors.danger),
+                      ),
+                      Text('Reward: ${CurrencyFormatter.formatRupiah(sellInReward)}', style: TextStyle(color: context.colors.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'NOO: ${CurrencyFormatter.formatPercent(nooAch)} (${nooPassed ? "LOLOS >= $_simIndNooMinAch%" : "GAGAL"})',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: nooPassed ? AppColors.success : AppColors.danger),
+                      ),
+                      Text('Reward: ${CurrencyFormatter.formatRupiah(nooReward)}', style: TextStyle(color: context.colors.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Grand Total Insentif Industri', style: TextStyle(color: context.colors.textMuted, fontSize: 12)),
+                      Text(
+                        CurrencyFormatter.formatRupiah(grandTotal),
+                        style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.success),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     final achievement = _simTarget > 0 ? (_simRealization / _simTarget) * 100 : 0.0;
     double reward = 0;
     String matchedRule = 'Tidak ada tier yang cocok';
@@ -2015,16 +2428,23 @@ class _GradeDraft {
   final TextEditingController nameCtrl;
   final TextEditingController fromCtrl;
   final TextEditingController toCtrl;
+  final TextEditingController multiplierRateCtrl;
   final List<_BobotDraft> bobots;
 
   _GradeDraft({
     required String name,
     required double from,
     required double to,
+    double multiplierRate = 0,
     required this.bobots,
   })  : nameCtrl = TextEditingController(text: name),
         fromCtrl = TextEditingController(text: from == from.roundToDouble() ? from.toInt().toString() : from.toString()),
-        toCtrl = TextEditingController(text: to == to.roundToDouble() ? to.toInt().toString() : to.toString());
+        toCtrl = TextEditingController(text: to == to.roundToDouble() ? to.toInt().toString() : to.toString()),
+        multiplierRateCtrl = TextEditingController(
+          text: multiplierRate == multiplierRate.roundToDouble()
+              ? multiplierRate.toInt().toString()
+              : multiplierRate.toString(),
+        );
 }
 
 class _BobotDraft {

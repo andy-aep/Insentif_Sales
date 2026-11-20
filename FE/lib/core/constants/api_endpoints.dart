@@ -1,5 +1,21 @@
+import 'package:flutter/foundation.dart';
+
 class ApiEndpoints {
-  static const String baseUrl = 'http://127.0.0.1:8000/api';
+  static String get baseUrl {
+    const envUrl = String.fromEnvironment('API_BASE_URL', defaultValue: '');
+    if (envUrl.isNotEmpty) return envUrl;
+    if (kIsWeb) {
+      final host = Uri.base.host;
+      if ((host == 'localhost' || host == '127.0.0.1') &&
+          Uri.base.port != 8000 &&
+          Uri.base.port != 80 &&
+          Uri.base.port != 443) {
+        return 'http://127.0.0.1:8000/api';
+      }
+      return '${Uri.base.origin}/api';
+    }
+    return 'http://127.0.0.1:8000/api';
+  }
 
   // Auth
   static const String login = '/login';
@@ -11,6 +27,7 @@ class ApiEndpoints {
   // 1. User & Access Management
   static const String users = '/users';
   static String userPassword(int id) => '/users/$id/password';
+  static const String sapSalesEmployees = '/sap/sales-employees';
   static const String roles = '/roles';
   static String rolePermissions(int id) => '/roles/$id/permissions';
   static const String positions = '/positions';
@@ -25,14 +42,20 @@ class ApiEndpoints {
 
   // 3. Master Realisasi Penjualan (SAP / Upload)
   static const String sellinDistributors = '/sellin-distributors';
+  static const String sellinDistributorsSyncSap = '/sellin-distributors/sync-sap';
   static const String selloutDistributors = '/sellout-distributors';
   static const String sellinIndustris = '/sellin-industris';
+  static const String sellinIndustrisSyncSap = '/sellin-industris/sync-sap';
   static const String selloutSurabayas = '/sellout-surabayas';
 
-  // 4. Master Sales Assignments (Distributor Konsumsi & Surabaya)
+  // 4. Master Sales Assignments (Distributor Konsumsi, Surabaya, & Industri)
+  static const String industriCustomers = '/industri-customers';
+  static const String sapIndustriCustomers = '/sap/industri-customers';
   static const String salesDistributorAssignments = '/sales-distributor-assignments';
+  static const String salesDistributorBulkMap = '/sales-distributor-assignments/bulk-map';
   static const String salesSurabayaAssignments = '/sales-surabaya-assignments';
   static const String surabayaAssignments = '/sales-surabaya-assignments';
+  static const String salesIndustriAssignments = '/sales-industri-assignments';
 
   // 5. Master Target (Distributor, Industri, Surabaya)
   static const String masterTargets = '/master-targets';
@@ -50,6 +73,8 @@ class ApiEndpoints {
   static const String calculateIncentive = '/incentives/calculate';
   static const String incentiveResults = '/incentives/results';
   static const String incentiveDistributorBreakdown = '/incentives/distributor-breakdown';
+  static const String incentiveIndustriBreakdown = '/incentives/industri-breakdown';
+  static const String incentiveSurabayaBreakdown = '/incentives/surabaya-breakdown';
   static const String exportExcel = '/incentives/export-excel';
 
   // 8. Bulk Upload & Batch Rollback

@@ -27,6 +27,8 @@ class User extends Authenticatable
         'password',
         'role_id',
         'position_id',
+        'sap_sales_code',
+        'sap_sales_name',
         'aktif_from',
         'aktif_to',
         'is_eligible_konsumsi',
@@ -52,6 +54,7 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
+            'sap_sales_code' => 'integer',
             'aktif_from' => 'date:Y-m-d',
             'aktif_to' => 'date:Y-m-d',
             'is_eligible_konsumsi' => 'boolean',
@@ -99,5 +102,10 @@ class User extends Authenticatable
     public function surabayaAssignments(): HasMany
     {
         return $this->hasMany(SalesSurabayaAssignment::class, 'sales_id');
+    }
+
+    public function industriAssignments(): HasMany
+    {
+        return $this->hasMany(SalesIndustriAssignment::class, 'user_id');
     }
 }

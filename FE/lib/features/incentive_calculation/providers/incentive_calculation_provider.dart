@@ -12,10 +12,21 @@ class IncentiveCalculationState {
   final bool isExporting;
   final List<IncentiveCalculationModel> results;
   final List<DistributorBreakdownCardModel> breakdownCards;
+  final List<IndustriBreakdownCardModel> industriCards;
+  final IndustriSummaryMeta? industriSummary;
+  final List<SurabayaBreakdownCardModel> surabayaCards;
+  final SurabayaSummaryMeta? surabayaSummary;
   final bool isBreakdownView;
   final IncentiveSummaryMeta summary;
   final String selectedKategori;
   final String selectedPeriod;
+  final List<String> availablePeriods;
+
+  List<String> get selectedPeriods => selectedPeriod
+      .split(',')
+      .map((e) => e.trim())
+      .where((e) => e.isNotEmpty)
+      .toList();
   final int? selectedPositionId;
   final int? selectedUserId;
   final String searchQuery;
@@ -28,10 +39,15 @@ class IncentiveCalculationState {
     this.isExporting = false,
     this.results = const [],
     this.breakdownCards = const [],
+    this.industriCards = const [],
+    this.industriSummary,
+    this.surabayaCards = const [],
+    this.surabayaSummary,
     this.isBreakdownView = true,
     required this.summary,
     this.selectedKategori = 'KONSUMSI',
     this.selectedPeriod = '202610',
+    this.availablePeriods = const ['202610'],
     this.selectedPositionId,
     this.selectedUserId,
     this.searchQuery = '',
@@ -45,10 +61,15 @@ class IncentiveCalculationState {
     bool? isExporting,
     List<IncentiveCalculationModel>? results,
     List<DistributorBreakdownCardModel>? breakdownCards,
+    List<IndustriBreakdownCardModel>? industriCards,
+    IndustriSummaryMeta? industriSummary,
+    List<SurabayaBreakdownCardModel>? surabayaCards,
+    SurabayaSummaryMeta? surabayaSummary,
     bool? isBreakdownView,
     IncentiveSummaryMeta? summary,
     String? selectedKategori,
     String? selectedPeriod,
+    List<String>? availablePeriods,
     int? selectedPositionId,
     int? selectedUserId,
     String? searchQuery,
@@ -65,10 +86,15 @@ class IncentiveCalculationState {
       isExporting: isExporting ?? this.isExporting,
       results: results ?? this.results,
       breakdownCards: breakdownCards ?? this.breakdownCards,
+      industriCards: industriCards ?? this.industriCards,
+      industriSummary: industriSummary ?? this.industriSummary,
+      surabayaCards: surabayaCards ?? this.surabayaCards,
+      surabayaSummary: surabayaSummary ?? this.surabayaSummary,
       isBreakdownView: isBreakdownView ?? this.isBreakdownView,
       summary: summary ?? this.summary,
       selectedKategori: selectedKategori ?? this.selectedKategori,
       selectedPeriod: selectedPeriod ?? this.selectedPeriod,
+      availablePeriods: availablePeriods ?? this.availablePeriods,
       selectedPositionId: clearPosition ? null : (selectedPositionId ?? this.selectedPositionId),
       selectedUserId: clearUser ? null : (selectedUserId ?? this.selectedUserId),
       searchQuery: searchQuery ?? this.searchQuery,
@@ -89,7 +115,31 @@ class IncentiveCalculationNotifier extends StateNotifier<IncentiveCalculationSta
             avgAchievement: 0,
           ),
         )) {
+    fetchAvailablePeriods();
     fetchResults();
+  }
+
+  Future<void> fetchAvailablePeriods() async {
+    try {
+      final res = await DioClient.instance.get(ApiEndpoints.masterTargetPeriods);
+      final raw = res.data is List
+          ? res.data as List
+          : (res.data is Map && res.data['data'] is List ? res.data['data'] as List : []);
+      final periods = raw
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toSet()
+          .toList();
+      for (final sp in state.selectedPeriods) {
+        if (sp.length == 6 && !periods.contains(sp)) {
+          periods.add(sp);
+        }
+      }
+      periods.sort((a, b) => b.compareTo(a));
+      state = state.copyWith(availablePeriods: periods);
+    } catch (_) {
+      // Abaikan jika gagal memuat periode
+    }
   }
 
   void setKategori(String kategori) {
@@ -124,6 +174,19 @@ class IncentiveCalculationNotifier extends StateNotifier<IncentiveCalculationSta
 
   void setPeriod(String period) {
     state = state.copyWith(selectedPeriod: period);
+    fetchResults();
+  }
+
+  void setPeriods(List<String> periods) {
+    final clean = periods
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort((a, b) => b.compareTo(a));
+    if (clean.isEmpty) return;
+    final joined = clean.join(',');
+    state = state.copyWith(selectedPeriod: joined);
     fetchResults();
   }
 
@@ -165,10 +228,15 @@ class IncentiveCalculationNotifier extends StateNotifier<IncentiveCalculationSta
         items = (data['data'] as List).map((json) => IncentiveCalculationModel.fromJson(json)).toList();
       }
 
-      final summary = IncentiveSummaryMeta.fromCalculations(items);
+      IncentiveSummaryMeta summary = IncentiveSummaryMeta.fromCalculations(items);
 
-      // 2. Fetch Hierarchical Distributor Breakdown Cards if KONSUMSI
+      // 2. Fetch Hierarchical Distributor Breakdown Cards if KONSUMSI or Industri Audit Cards if INDUSTRI
       List<DistributorBreakdownCardModel> breakdownCards = [];
+      List<IndustriBreakdownCardModel> industriCards = [];
+      IndustriSummaryMeta? industriSummary;
+      List<SurabayaBreakdownCardModel> surabayaCards = [];
+      SurabayaSummaryMeta? surabayaSummary;
+
       if (state.selectedKategori == 'KONSUMSI') {
         try {
           final breakdownRes = await DioClient.instance.get(
@@ -183,6 +251,64 @@ class IncentiveCalculationNotifier extends StateNotifier<IncentiveCalculationSta
           breakdownCards = rawCards
               .map((c) => DistributorBreakdownCardModel.fromJson(c as Map<String, dynamic>))
               .toList();
+          final meta = breakdownRes.data?['meta'];
+          if (meta is Map<String, dynamic>) {
+            double toD(dynamic v) => v is num ? v.toDouble() : (double.tryParse('${v ?? ''}') ?? 0.0);
+            int toI(dynamic v) => v is num ? v.toInt() : (int.tryParse('${v ?? ''}') ?? 0);
+            final targetSi = toD(meta['total_target_sell_in']);
+            final realSi = toD(meta['total_real_sell_in']);
+            final targetSo = toD(meta['total_target_sell_out']);
+            final realSo = toD(meta['total_real_sell_out']);
+            final role = (meta['user_role'] ?? '').toString().toUpperCase();
+            final isSpvScope = role == 'SPV' || role == 'ASC';
+            final totalQuota = isSpvScope ? targetSo : (targetSi + targetSo);
+            final totalReal = isSpvScope ? realSo : (realSi + realSo);
+            final totalRew = toD(meta['total_reward']);
+            final totalPers = toI(meta['total_personil']);
+            summary = IncentiveSummaryMeta(
+              totalPersonil: totalPers > 0 ? totalPers : summary.totalPersonil,
+              totalQuota: totalQuota > 0 ? totalQuota : summary.totalQuota,
+              totalRealization: totalReal > 0 ? totalReal : summary.totalRealization,
+              totalReward: totalRew > 0 ? totalRew : summary.totalReward,
+              avgAchievement: totalQuota > 0 ? (totalReal / totalQuota) * 100.0 : summary.avgAchievement,
+            );
+          }
+        } catch (_) {}
+      } else if (state.selectedKategori == 'INDUSTRI') {
+        try {
+          final indRes = await DioClient.instance.get(
+            ApiEndpoints.incentiveIndustriBreakdown,
+            queryParameters: {
+              'period': state.selectedPeriod,
+              if (state.selectedPositionId != null) 'position_id': state.selectedPositionId,
+              if (state.selectedUserId != null) 'user_id': state.selectedUserId,
+            },
+          );
+          final rawCards = indRes.data?['data'] as List? ?? [];
+          industriCards = rawCards
+              .map((c) => IndustriBreakdownCardModel.fromJson(c as Map<String, dynamic>))
+              .toList();
+          if (indRes.data?['meta'] is Map<String, dynamic>) {
+            industriSummary = IndustriSummaryMeta.fromJson(indRes.data['meta'] as Map<String, dynamic>);
+          }
+        } catch (_) {}
+      } else if (state.selectedKategori == 'SURABAYA') {
+        try {
+          final sbyRes = await DioClient.instance.get(
+            ApiEndpoints.incentiveSurabayaBreakdown,
+            queryParameters: {
+              'period': state.selectedPeriod,
+              if (state.selectedPositionId != null) 'position_id': state.selectedPositionId,
+              if (state.selectedUserId != null) 'user_id': state.selectedUserId,
+            },
+          );
+          final rawCards = sbyRes.data?['data'] as List? ?? [];
+          surabayaCards = rawCards
+              .map((c) => SurabayaBreakdownCardModel.fromJson(c as Map<String, dynamic>))
+              .toList();
+          if (sbyRes.data?['meta'] is Map<String, dynamic>) {
+            surabayaSummary = SurabayaSummaryMeta.fromJson(sbyRes.data['meta'] as Map<String, dynamic>);
+          }
         } catch (_) {}
       }
 
@@ -190,6 +316,10 @@ class IncentiveCalculationNotifier extends StateNotifier<IncentiveCalculationSta
         isLoading: false,
         results: items,
         breakdownCards: breakdownCards,
+        industriCards: industriCards,
+        industriSummary: industriSummary,
+        surabayaCards: surabayaCards,
+        surabayaSummary: surabayaSummary,
         summary: summary,
       );
     } on DioException catch (dioErr) {
@@ -219,6 +349,7 @@ class IncentiveCalculationNotifier extends StateNotifier<IncentiveCalculationSta
         successMessage: msg.toString(),
       );
       await fetchResults();
+      await exportExcel();
     } on DioException catch (dioErr) {
       final err = ApiException.fromDioException(dioErr);
       state = state.copyWith(isCalculating: false, errorMessage: err.message);
@@ -230,7 +361,8 @@ class IncentiveCalculationNotifier extends StateNotifier<IncentiveCalculationSta
   Future<void> exportExcel() async {
     state = state.copyWith(isExporting: true, clearError: true, clearSuccess: true);
     try {
-      final filename = 'Insentif_${state.selectedKategori}_${state.selectedPeriod}.xlsx';
+      final safePeriod = state.selectedPeriod.replaceAll(',', '_');
+      final filename = 'Insentif_${state.selectedKategori}_$safePeriod.xlsx';
       await WebDownloader.downloadExcel(
         ApiEndpoints.exportExcel,
         filename,
@@ -239,6 +371,7 @@ class IncentiveCalculationNotifier extends StateNotifier<IncentiveCalculationSta
           'period': state.selectedPeriod,
           if (state.selectedPositionId != null) 'position_id': state.selectedPositionId.toString(),
           if (state.selectedUserId != null) 'user_id': state.selectedUserId.toString(),
+          if (state.searchQuery.trim().isNotEmpty) 'search': state.searchQuery.trim(),
         },
       );
       state = state.copyWith(

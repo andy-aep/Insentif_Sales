@@ -5,31 +5,58 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../data/models/auth_user_model.dart';
 
+class SapSalesEmployeeModel {
+  final int slpCode;
+  final String slpName;
+
+  SapSalesEmployeeModel({
+    required this.slpCode,
+    required this.slpName,
+  });
+
+  factory SapSalesEmployeeModel.fromJson(Map<String, dynamic> json) {
+    return SapSalesEmployeeModel(
+      slpCode: int.tryParse((json['slp_code'] ?? json['SlpCode'] ?? 0).toString()) ?? 0,
+      slpName: (json['slp_name'] ?? json['SlpName'] ?? '').toString().trim(),
+    );
+  }
+}
+
 class UserManagementState {
   final bool isLoading;
+  final bool isLoadingSapSales;
   final List<UserModel> users;
   final List<RoleModel> roles;
   final List<PositionModel> positions;
   final List<MenuModel> menus;
+  final List<SapSalesEmployeeModel> sapSalesEmployees;
+  final String? sapError;
   final String? errorMessage;
   final String? successMessage;
 
   UserManagementState({
     this.isLoading = false,
+    this.isLoadingSapSales = false,
     this.users = const [],
     this.roles = const [],
     this.positions = const [],
     this.menus = const [],
+    this.sapSalesEmployees = const [],
+    this.sapError,
     this.errorMessage,
     this.successMessage,
   });
 
   UserManagementState copyWith({
     bool? isLoading,
+    bool? isLoadingSapSales,
     List<UserModel>? users,
     List<RoleModel>? roles,
     List<PositionModel>? positions,
     List<MenuModel>? menus,
+    List<SapSalesEmployeeModel>? sapSalesEmployees,
+    String? sapError,
+    bool clearSapError = false,
     String? errorMessage,
     String? successMessage,
     bool clearError = false,
@@ -37,10 +64,13 @@ class UserManagementState {
   }) {
     return UserManagementState(
       isLoading: isLoading ?? this.isLoading,
+      isLoadingSapSales: isLoadingSapSales ?? this.isLoadingSapSales,
       users: users ?? this.users,
       roles: roles ?? this.roles,
       positions: positions ?? this.positions,
       menus: menus ?? this.menus,
+      sapSalesEmployees: sapSalesEmployees ?? this.sapSalesEmployees,
+      sapError: clearSapError ? null : (sapError ?? this.sapError),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       successMessage: clearSuccess ? null : (successMessage ?? this.successMessage),
     );
@@ -169,8 +199,32 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
         positions: positions,
         menus: menus,
       );
+      if (state.sapSalesEmployees.isEmpty) {
+        fetchSapSalesEmployees();
+      }
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
+    }
+  }
+
+  Future<void> fetchSapSalesEmployees({bool force = false}) async {
+    if (state.isLoadingSapSales) return;
+    if (!force && state.sapSalesEmployees.isNotEmpty) return;
+
+    state = state.copyWith(isLoadingSapSales: true, clearSapError: true);
+    try {
+      final res = await DioClient.instance.get(ApiEndpoints.sapSalesEmployees);
+      final raw = res.data is Map && res.data['data'] is List ? res.data['data'] as List : [];
+      final list = raw
+          .whereType<Map<String, dynamic>>()
+          .map((e) => SapSalesEmployeeModel.fromJson(e))
+          .toList();
+      state = state.copyWith(isLoadingSapSales: false, sapSalesEmployees: list);
+    } on DioException catch (e) {
+      final err = ApiException.fromDioException(e);
+      state = state.copyWith(isLoadingSapSales: false, sapError: err.message);
+    } catch (e) {
+      state = state.copyWith(isLoadingSapSales: false, sapError: e.toString());
     }
   }
 
@@ -190,7 +244,11 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
       return true;
     } on DioException catch (e) {
       final err = ApiException.fromDioException(e);
-      // Fallback for offline/mock demo
+      if (e.response != null) {
+        state = state.copyWith(isLoading: false, errorMessage: err.message);
+        return false;
+      }
+      // Fallback for offline/mock demo only when network unreachable
       _localSaveUser(data, id: id);
       state = state.copyWith(isLoading: false, successMessage: 'User tersimpan lokal: ${err.message}');
       return true;
@@ -217,6 +275,8 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
         username: data['username'] ?? '',
         roleId: data['role_id'] ?? 1,
         positionId: data['position_id'],
+        sapSalesCode: data['sap_sales_code'],
+        sapSalesName: data['sap_sales_name'],
         aktifFrom: data['aktif_from'] ?? '',
         aktifTo: data['aktif_to'],
         isEligibleKonsumsi: data['is_eligible_konsumsi'] == true,
@@ -235,6 +295,8 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
             username: data['username'] ?? u.username,
             roleId: data['role_id'] ?? u.roleId,
             positionId: data['position_id'] ?? u.positionId,
+            sapSalesCode: data.containsKey('sap_sales_code') ? data['sap_sales_code'] : u.sapSalesCode,
+            sapSalesName: data.containsKey('sap_sales_name') ? data['sap_sales_name'] : u.sapSalesName,
             aktifFrom: data['aktif_from'] ?? u.aktifFrom,
             aktifTo: data['aktif_to'] ?? u.aktifTo,
             isEligibleKonsumsi: data['is_eligible_konsumsi'] ?? u.isEligibleKonsumsi,

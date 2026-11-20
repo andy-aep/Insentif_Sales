@@ -1,6 +1,10 @@
 class UploadBatchModel {
   final String id;
   final String entity;
+  final String? period;
+  final int? distributorId;
+  final String? distributorCode;
+  final String? distributorName;
   final int totalRows;
   final int successRows;
   final int failedRows;
@@ -12,6 +16,10 @@ class UploadBatchModel {
   UploadBatchModel({
     required this.id,
     required this.entity,
+    this.period,
+    this.distributorId,
+    this.distributorCode,
+    this.distributorName,
     required this.totalRows,
     required this.successRows,
     required this.failedRows,
@@ -22,9 +30,16 @@ class UploadBatchModel {
   });
 
   factory UploadBatchModel.fromJson(Map<String, dynamic> json) {
+    final dist = json['distributor'] is Map ? json['distributor'] as Map : null;
     return UploadBatchModel(
       id: json['id']?.toString() ?? json['batch_id']?.toString() ?? '',
       entity: (json['entity_type'] ?? json['entity'] ?? '').toString(),
+      period: json['period']?.toString(),
+      distributorId: json['distributor_id'] is int
+          ? json['distributor_id'] as int
+          : int.tryParse(json['distributor_id']?.toString() ?? ''),
+      distributorCode: dist?['code']?.toString(),
+      distributorName: dist?['name']?.toString(),
       totalRows: json['total_rows'] is int ? json['total_rows'] : int.tryParse(json['total_rows']?.toString() ?? '0') ?? 0,
       successRows: json['success_rows'] is int ? json['success_rows'] : int.tryParse(json['success_rows']?.toString() ?? '0') ?? 0,
       failedRows: json['failed_rows'] is int ? json['failed_rows'] : int.tryParse(json['failed_rows']?.toString() ?? '0') ?? 0,

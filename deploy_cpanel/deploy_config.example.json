@@ -1,0 +1,8 @@
+{
+  "protocol": "ftp",
+  "host": "ftp.garamonline.com",
+  "port": 21,
+  "username": "ISI_USERNAME_FTP_CPANEL",
+  "remote_be_path": "/public_html/api-prod.garamonline.com",
+  "remote_fe_path": "/public_html/insentif-dev.susantimegah.com"
+}

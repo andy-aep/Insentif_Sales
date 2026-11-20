@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\MasterTarget;
 use App\Models\SalesDistributorAssignment;
+use App\Models\SellinDistributor;
+use App\Models\SellinIndustri;
+use App\Models\SelloutDistributor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,13 +18,40 @@ class MasterTargetController extends Controller
      */
     public function periods(): JsonResponse
     {
-        $periods = MasterTarget::distinct()
-            ->orderByDesc('period')
-            ->pluck('period');
+        $periods = MasterTarget::distinct()->pluck('period')
+            ->merge(SellinDistributor::distinct()->pluck('period'))
+            ->merge(SelloutDistributor::distinct()->pluck('period'))
+            ->merge(SellinIndustri::distinct()->pluck('period'))
+            ->map(fn ($p) => trim((string) $p))
+            ->filter(fn ($p) => $p !== '')
+            ->unique()
+            ->sortDesc()
+            ->values();
 
         return response()->json([
             'data' => $periods,
         ]);
+    }
+
+    /**
+     * Parse parameter period (mendukung 1 periode, multi-periode dipisah koma, atau 'ALL').
+     *
+     * @return array<int, string>
+     */
+    private function parsePeriodList(?string $rawPeriod): array
+    {
+        $trimmed = trim((string) $rawPeriod);
+        if ($trimmed === '' || strtoupper($trimmed) === 'ALL') {
+            return [];
+        }
+
+        return collect(explode(',', $trimmed))
+            ->map(fn ($p) => preg_replace('/[^0-9]/', '', $p))
+            ->filter(fn ($p) => strlen($p) === 6)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
     }
 
     /**
@@ -35,11 +65,12 @@ class MasterTargetController extends Controller
         }
 
         $perPage = min(max($request->integer('per_page', 10), 1), 100);
+        $periodList = $this->parsePeriodList($request->query('period'));
 
         $base = MasterTarget::query()
             ->whereIn('kategori_skema', ['KONSUMSI', 'DISTRIBUTOR'])
             ->whereNotNull('distributor_id')
-            ->when($request->period && $request->period !== 'ALL', fn ($q) => $q->where('period', $request->period))
+            ->when(! empty($periodList), fn ($q) => $q->whereIn('period', $periodList))
             ->when($request->distributor_id, fn ($q) => $q->where('distributor_id', $request->distributor_id))
             ->when($request->brand_id, fn ($q) => $q->where('brand_id', $request->brand_id))
             ->when($request->metrik_target, fn ($q) => $q->where('metrik_target', $request->metrik_target));
@@ -61,13 +92,14 @@ class MasterTargetController extends Controller
             'depo_sell_in' => (float) (clone $base)->where('level', 'DEPO')->where('metrik_target', 'SELL_IN')->sum('target_quota'),
             'area_sell_out' => (float) (clone $base)->where('level', 'AREA')->where('metrik_target', 'SELL_OUT')->sum('target_quota'),
             'area_sell_in' => (float) (clone $base)->where('level', 'AREA')->where('metrik_target', 'SELL_IN')->sum('target_quota'),
-            'total_ao' => (int) (clone $base)->where('metrik_target', 'AO')->sum(DB::raw('COALESCE(target_outlet, target_quota)')),
+            'total_ao' => (int) (clone $base)->where('level', 'AREA')->sum(DB::raw('COALESCE(target_outlet, 0)')),
         ];
 
         $distPage = (clone $base)
-            ->select('distributor_id')
-            ->groupBy('distributor_id')
-            ->orderBy('distributor_id')
+            ->join('distributors', 'distributors.id', '=', 'master_targets.distributor_id')
+            ->select('master_targets.distributor_id', 'distributors.name as dist_name')
+            ->groupBy('master_targets.distributor_id', 'distributors.name')
+            ->orderBy('distributors.name')
             ->paginate($perPage);
 
         $distIds = collect($distPage->items())->pluck('distributor_id')->all();
@@ -81,25 +113,23 @@ class MasterTargetController extends Controller
                 'area:id,name,code,depo_id',
                 'brand:id,name,code',
             ])
-            ->orderBy('depo_id')->orderBy('area_id')->orderBy('brand_id')
+            ->orderByDesc('period')->orderBy('depo_id')->orderBy('area_id')->orderBy('brand_id')
             ->get();
 
-        // Resolusi PIC dari Penugasan Sales Distributor (Gambar 2) jika user belum terisi di target
-        $periodFilter = $request->period && $request->period !== 'ALL' ? $request->period : null;
-
+        // Resolusi PIC dari Penugasan Sales Distributor jika user belum terisi di target
         $asmAssignments = SalesDistributorAssignment::whereIn('distributor_id', $distIds)
             ->whereHas('user.position', fn ($q) => $q->where('code', 'ASM'))
             ->where('is_active', true)
-            ->when($periodFilter, fn ($q) => $q->where(fn ($sub) => $sub->where('period', $periodFilter)->orWhereNull('period')))
+            ->when(! empty($periodList), fn ($q) => $q->where(fn ($sub) => $sub->whereIn('period', $periodList)->orWhereNull('period')))
             ->with('user:id,name,username')
             ->get()
             ->keyBy('distributor_id');
 
         $areaIds = $rows->where('level', 'AREA')->pluck('area_id')->filter()->unique()->all();
         $spvAssignments = SalesDistributorAssignment::whereIn('area_id', $areaIds)
-            ->whereHas('user.position', fn ($q) => $q->where('code', 'SPV'))
+            ->whereHas('user.position', fn ($q) => $q->whereIn('code', ['SPV', 'ASC']))
             ->where('is_active', true)
-            ->when($periodFilter, fn ($q) => $q->where(fn ($sub) => $sub->where('period', $periodFilter)->orWhereNull('period')))
+            ->when(! empty($periodList), fn ($q) => $q->where(fn ($sub) => $sub->whereIn('period', $periodList)->orWhereNull('period')))
             ->with('user:id,name,username')
             ->get()
             ->keyBy('area_id');
@@ -168,6 +198,7 @@ class MasterTargetController extends Controller
         }
 
         $perPage = min(max($request->integer('per_page', 50), 10), 500);
+        $periodList = $this->parsePeriodList($request->query('period'));
 
         $query = MasterTarget::with([
             'user:id,name,username,position_id',
@@ -182,7 +213,7 @@ class MasterTargetController extends Controller
             ->when($request->depo_id, fn ($q) => $q->where('depo_id', $request->depo_id))
             ->when($request->area_id, fn ($q) => $q->where('area_id', $request->area_id))
             ->when($request->brand_id, fn ($q) => $q->where('brand_id', $request->brand_id))
-            ->when($request->period, fn ($q) => $q->where('period', $request->period))
+            ->when(! empty($periodList), fn ($q) => $q->whereIn('period', $periodList))
             ->when($request->metrik_target, fn ($q) => $q->where('metrik_target', $request->metrik_target));
 
         if ($request->filled('search')) {

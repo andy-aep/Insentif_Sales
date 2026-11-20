@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../../core/constants/api_endpoints.dart';
+import '../../../core/network/api_exception.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../data/models/master_model.dart';
 
@@ -56,7 +57,7 @@ class MasterDataNotifier extends StateNotifier<MasterDataState> {
   }
 
   Future<void> fetchAllMasterData({bool force = false}) async {
-    if (state.isLoading) return;
+    if (!force && state.isLoading) return;
     if (!force && state.distributors.isNotEmpty) return;
 
     state = state.copyWith(isLoading: true, clearError: true);
@@ -170,6 +171,10 @@ class MasterDataNotifier extends StateNotifier<MasterDataState> {
       await fetchAllMasterData(force: true);
       state = state.copyWith(isLoading: false, successMessage: 'Distributor berhasil dihapus');
       return true;
+    } on DioException catch (e) {
+      final err = ApiException.fromDioException(e);
+      state = state.copyWith(isLoading: false, errorMessage: err.message);
+      return false;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: 'Gagal menghapus distributor: $e');
       return false;
@@ -268,10 +273,15 @@ class MasterDataNotifier extends StateNotifier<MasterDataState> {
     int? id,
     required String code,
     required String name,
+    List<String>? itemCodes,
   }) async {
     state = state.copyWith(isLoading: true, clearError: true, clearSuccess: true);
     try {
-      final payload = {'code': code, 'name': name};
+      final payload = {
+        'code': code,
+        'name': name,
+        if (itemCodes != null) 'item_codes': itemCodes,
+      };
       if (id != null) {
         await DioClient.instance.put('${ApiEndpoints.brands}/$id', data: payload);
       } else {
@@ -283,6 +293,10 @@ class MasterDataNotifier extends StateNotifier<MasterDataState> {
         successMessage: id != null ? 'Brand berhasil diperbarui' : 'Brand berhasil ditambahkan',
       );
       return true;
+    } on DioException catch (e) {
+      final serverMsg = e.response?.data is Map ? e.response?.data['message']?.toString() : null;
+      state = state.copyWith(isLoading: false, errorMessage: serverMsg ?? 'Gagal menyimpan brand: ${e.message}');
+      return false;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: 'Gagal menyimpan brand: $e');
       return false;

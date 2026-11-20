@@ -78,7 +78,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
       case 'INDUSTRI':
         return 'Kalkulasi insentif tim sales industri berbasis kuota volume dan New Open Outlet (NOO) (Bagi user is_eligible_industri = true)';
       case 'SURABAYA':
-        return 'Kalkulasi insentif sales cabang Surabaya (Taking Order & Canvasing) (Bagi user is_eligible_surabaya = true)';
+        return 'Kalkulasi insentif tim sales Surabaya (SM, TO, & ASC berbasis evaluasi bawahan) (Bagi user is_eligible_surabaya = true)';
       default:
         return 'Eksekusi kalkulasi multi-tier berjenjang dan laporan insentif';
     }
@@ -130,10 +130,16 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
     // Posisi yang eligible di skema aktif
     final eligiblePositionIds = eligibleUsers.map((u) => u.positionId!).toSet();
     final List<PositionModel> eligiblePositions = userMgmt.positions.where((p) {
+      final code = p.code.toUpperCase();
+      if (activeKategori == 'INDUSTRI') {
+        return eligiblePositionIds.contains(p.id) || code == 'ASM' || code == 'SPV' || code == 'ASC';
+      }
+      if (activeKategori == 'SURABAYA') {
+        return eligiblePositionIds.contains(p.id) || code == 'ASC' || code == 'TO' || code == 'SM';
+      }
       if (eligiblePositionIds.isNotEmpty) {
         return eligiblePositionIds.contains(p.id);
       }
-      final code = p.code.toUpperCase();
       if (activeKategori == 'KONSUMSI' || activeKategori == 'DISTRIBUTOR') {
         return code == 'ASM' || code == 'SPV';
       }
@@ -181,14 +187,6 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                     ),
                   ],
                 ),
-              ),
-              IconButton(
-                icon: Icon(LucideIcons.refreshCw, color: colors.textSecondary),
-                tooltip: 'Muat Ulang Data',
-                onPressed: () {
-                  ref.read(userManagementProvider.notifier).fetchAll(force: true);
-                  notifier.fetchResults();
-                },
               ),
             ],
           ),
@@ -284,9 +282,15 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                   child: Text('Semua Posisi Eligible', overflow: TextOverflow.ellipsis),
                                 ),
                                 ...eligiblePositions.map((pos) {
-                                  final metricHint = pos.code.toUpperCase() == 'ASM'
-                                      ? ' (Sell-In)'
-                                      : (pos.code.toUpperCase() == 'SPV' ? ' (Sell-Out & AO)' : '');
+                                  final metricHint = activeKategori == 'INDUSTRI'
+                                      ? ' (Sell-In & NOO)'
+                                      : (activeKategori == 'SURABAYA'
+                                          ? (pos.code.toUpperCase() == 'ASC'
+                                              ? ' (Evaluasi Bawahan)'
+                                              : ' (Penjualan Langsung)')
+                                          : (pos.code.toUpperCase() == 'ASM'
+                                              ? ' (Sell-In)'
+                                              : (pos.code.toUpperCase() == 'SPV' ? ' (Sell-Out & AO)' : '')));
                                   return DropdownMenuItem<int?>(
                                     value: pos.id,
                                     child: Text(
@@ -365,40 +369,141 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                       ],
                     ),
 
-                    // 3. Periode (YYYYMM)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('3. Periode (YYYYMM)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: colors.textSecondary)),
-                        const SizedBox(height: 6),
-                        SizedBox(
-                          width: 140,
-                          child: TextField(
-                            controller: _periodController,
-                            style: TextStyle(color: colors.textPrimary, fontSize: 13.5),
-                            decoration: InputDecoration(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                              hintText: '202610',
-                              hintStyle: TextStyle(color: colors.textMuted),
-                              filled: true,
-                              fillColor: colors.bgInput,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: colors.borderMuted)),
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: colors.borderMuted)),
-                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.primary)),
-                              prefixIcon: Icon(LucideIcons.calendar, size: 15, color: colors.textSecondary),
-                              prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    // 3. Periode (YYYYMM) — Mendukung pilih 1 atau beberapa periode sekaligus
+                    Builder(
+                      builder: (context) {
+                        final selectedList = state.selectedPeriods;
+                        final periods = <String>{
+                          ...state.availablePeriods,
+                          ...selectedList.where((p) => p.length == 6),
+                        }.toList()
+                          ..sort((a, b) => b.compareTo(a));
+                        final displayLabel = selectedList.isEmpty
+                            ? (periods.isNotEmpty ? periods.first : 'Pilih Periode')
+                            : (selectedList.length == 1
+                                ? selectedList.first
+                                : (selectedList.length == periods.length && periods.length > 1
+                                    ? 'Semua (${periods.length} Periode)'
+                                    : '${selectedList.length} Periode (${selectedList.take(2).join(', ')}${selectedList.length > 2 ? '..' : ''})'));
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('3. Periode (YYYYMM)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: colors.textSecondary)),
+                            const SizedBox(height: 6),
+                            SizedBox(
+                              width: 215,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(10),
+                                onTap: () async {
+                                  final picked = Set<String>.from(
+                                    selectedList.isNotEmpty
+                                        ? selectedList
+                                        : (periods.isNotEmpty ? [periods.first] : <String>[]),
+                                  );
+                                  final res = await showDialog<List<String>>(
+                                    context: context,
+                                    builder: (ctx) => StatefulBuilder(
+                                      builder: (ctx, setDialogState) => AlertDialog(
+                                        backgroundColor: colors.bgElevated,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                        title: Text(
+                                          'Pilih Periode (Bisa > 1 Bulan)',
+                                          style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                                        ),
+                                        content: SizedBox(
+                                          width: 320,
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Row(
+                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                children: [
+                                                  TextButton(
+                                                    onPressed: () => setDialogState(() => picked
+                                                      ..clear()
+                                                      ..addAll(periods)),
+                                                    child: const Text('Pilih Semua'),
+                                                  ),
+                                                  TextButton(
+                                                    onPressed: () => setDialogState(() {
+                                                      picked.clear();
+                                                      if (periods.isNotEmpty) picked.add(periods.first);
+                                                    }),
+                                                    child: const Text('Reset (Terbaru)'),
+                                                  ),
+                                                ],
+                                              ),
+                                              const Divider(height: 8),
+                                              ConstrainedBox(
+                                                constraints: const BoxConstraints(maxHeight: 280),
+                                                child: ListView(
+                                                  shrinkWrap: true,
+                                                  children: periods.map((p) {
+                                                    final isChecked = picked.contains(p);
+                                                    return CheckboxListTile(
+                                                      dense: true,
+                                                      value: isChecked,
+                                                      activeColor: AppColors.primary,
+                                                      title: Text(p, style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600)),
+                                                      onChanged: (v) {
+                                                        setDialogState(() {
+                                                          if (v == true) {
+                                                            picked.add(p);
+                                                          } else if (picked.length > 1) {
+                                                            picked.remove(p);
+                                                          }
+                                                        });
+                                                      },
+                                                    );
+                                                  }).toList(),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(ctx),
+                                            child: Text('Batal', style: TextStyle(color: colors.textMuted)),
+                                          ),
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                                            onPressed: () => Navigator.pop(ctx, picked.toList()),
+                                            child: const Text('Terapkan'),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                  if (res != null && res.isNotEmpty) {
+                                    _periodController.text = res.join(',');
+                                    notifier.setPeriods(res);
+                                  }
+                                },
+                                child: InputDecorator(
+                                  decoration: InputDecoration(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                    filled: true,
+                                    fillColor: colors.bgInput,
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: colors.borderMuted)),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: colors.borderMuted)),
+                                    prefixIcon: Icon(LucideIcons.calendar, size: 15, color: colors.textSecondary),
+                                    prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                    suffixIcon: Icon(LucideIcons.chevronDown, size: 16, color: colors.textSecondary),
+                                    suffixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 36),
+                                  ),
+                                  child: Text(
+                                    displayLabel,
+                                    style: TextStyle(color: colors.textPrimary, fontSize: 13.5),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
                             ),
-                            onChanged: (val) {
-                              if (val.trim().length == 6 && val.trim() != state.selectedPeriod) {
-                                notifier.setPeriod(val.trim());
-                              }
-                            },
-                            onSubmitted: (val) {
-                              if (val.trim().isNotEmpty) notifier.setPeriod(val.trim());
-                            },
-                          ),
-                        ),
-                      ],
+                          ],
+                        );
+                      },
                     ),
                     Padding(
                       padding: const EdgeInsets.only(top: 22),
@@ -420,27 +525,6 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        elevation: 2,
-                      ),
-                      icon: state.isCalculating
-                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Icon(LucideIcons.calculator, size: 16),
-                      label: Text(state.isCalculating ? 'Memproses...' : 'Hitung Insentif'),
-                      onPressed: state.isCalculating
-                          ? null
-                          : () {
-                              if (_periodController.text.trim().isNotEmpty && _periodController.text.trim() != state.selectedPeriod) {
-                                notifier.setPeriod(_periodController.text.trim());
-                              }
-                              notifier.calculate();
-                            },
-                    ),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.success,
@@ -472,22 +556,94 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
           // KPI Banner
           LayoutBuilder(
             builder: (context, constraints) {
-              final isDesktop = constraints.maxWidth >= 850;
-              final crossAxis = isDesktop ? 4 : (constraints.maxWidth >= 500 ? 2 : 1);
+              final isIndustri = activeKategori == 'INDUSTRI';
+              final isSurabaya = activeKategori == 'SURABAYA';
+              final indMeta = state.industriSummary;
+              final sbyMeta = state.surabayaSummary;
 
-              return GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: crossAxis,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: isDesktop ? 2.1 : 2.5,
-                children: [
-                  _buildSummaryItem(context, title: 'Sales Berhak (Eligible)', value: '${state.summary.totalPersonil} Personil', icon: LucideIcons.users, color: AppColors.info),
-                  _buildSummaryItem(context, title: 'Total Kuota Target', value: '${CurrencyFormatter.formatNumber(state.summary.totalQuota)} Unit', icon: LucideIcons.target, color: AppColors.primaryLight),
-                  _buildSummaryItem(context, title: 'Total Realisasi', value: '${CurrencyFormatter.formatNumber(state.summary.totalRealization)} Unit', icon: LucideIcons.checkCheck, color: AppColors.success),
-                  _buildSummaryItem(context, title: 'Akumulasi Reward Insentif', value: CurrencyFormatter.formatRupiah(state.summary.totalReward), icon: LucideIcons.wallet, color: const Color(0xFF24968B)),
-                ],
+              final List<Widget> kpiCards = isIndustri
+                  ? [
+                      _buildSummaryItem(
+                        context,
+                        title: 'Tim Sales Industri',
+                        value: '${indMeta?.totalPersonil ?? state.industriCards.length} Personil',
+                        icon: LucideIcons.users,
+                        color: AppColors.info,
+                      ),
+                      _buildSummaryItem(
+                        context,
+                        title: 'Total Sell-In (Kg)',
+                        value: '${CurrencyFormatter.formatNumber(indMeta?.totalActualSellInKg ?? 0)} / ${CurrencyFormatter.formatNumber(indMeta?.totalTargetSellInKg ?? 0)}',
+                        icon: LucideIcons.packageCheck,
+                        color: AppColors.primaryLight,
+                      ),
+                      _buildSummaryItem(
+                        context,
+                        title: 'Realisasi NOO',
+                        value: '${CurrencyFormatter.formatNumber(indMeta?.totalActualNoo ?? 0)} NOO (${CurrencyFormatter.formatNumber(indMeta?.totalActualNooKg ?? 0)} Kg)',
+                        icon: LucideIcons.store,
+                        color: AppColors.success,
+                      ),
+                      _buildSummaryItem(
+                        context,
+                        title: 'Total Payout Industri',
+                        value: CurrencyFormatter.formatRupiah(indMeta?.totalPayout ?? state.summary.totalReward),
+                        icon: LucideIcons.wallet,
+                        color: const Color(0xFF24968B),
+                      ),
+                    ]
+                  : (isSurabaya
+                      ? [
+                          _buildSummaryItem(
+                            context,
+                            title: 'Tim Sales Surabaya',
+                            value: '${sbyMeta?.totalPersonil ?? state.surabayaCards.length} Personil',
+                            icon: LucideIcons.users,
+                            color: AppColors.info,
+                          ),
+                          _buildSummaryItem(
+                            context,
+                            title: 'Total Target (Kg)',
+                            value: '${CurrencyFormatter.formatNumber(sbyMeta?.totalTargetKg ?? 0)} Kg',
+                            icon: LucideIcons.target,
+                            color: AppColors.primaryLight,
+                          ),
+                          _buildSummaryItem(
+                            context,
+                            title: 'Total Penjualan (Kg)',
+                            value: '${CurrencyFormatter.formatNumber(sbyMeta?.totalActualKg ?? 0)} Kg',
+                            icon: LucideIcons.packageCheck,
+                            color: AppColors.success,
+                          ),
+                          _buildSummaryItem(
+                            context,
+                            title: 'Total Payout Surabaya',
+                            value: CurrencyFormatter.formatRupiah(sbyMeta?.totalPayout ?? state.summary.totalReward),
+                            icon: LucideIcons.wallet,
+                            color: const Color(0xFF24968B),
+                          ),
+                        ]
+                      : [
+                          _buildSummaryItem(context, title: 'Sales Berhak (Eligible)', value: '${state.summary.totalPersonil} Personil', icon: LucideIcons.users, color: AppColors.info),
+                          _buildSummaryItem(context, title: 'Total Kuota Target', value: '${CurrencyFormatter.formatNumber(state.summary.totalQuota)} Kg', icon: LucideIcons.target, color: AppColors.primaryLight),
+                          _buildSummaryItem(context, title: 'Total Realisasi', value: '${CurrencyFormatter.formatNumber(state.summary.totalRealization)} Kg', icon: LucideIcons.checkCheck, color: AppColors.success),
+                          _buildSummaryItem(context, title: 'Akumulasi Reward Insentif', value: CurrencyFormatter.formatRupiah(state.summary.totalReward), icon: LucideIcons.wallet, color: const Color(0xFF24968B)),
+                        ]);
+
+              return LayoutBuilder(
+                builder: (context, kpiConstraints) {
+                  final maxW = kpiConstraints.maxWidth;
+                  final cols = maxW >= 980 ? 4 : (maxW >= 540 ? 2 : 1);
+                  const spacing = 16.0;
+                  final itemWidth = ((maxW - spacing * (cols - 1)) / cols).floorToDouble();
+                  return Wrap(
+                    spacing: spacing,
+                    runSpacing: spacing,
+                    children: kpiCards
+                        .map((card) => SizedBox(width: itemWidth, child: card))
+                        .toList(),
+                  );
+                },
               );
             },
           ),
@@ -508,17 +664,27 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                   padding: const EdgeInsets.all(20),
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      final isNarrow = constraints.maxWidth < 750;
-                      final isKonsumsi = state.selectedKategori == 'KONSUMSI';
+                      final isNarrow = constraints.maxWidth < 960;
+                      final isKonsumsi = activeKategori == 'KONSUMSI' || activeKategori == 'DISTRIBUTOR';
+                      final isIndustri = activeKategori == 'INDUSTRI';
+                      final isSurabaya = activeKategori == 'SURABAYA';
+                      final hasBreakdown = isKonsumsi || isIndustri || isSurabaya;
 
                       final titleRow = Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            isKonsumsi && state.isBreakdownView
-                                ? 'Rincian Distributor, Depo & Area'
-                                : 'Hasil Perhitungan Insentif Sales',
-                            style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                          Flexible(
+                            child: Text(
+                              isKonsumsi && state.isBreakdownView
+                                  ? 'Rincian Distributor, Depo & Area'
+                                  : (isIndustri && state.isBreakdownView
+                                      ? 'Audit Insentif Sales Industri'
+                                      : (isSurabaya && state.isBreakdownView
+                                          ? 'Audit Insentif Sales Surabaya'
+                                          : 'Hasil Perhitungan Insentif Sales')),
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Container(
@@ -527,14 +693,18 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                             child: Text(
                               isKonsumsi && state.isBreakdownView
                                   ? '${state.breakdownCards.length} Depo'
-                                  : '${filteredResults.length} Baris',
+                                  : (isIndustri && state.isBreakdownView
+                                      ? '${state.industriCards.length} Personil'
+                                      : (isSurabaya && state.isBreakdownView
+                                          ? '${state.surabayaCards.length} Personil'
+                                          : '${filteredResults.length} Baris')),
                               style: TextStyle(fontSize: 11, color: colors.textSecondary),
                             ),
                           ),
                         ],
                       );
 
-                      final viewToggle = isKonsumsi
+                      final viewToggle = hasBreakdown
                           ? Container(
                               decoration: BoxDecoration(
                                 color: colors.bgSubtle,
@@ -558,7 +728,12 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                         children: [
                                           Icon(LucideIcons.layoutGrid, size: 14, color: state.isBreakdownView ? Colors.white : colors.textSecondary),
                                           const SizedBox(width: 6),
-                                          Text('Kartu Distributor', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: state.isBreakdownView ? Colors.white : colors.textSecondary)),
+                                          Text(
+                                            isIndustri
+                                                ? 'Kartu Audit Industri'
+                                                : (isSurabaya ? 'Kartu Audit Surabaya' : 'Kartu Distributor'),
+                                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: state.isBreakdownView ? Colors.white : colors.textSecondary),
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -595,9 +770,12 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                           decoration: InputDecoration(
                             hintText: isKonsumsi && state.isBreakdownView
                                 ? 'Cari distributor / depo / area...'
-                                : 'Cari nama sales...',
+                                : (isIndustri && state.isBreakdownView
+                                    ? 'Cari sales / posisi / customer...'
+                                    : 'Cari nama sales...'),
                             hintStyle: TextStyle(color: colors.textMuted),
                             prefixIcon: Icon(LucideIcons.search, size: 16, color: colors.textSecondary),
+                            prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             filled: true,
                             fillColor: colors.bgInput,
@@ -633,8 +811,8 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
 
                       return Row(
                         children: [
-                          titleRow,
-                          const Spacer(),
+                          Expanded(child: titleRow),
+                          const SizedBox(width: 12),
                           viewToggle,
                           const SizedBox(width: 14),
                           searchBox,
@@ -647,8 +825,12 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
 
                 if (state.isLoading)
                   const Padding(padding: EdgeInsets.all(60), child: Center(child: CircularProgressIndicator(color: AppColors.primary)))
-                else if (state.selectedKategori == 'KONSUMSI' && state.isBreakdownView)
+                else if ((activeKategori == 'KONSUMSI' || activeKategori == 'DISTRIBUTOR') && state.isBreakdownView)
                   _buildDistributorCardsView(context, state)
+                else if (activeKategori == 'INDUSTRI' && state.isBreakdownView)
+                  _buildIndustriBreakdownList(context, state)
+                else if (activeKategori == 'SURABAYA' && state.isBreakdownView)
+                  _buildSurabayaBreakdownList(context, state)
                 else if (filteredResults.isEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
@@ -658,9 +840,9 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                         children: [
                           Icon(LucideIcons.calculator, size: 48, color: colors.textMuted),
                           const SizedBox(height: 16),
-                          Text('Belum Ada Hasil Kalkulasi Periode Ini', style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: colors.textPrimary)),
+                          Text('Belum Ada Data Insentif pada Periode Ini', style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: colors.textPrimary)),
                           const SizedBox(height: 6),
-                          Text('Klik tombol "Hitung Insentif" di atas untuk memproses kalkulasi otomatis.', style: TextStyle(fontSize: 13, color: colors.textSecondary)),
+                          Text('Pilih periode lain atau pastikan Master Target & Realisasi sudah tersedia.', style: TextStyle(fontSize: 13, color: colors.textSecondary)),
                         ],
                       ),
                     ),
@@ -678,7 +860,8 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
   Widget _buildSummaryItem(BuildContext context, {required String title, required String value, required IconData icon, required Color color}) {
     final colors = context.colors;
     return Container(
-      padding: const EdgeInsets.all(18),
+      constraints: const BoxConstraints(minHeight: 86),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: colors.bgCard,
         borderRadius: BorderRadius.circular(14),
@@ -696,11 +879,15 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(title, style: TextStyle(fontSize: 11.5, color: colors.textSecondary)),
+                Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: colors.textSecondary)),
                 const SizedBox(height: 3),
-                Text(value, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: colors.textPrimary), overflow: TextOverflow.ellipsis),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(value, maxLines: 1, style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: colors.textPrimary)),
+                ),
               ],
             ),
           ),
@@ -767,7 +954,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
               ),
               const SizedBox(height: 6),
               Text(
-                'Pilih posisi ASM / SPV atau personil sales, lalu klik tombol "Hitung Insentif".',
+                'Pilih periode, posisi ASM / SPV, atau personil sales di atas.',
                 style: TextStyle(fontSize: 13, color: colors.textSecondary),
               ),
             ],
@@ -820,6 +1007,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
     required int startIndex,
     required int displayedCount,
     required AppThemeColors colors,
+    String unitLabel = 'Depo',
   }) {
     if (totalCards == 0) return const SizedBox.shrink();
 
@@ -837,7 +1025,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
         runSpacing: 10,
         children: [
           Text(
-            'Menampilkan ${totalCards > 0 ? startIndex + 1 : 0} - ${startIndex + displayedCount} dari $totalCards Depo',
+            'Menampilkan ${totalCards > 0 ? startIndex + 1 : 0} - ${startIndex + displayedCount} dari $totalCards $unitLabel',
             style: TextStyle(fontSize: 12.5, color: colors.textSecondary, fontWeight: FontWeight.w500),
           ),
           Row(
@@ -1181,7 +1369,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
-                                      '${CurrencyFormatter.formatNumber(area.sellOutReal)} / ${CurrencyFormatter.formatNumber(area.sellOutTarget)}',
+                                      '${CurrencyFormatter.formatNumber(area.sellOutReal)} / ${CurrencyFormatter.formatNumber(area.sellOutTarget)} Kg',
                                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.textPrimary),
                                     ),
                                     const SizedBox(width: 6),
@@ -1205,7 +1393,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
-                                      '${CurrencyFormatter.formatNumber(area.aoReal.toDouble())} / ${CurrencyFormatter.formatNumber(area.aoTarget.toDouble())}',
+                                      '${CurrencyFormatter.formatNumber(area.aoReal.toDouble())} / ${CurrencyFormatter.formatNumber(area.aoTarget.toDouble())} Toko',
                                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.textPrimary),
                                     ),
                                     const SizedBox(width: 6),
@@ -1264,8 +1452,9 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
           DataColumn(label: Text('Reward Bersih (Rp)')),
         ],
         rows: filteredResults.map((item) {
+          final isNoo = item.metricType.toUpperCase() == 'NOO';
           final isAo = item.metricType.toUpperCase().contains('AO') || item.metricType.toUpperCase().contains('OUTLET');
-          final unitLabel = isAo ? 'Toko' : 'Kg';
+          final unitLabel = isNoo ? 'NOO' : (isAo ? 'Toko' : 'Kg');
           return DataRow(
             cells: [
               DataCell(
@@ -1353,6 +1542,977 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
             ],
           );
         }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildIndustriBreakdownList(BuildContext context, IncentiveCalculationState state) {
+    final colors = context.colors;
+    final query = state.searchQuery.trim().toLowerCase();
+
+    final filteredCards = state.industriCards.where((card) {
+      if (query.isEmpty) return true;
+      final inName = card.userName.toLowerCase().contains(query);
+      final inUser = card.username.toLowerCase().contains(query);
+      final inPos = card.positionCode.toLowerCase().contains(query) || card.positionName.toLowerCase().contains(query);
+      final inCustomers = card.customers.any((c) =>
+          c.customerName.toLowerCase().contains(query) ||
+          c.customerCode.toLowerCase().contains(query) ||
+          (c.city ?? '').toLowerCase().contains(query));
+      return inName || inUser || inPos || inCustomers;
+    }).toList();
+
+    if (filteredCards.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(LucideIcons.factory, size: 48, color: colors.textMuted),
+              const SizedBox(height: 16),
+              Text(
+                'Belum Ada Rincian Audit Insentif Industri',
+                style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: colors.textPrimary),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Pilih periode, posisi (ASM / SPV / ASC), atau personil sales di atas.',
+                style: TextStyle(fontSize: 13, color: colors.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final totalCards = filteredCards.length;
+    final totalPages = _cardsPerPage > 0 ? (totalCards / _cardsPerPage).ceil().clamp(1, 999999) : 1;
+    final currentPage = _cardsPage.clamp(1, totalPages);
+    final startIndex = _cardsPerPage > 0 ? (currentPage - 1) * _cardsPerPage : 0;
+    final displayedCards = _cardsPerPage > 0
+        ? filteredCards.skip(startIndex).take(_cardsPerPage).toList()
+        : filteredCards;
+
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: displayedCards.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 16),
+            itemBuilder: (context, index) => _buildIndustriCard(displayedCards[index], colors),
+          ),
+          const SizedBox(height: 16),
+          _buildPaginationBar(
+            totalCards: totalCards,
+            currentPage: currentPage,
+            totalPages: totalPages,
+            startIndex: startIndex,
+            displayedCount: displayedCards.length,
+            colors: colors,
+            unitLabel: 'Personil',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIndustriCard(IndustriBreakdownCardModel card, AppThemeColors colors) {
+    final expandKey = -card.userId;
+    final isExpanded = _expandedCardIds.contains(expandKey);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.bgCard,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: card.isEligibleIndustri ? colors.border : AppColors.danger.withValues(alpha: 0.45),
+          width: 1.2,
+        ),
+        boxShadow: colors.cardShadows,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () {
+              setState(() {
+                if (isExpanded) {
+                  _expandedCardIds.remove(expandKey);
+                } else {
+                  _expandedCardIds.add(expandKey);
+                }
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  LayoutBuilder(
+                    builder: (context, headerConstraints) {
+                      final isCompactHeader = headerConstraints.maxWidth < 620;
+                      final totalBadge = Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: isCompactHeader ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Grand Total Insentif', style: TextStyle(fontSize: 10, color: colors.textSecondary)),
+                            Text(
+                              CurrencyFormatter.formatRupiah(card.totalReward),
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.success),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      final identityRow = Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CircleAvatar(
+                            radius: 18,
+                            backgroundColor: AppColors.primary.withValues(alpha: 0.14),
+                            child: Text(
+                              card.userName.isNotEmpty ? card.userName[0].toUpperCase() : '?',
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.primary),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 8,
+                              runSpacing: 6,
+                              children: [
+                                Text(
+                                  card.userName,
+                                  style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w700, color: colors.textPrimary),
+                                ),
+                                Text(
+                                  '@${card.username}',
+                                  style: TextStyle(fontSize: 12, color: colors.textMuted),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.info.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    '${card.positionCode} - ${card.positionName}',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.info),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: (card.isEligibleIndustri ? AppColors.success : AppColors.danger).withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    card.isEligibleIndustri
+                                        ? 'Eligible Industri'
+                                        : (card.ineligibilityReason ?? 'Tidak Eligible Industri'),
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: card.isEligibleIndustri ? AppColors.success : AppColors.danger,
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: colors.bgSubtle,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: colors.borderMuted),
+                                  ),
+                                  child: Text(
+                                    '${card.assignedCustomersCount} Customer Assigned',
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: colors.textSecondary),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (!isCompactHeader) ...[
+                            const SizedBox(width: 12),
+                            totalBadge,
+                          ],
+                          const SizedBox(width: 8),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Icon(
+                              isExpanded ? LucideIcons.chevronUp : LucideIcons.chevronDown,
+                              size: 18,
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      );
+
+                      if (isCompactHeader) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            identityRow,
+                            const SizedBox(height: 10),
+                            totalBadge,
+                          ],
+                        );
+                      }
+                      return identityRow;
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isWide = constraints.maxWidth >= 780;
+                      final sellInPanel = _buildIndustriMethodPanel(
+                        methodData: card.sellIn,
+                        title: 'SELL-IN (Volume Kg)',
+                        icon: LucideIcons.packageCheck,
+                        accent: AppColors.info,
+                        isNooMethod: false,
+                        period: card.period,
+                        colors: colors,
+                      );
+                      final nooPanel = _buildIndustriMethodPanel(
+                        methodData: card.noo,
+                        title: 'NOO (New Open Outlet)',
+                        icon: LucideIcons.sparkles,
+                        accent: AppColors.primaryLight,
+                        isNooMethod: true,
+                        period: card.period,
+                        colors: colors,
+                      );
+
+                      if (isWide) {
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: sellInPanel),
+                            const SizedBox(width: 14),
+                            Expanded(child: nooPanel),
+                          ],
+                        );
+                      }
+                      return Column(
+                        children: [
+                          sellInPanel,
+                          const SizedBox(height: 12),
+                          nooPanel,
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    isExpanded
+                        ? 'Klik untuk sembunyikan rincian ${card.customers.length} transaksi customer'
+                        : 'Klik kartu untuk audit ${card.customers.length} customer & riwayat status NOO',
+                    style: TextStyle(fontSize: 11.5, color: AppColors.primaryLight, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (isExpanded) ...[
+            Divider(height: 1, color: colors.border),
+            if (card.customers.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text(
+                  'Belum ada transaksi customer industri ter-assign untuk sales ini pada periode ${card.period}.',
+                  style: TextStyle(fontSize: 12.5, color: colors.textSecondary),
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    headingRowColor: WidgetStateProperty.all(colors.bgSubtle),
+                    headingTextStyle: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: colors.textSecondary),
+                    dataRowMinHeight: 46,
+                    dataRowMaxHeight: double.infinity,
+                    columns: const [
+                      DataColumn(label: Text('Kode Customer')),
+                      DataColumn(label: Text('Nama Customer')),
+                      DataColumn(label: Text('Kota')),
+                      DataColumn(label: Text('Tipe Master')),
+                      DataColumn(label: Text('Jml TX')),
+                      DataColumn(label: Text('Volume (Kg)')),
+                      DataColumn(label: Text('Nominal (Rp)')),
+                      DataColumn(label: Text('Status NOO & Audit')),
+                    ],
+                    rows: card.customers.map((c) {
+                      return DataRow(
+                        cells: [
+                          DataCell(Text(c.customerCode, style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.w600, fontSize: 12))),
+                          DataCell(
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 220),
+                              child: Text(c.customerName, overflow: TextOverflow.ellipsis, style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600, fontSize: 12.5)),
+                            ),
+                          ),
+                          DataCell(Text(c.city ?? '-', style: TextStyle(color: colors.textSecondary, fontSize: 12))),
+                          DataCell(
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: (c.customerType == 'NEW' ? AppColors.success : AppColors.info).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              child: Text(
+                                c.customerType,
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: c.customerType == 'NEW' ? AppColors.success : AppColors.info,
+                                ),
+                              ),
+                            ),
+                          ),
+                          DataCell(Text('${c.txCount}x', style: TextStyle(color: colors.textSecondary, fontSize: 12))),
+                          DataCell(Text('${CurrencyFormatter.formatNumber(c.volumeKg)} Kg', style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 12.5))),
+                          DataCell(Text(CurrencyFormatter.formatRupiah(c.nominal), style: const TextStyle(color: AppColors.success, fontSize: 12))),
+                          DataCell(
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: (c.isNoo ? AppColors.success : colors.bgSubtle).withValues(alpha: c.isNoo ? 0.15 : 1),
+                                    borderRadius: BorderRadius.circular(5),
+                                    border: Border.all(color: c.isNoo ? AppColors.success.withValues(alpha: 0.4) : colors.borderMuted),
+                                  ),
+                                  child: Text(
+                                    c.isNoo ? 'NOO' : 'Repeat Order',
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: c.isNoo ? AppColors.success : colors.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 260),
+                                  child: Text(
+                                    c.nooReason,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(fontSize: 11.5, color: colors.textSecondary),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIndustriMethodPanel({
+    required IndustriMethodBreakdownModel? methodData,
+    required String title,
+    required IconData icon,
+    required Color accent,
+    required bool isNooMethod,
+    required String period,
+    required AppThemeColors colors,
+  }) {
+    final unit = isNooMethod ? 'NOO' : 'Kg';
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colors.bgSubtle.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.borderMuted),
+      ),
+      child: methodData == null
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(icon, size: 15, color: accent),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Skema atau target $title belum dikonfigurasi untuk periode $period.',
+                  style: TextStyle(fontSize: 12, color: colors.textMuted),
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(icon, size: 15, color: accent),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            title,
+                            style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: (methodData.isPassed ? AppColors.success : AppColors.danger).withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        methodData.isPassed
+                            ? 'LOLOS >= ${methodData.minAchievementPct.toStringAsFixed(0)}%'
+                            : 'TIDAK LOLOS (< ${methodData.minAchievementPct.toStringAsFixed(0)}%)',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: methodData.isPassed ? AppColors.success : AppColors.danger,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 14,
+                  runSpacing: 6,
+                  children: [
+                    Text(
+                      'Target: ${CurrencyFormatter.formatNumber(methodData.targetQuota)} $unit',
+                      style: TextStyle(fontSize: 12, color: colors.textSecondary, fontWeight: FontWeight.w500),
+                    ),
+                    Text(
+                      isNooMethod
+                          ? 'Real: ${CurrencyFormatter.formatNumber(methodData.actualRealization)} NOO (${CurrencyFormatter.formatNumber(methodData.actualVolumeKg)} Kg)'
+                          : 'Real: ${CurrencyFormatter.formatNumber(methodData.actualRealization)} Kg',
+                      style: TextStyle(fontSize: 12, color: colors.textPrimary, fontWeight: FontWeight.w700),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('Ach: ', style: TextStyle(fontSize: 12, color: colors.textSecondary)),
+                        _buildMiniBadge(methodData.achievementPercent),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: colors.bgCard,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: colors.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Grade ${methodData.gradeName ?? '-'} • Rate ${CurrencyFormatter.formatRupiah(methodData.multiplierRate)}/Kg • Bobot ${methodData.headerWeightPct.toStringAsFixed(0)}%',
+                        style: TextStyle(fontSize: 11.5, color: colors.textSecondary, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        methodData.isPassed
+                            ? 'Tanpa Cap: ${CurrencyFormatter.formatNumber(methodData.actualVolumeKg)} Kg × ${CurrencyFormatter.formatRupiah(methodData.multiplierRate)} × ${methodData.headerWeightPct.toStringAsFixed(0)}% = ${CurrencyFormatter.formatRupiah(methodData.finalReward)}'
+                            : 'Reward: Rp 0 (Achievement belum memenuhi batas minimal ${methodData.minAchievementPct.toStringAsFixed(0)}%)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: methodData.isPassed ? AppColors.success : AppColors.danger,
+                        ),
+                      ),
+                      if (methodData.auditNotes != null && methodData.auditNotes!.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          methodData.auditNotes!,
+                          style: TextStyle(fontSize: 11, color: colors.textMuted, fontStyle: FontStyle.italic),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  String _formatRateRupiah(double rate) {
+    if (rate % 1 == 0) {
+      return CurrencyFormatter.formatRupiah(rate);
+    }
+    return 'Rp ${rate.toStringAsFixed(2).replaceAll('.', ',')}';
+  }
+
+  Widget _buildSurabayaBreakdownList(BuildContext context, IncentiveCalculationState state) {
+    final colors = context.colors;
+    final query = state.searchQuery.trim().toLowerCase();
+
+    final filteredCards = state.surabayaCards.where((card) {
+      if (query.isEmpty) return true;
+      final inName = card.userName.toLowerCase().contains(query) || card.username.toLowerCase().contains(query);
+      final inPos = card.positionCode.toLowerCase().contains(query) || card.positionName.toLowerCase().contains(query);
+      final inAsc = (card.ascName ?? '').toLowerCase().contains(query);
+      final inSubs = card.subordinates.any((s) =>
+          s.salesName.toLowerCase().contains(query) ||
+          s.username.toLowerCase().contains(query) ||
+          s.positionCode.toLowerCase().contains(query));
+      return inName || inPos || inAsc || inSubs;
+    }).toList();
+
+    if (filteredCards.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(LucideIcons.truck, size: 48, color: colors.textMuted),
+              const SizedBox(height: 16),
+              Text(
+                'Belum Ada Rincian Audit Insentif Surabaya',
+                style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: colors.textPrimary),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Pilih periode, posisi (ASC / TO / SM), atau personil sales di atas.',
+                style: TextStyle(fontSize: 13, color: colors.textSecondary),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: filteredCards.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 16),
+        itemBuilder: (context, index) => _buildSurabayaCard(filteredCards[index], colors),
+      ),
+    );
+  }
+
+  Widget _buildSurabayaCard(SurabayaBreakdownCardModel card, AppThemeColors colors) {
+    final isAsc = card.positionCode.toUpperCase() == 'ASC';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.bgCard,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: card.isEligibleSurabaya ? colors.border : AppColors.danger.withValues(alpha: 0.45),
+          width: 1.2,
+        ),
+        boxShadow: colors.cardShadows,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            LayoutBuilder(
+              builder: (context, headerConstraints) {
+                final isCompactHeader = headerConstraints.maxWidth < 620;
+                final totalBadge = Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: isCompactHeader ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        isAsc ? 'Grand Total Insentif ASC' : 'Total Insentif',
+                        style: TextStyle(fontSize: 10, color: colors.textSecondary),
+                      ),
+                      Text(
+                        CurrencyFormatter.formatRupiah(card.totalReward),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.success),
+                      ),
+                    ],
+                  ),
+                );
+
+                final identityRow = Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: (isAsc ? AppColors.warning : AppColors.primary).withValues(alpha: 0.15),
+                      child: Text(
+                        card.userName.isNotEmpty ? card.userName[0].toUpperCase() : '?',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: isAsc ? AppColors.warning : AppColors.primary),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [
+                          Text(
+                            card.userName,
+                            style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w700, color: colors.textPrimary),
+                          ),
+                          Text('@${card.username}', style: TextStyle(fontSize: 12, color: colors.textMuted)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: (isAsc ? AppColors.warning : AppColors.info).withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '${card.positionCode} - ${card.positionName}',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: isAsc ? AppColors.warning : AppColors.info),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: (card.isEligibleSurabaya ? AppColors.success : AppColors.danger).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              card.isEligibleSurabaya ? 'Eligible Surabaya' : (card.ineligibilityReason ?? 'Tidak Eligible Surabaya'),
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: card.isEligibleSurabaya ? AppColors.success : AppColors.danger,
+                              ),
+                            ),
+                          ),
+                          if (!isAsc && card.ascName != null && card.ascName!.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: colors.bgSubtle,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: colors.borderMuted),
+                              ),
+                              child: Text(
+                                'Atasan ASC: ${card.ascName}',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: colors.textSecondary),
+                              ),
+                            ),
+                          if (isAsc)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: colors.bgSubtle,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: colors.borderMuted),
+                              ),
+                              child: Text(
+                                '${card.subordinatesCount} Bawahan (TO/SM)',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: colors.textSecondary),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (!isCompactHeader) ...[
+                      const SizedBox(width: 12),
+                      totalBadge,
+                    ],
+                  ],
+                );
+
+                if (isCompactHeader) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      identityRow,
+                      const SizedBox(height: 10),
+                      totalBadge,
+                    ],
+                  );
+                }
+                return identityRow;
+              },
+            ),
+            const SizedBox(height: 14),
+            if (isAsc) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: colors.bgSubtle.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: colors.borderMuted),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 6,
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          'Breakdown Evaluasi Bawahan (${card.headerName ?? 'Setting ASC'})',
+                          style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                        ),
+                        Text(
+                          'Min. Achievement ASC: ${card.minAchievementPct.toStringAsFixed(0)}% • Bobot Header: ${card.headerWeightPct.toStringAsFixed(0)}%',
+                          style: TextStyle(fontSize: 11.5, color: colors.textSecondary, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    if (card.subordinates.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Text(
+                          'Belum ada bawahan TO / SM yang di-assign ke ASC ini pada periode ${card.period}.',
+                          style: TextStyle(fontSize: 12.5, color: colors.textMuted),
+                        ),
+                      )
+                    else
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          headingRowColor: WidgetStateProperty.all(colors.bgCard),
+                          headingTextStyle: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: colors.textSecondary),
+                          dataRowMinHeight: 44,
+                          dataRowMaxHeight: double.infinity,
+                          columns: const [
+                            DataColumn(label: Text('Nama Bawahan')),
+                            DataColumn(label: Text('Posisi')),
+                            DataColumn(label: Text('Target (Kg)')),
+                            DataColumn(label: Text('Aktual (Kg)')),
+                            DataColumn(label: Text('% Capai')),
+                            DataColumn(label: Text('Status Target')),
+                            DataColumn(label: Text('Grade ASC')),
+                            DataColumn(label: Text('Bobot ASC')),
+                            DataColumn(label: Text('Bobot Header')),
+                            DataColumn(label: Text('Kontribusi Insentif ASC')),
+                          ],
+                          rows: [
+                            ...card.subordinates.map((sub) {
+                              return DataRow(
+                                cells: [
+                                  DataCell(Text(sub.salesName, style: TextStyle(fontWeight: FontWeight.w600, color: colors.textPrimary, fontSize: 12.5))),
+                                  DataCell(
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                      decoration: BoxDecoration(color: AppColors.info.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(5)),
+                                      child: Text(sub.positionCode, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.info)),
+                                    ),
+                                  ),
+                                  DataCell(Text(CurrencyFormatter.formatNumber(sub.targetKg), style: TextStyle(color: colors.textSecondary, fontSize: 12.5))),
+                                  DataCell(Text(CurrencyFormatter.formatNumber(sub.actualKg), style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600, fontSize: 12.5))),
+                                  DataCell(_buildMiniBadge(sub.achievementPercent)),
+                                  DataCell(
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: (sub.isPassed ? AppColors.success : AppColors.danger).withValues(alpha: 0.14),
+                                        borderRadius: BorderRadius.circular(5),
+                                      ),
+                                      child: Text(
+                                        sub.statusLabel,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: sub.isPassed ? AppColors.success : AppColors.danger,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  DataCell(Text(sub.gradeName ?? '-', style: TextStyle(color: colors.textSecondary, fontSize: 12))),
+                                  DataCell(Text(_formatRateRupiah(sub.multiplierRate), style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600, fontSize: 12))),
+                                  DataCell(Text('${sub.headerWeightPct.toStringAsFixed(0)}%', style: TextStyle(color: colors.textSecondary, fontSize: 12))),
+                                  DataCell(
+                                    Text(
+                                      CurrencyFormatter.formatRupiah(sub.contributionReward),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12.5,
+                                        color: sub.contributionReward > 0 ? AppColors.success : colors.textMuted,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }),
+                            DataRow(
+                              color: WidgetStateProperty.all(AppColors.success.withValues(alpha: 0.08)),
+                              cells: [
+                                DataCell(Text('GRAND TOTAL INSENTIF ASC (${card.userName})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.success))),
+                                const DataCell(Text('')),
+                                DataCell(Text(CurrencyFormatter.formatNumber(card.targetKg), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colors.textPrimary))),
+                                DataCell(Text(CurrencyFormatter.formatNumber(card.actualKg), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colors.textPrimary))),
+                                const DataCell(Text('')),
+                                const DataCell(Text('')),
+                                const DataCell(Text('')),
+                                const DataCell(Text('')),
+                                const DataCell(Text('')),
+                                DataCell(Text(CurrencyFormatter.formatRupiah(card.totalReward), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.success))),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: colors.bgSubtle.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: colors.borderMuted),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          'Penjualan Langsung (${card.positionCode})',
+                          style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: (card.isPassed ? AppColors.success : AppColors.danger).withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            card.isPassed
+                                ? 'LOLOS >= ${card.minAchievementPct.toStringAsFixed(0)}%'
+                                : 'TIDAK LOLOS (< ${card.minAchievementPct.toStringAsFixed(0)}%)',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: card.isPassed ? AppColors.success : AppColors.danger,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 14,
+                      runSpacing: 6,
+                      children: [
+                        Text('Target: ${CurrencyFormatter.formatNumber(card.targetKg)} Kg', style: TextStyle(fontSize: 12, color: colors.textSecondary, fontWeight: FontWeight.w500)),
+                        Text('Aktual: ${CurrencyFormatter.formatNumber(card.actualKg)} Kg', style: TextStyle(fontSize: 12, color: colors.textPrimary, fontWeight: FontWeight.w700)),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Ach: ', style: TextStyle(fontSize: 12, color: colors.textSecondary)),
+                            _buildMiniBadge(card.achievementPercent),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: colors.bgCard,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: colors.border),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Grade ${card.gradeName ?? '-'} • Tarif ${_formatRateRupiah(card.multiplierRate)}/Kg • Bobot Header ${card.headerWeightPct.toStringAsFixed(0)}%',
+                            style: TextStyle(fontSize: 11.5, color: colors.textSecondary, fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            card.isPassed
+                                ? '${CurrencyFormatter.formatNumber(card.actualKg)} Kg × ${_formatRateRupiah(card.multiplierRate)} × ${card.headerWeightPct.toStringAsFixed(0)}% = ${CurrencyFormatter.formatRupiah(card.totalReward)}'
+                                : 'Reward: Rp 0 (Achievement belum memenuhi batas minimal ${card.minAchievementPct.toStringAsFixed(0)}%)',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: card.isPassed ? AppColors.success : AppColors.danger,
+                            ),
+                          ),
+                          if (card.auditNotes != null && card.auditNotes!.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              card.auditNotes!,
+                              style: TextStyle(fontSize: 11, color: colors.textMuted, fontStyle: FontStyle.italic),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

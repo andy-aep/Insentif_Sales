@@ -1,10 +1,11 @@
 class TargetHeaderModel {
   final int id;
   final String nama;
-  final String salesType; // e.g. ASM, SPV, Coordinator, atau '1', '2'
+  final String salesType; // e.g. ASM, SPV, ASC, Coordinator, atau '1', '2'
   final String? salesTypeName;
-  final String type; // Sell-In, Sell-Out, Active Outlet (AO)
+  final String type; // Sell-In, Sell-Out, Active Outlet (AO), NOO
   final double bobot; // 100.00%
+  final double minAchievementPct; // Minimum achievement gate (%) e.g. 80%, 50%
   final bool aktif;
   final String aktifFrom; // YYYYMMDD
   final String aktifTo; // YYYYMMDD
@@ -18,6 +19,7 @@ class TargetHeaderModel {
     this.salesTypeName,
     required this.type,
     required this.bobot,
+    this.minAchievementPct = 0.0,
     required this.aktif,
     required this.aktifFrom,
     required this.aktifTo,
@@ -75,6 +77,7 @@ class TargetHeaderModel {
           : null,
       type: json['type'] ?? 'Sell-In',
       bobot: double.tryParse(json['bobot']?.toString() ?? json['bobot_percent']?.toString() ?? '100') ?? 100.0,
+      minAchievementPct: double.tryParse(json['min_achievement_pct']?.toString() ?? '0') ?? 0.0,
       aktif: json['aktif'] == true || json['aktif'] == 1 || json['aktif'] == '1',
       aktifFrom: json['aktif_from']?.toString() ?? '',
       aktifTo: json['aktif_to']?.toString() ?? '',
@@ -89,6 +92,7 @@ class TargetHeaderModel {
     'sales_type': salesType,
     'type': type,
     'bobot': bobot,
+    'min_achievement_pct': minAchievementPct,
     'aktif': aktif,
     'aktif_from': aktifFrom,
     'aktif_to': aktifTo,
@@ -102,8 +106,9 @@ class GradeModel {
   final int? targetHeaderId;
   final String idGrade; // UUID or string ID
   final String gradeName;
-  final double targetFrom; // Kg / Unit
+  final double targetFrom; // Kg / Unit / Outlet
   final double targetTo;
+  final double? multiplierRate; // Rate pengali langsung (Rp / Kg)
   final List<GradeBobotModel> gradeBobots;
 
   GradeModel({
@@ -113,6 +118,7 @@ class GradeModel {
     required this.gradeName,
     required this.targetFrom,
     required this.targetTo,
+    this.multiplierRate,
     this.gradeBobots = const [],
   });
 
@@ -125,6 +131,7 @@ class GradeModel {
       gradeName: json['grade_name'] ?? json['name'] ?? '',
       targetFrom: double.tryParse(json['target_from']?.toString() ?? '0') ?? 0.0,
       targetTo: double.tryParse(json['target_to']?.toString() ?? '0') ?? 0.0,
+      multiplierRate: json['multiplier_rate'] != null ? double.tryParse(json['multiplier_rate'].toString()) : null,
       gradeBobots: gbList.map((gb) => GradeBobotModel.fromJson(gb as Map<String, dynamic>)).toList(),
     );
   }
@@ -136,6 +143,7 @@ class GradeModel {
     'grade_name': gradeName,
     'target_from': targetFrom,
     'target_to': targetTo,
+    'multiplier_rate': multiplierRate,
     'bobots': gradeBobots.map((b) => b.toJson()).toList(),
   };
 }

@@ -1,4 +1,6 @@
 ~$*
 .DS_Store
 Thumbs.db
+deploy_cpanel/deploy_config.json
+
 

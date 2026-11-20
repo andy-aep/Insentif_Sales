@@ -19,13 +19,17 @@ class IncentiveCalculation extends Model
         'period',
         'target_quota',
         'realization',
+        'noo_volume_kg',
         'achievement_percent',
+        'min_achievement_pct',
+        'is_passed',
         'capped_realization',
         'is_rate_based',
         'unit_rate',
         'lump_sum_nominal',
         'header_bobot_percent',
         'final_reward',
+        'audit_notes',
         'calculated_by',
     ];
 
@@ -34,7 +38,10 @@ class IncentiveCalculation extends Model
         return [
             'target_quota' => 'decimal:2',
             'realization' => 'decimal:2',
+            'noo_volume_kg' => 'decimal:2',
             'achievement_percent' => 'decimal:2',
+            'min_achievement_pct' => 'decimal:2',
+            'is_passed' => 'boolean',
             'capped_realization' => 'decimal:2',
             'is_rate_based' => 'boolean',
             'unit_rate' => 'decimal:2',

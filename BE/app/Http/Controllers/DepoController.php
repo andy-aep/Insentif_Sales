@@ -53,7 +53,9 @@ class DepoController extends Controller
 
             if (!empty($validated['areas'])) {
                 foreach ($validated['areas'] as $aIdx => $areaData) {
-                    $areaCode = !empty($areaData['code']) ? trim($areaData['code']) : $depo->code . '-AR' . ($aIdx + 1);
+                    $areaCode = !empty($areaData['code'])
+                        ? strtoupper(trim($areaData['code']))
+                        : DistributorController::nextSequentialCode(Area::class, 'AR', 5);
                     $baseCode = $areaCode;
                     $counter = 1;
                     while (Area::where('code', $areaCode)->exists()) {
@@ -102,7 +104,9 @@ class DepoController extends Controller
                 foreach ($request->input('areas', []) as $aIdx => $areaData) {
                     $areaId = $areaData['id'] ?? null;
                     $areaName = $areaData['name'] ?? '';
-                    $areaCode = !empty($areaData['code']) ? trim($areaData['code']) : $depo->code . '-AR' . ($aIdx + 1);
+                    $areaCode = !empty($areaData['code'])
+                        ? strtoupper(trim($areaData['code']))
+                        : DistributorController::nextSequentialCode(Area::class, 'AR', 5);
 
                     if ($areaId) {
                         $area = Area::where('id', $areaId)->where('depo_id', $depo->id)->first();

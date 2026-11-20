@@ -47,6 +47,7 @@ class TargetHeaderController extends Controller
             'sales_type' => 'required|exists:positions,id',
             'type' => 'required|string|max:100',
             'bobot' => 'nullable|numeric|min:0|max:100',
+            'min_achievement_pct' => 'nullable|numeric|min:0|max:1000',
             'aktif' => 'boolean',
             'aktif_from' => 'required|string|size:8',
             'aktif_to' => 'required|string|size:8',
@@ -99,6 +100,7 @@ class TargetHeaderController extends Controller
             'sales_type' => 'sometimes|required|exists:positions,id',
             'type' => 'sometimes|required|string|max:100',
             'bobot' => 'nullable|numeric|min:0|max:100',
+            'min_achievement_pct' => 'nullable|numeric|min:0|max:1000',
             'aktif' => 'boolean',
             'aktif_from' => 'sometimes|required|string|size:8',
             'aktif_to' => 'sometimes|required|string|size:8',
@@ -171,16 +173,22 @@ class TargetHeaderController extends Controller
 
         foreach ($gradesData as $gData) {
             $idGrade = !empty($gData['id_grade']) ? $gData['id_grade'] : (string) Str::uuid();
+            $gradeName = $gData['grade_name'] ?? 'Grade';
+            $multiplierRate = isset($gData['multiplier_rate']) && $gData['multiplier_rate'] !== ''
+                ? (float) $gData['multiplier_rate']
+                : null;
+
             Grade::create([
                 'id_grade' => $idGrade,
                 'target_header_id' => $header->id,
-                'grade_name' => $gData['grade_name'] ?? 'Grade',
+                'grade_name' => $gradeName,
                 'target_from' => $gData['target_from'] ?? 0,
                 'target_to' => $gData['target_to'] ?? 0,
+                'multiplier_rate' => $multiplierRate,
             ]);
 
             $bobotsData = $gData['bobots'] ?? $gData['grade_bobots'] ?? [];
-            if (is_array($bobotsData)) {
+            if (is_array($bobotsData) && count($bobotsData) > 0) {
                 foreach ($bobotsData as $bData) {
                     $isPengali = filter_var($bData['pengali'] ?? false, FILTER_VALIDATE_BOOLEAN);
                     GradeBobot::create([
@@ -193,6 +201,16 @@ class TargetHeaderController extends Controller
                         'nominal' => !$isPengali ? ($bData['nominal'] ?? 0) : 0,
                     ]);
                 }
+            } elseif ($header->kategori_skema === 'INDUSTRI' && $multiplierRate !== null && $multiplierRate > 0) {
+                GradeBobot::create([
+                    'id_grade' => $idGrade,
+                    'bobot_name' => 'Rate ' . $gradeName,
+                    'percent_from' => (float) ($header->min_achievement_pct ?? 0),
+                    'percent_to' => 9999,
+                    'pengali' => true,
+                    'bobot' => $multiplierRate,
+                    'nominal' => 0,
+                ]);
             }
         }
     }

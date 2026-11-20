@@ -214,6 +214,7 @@ class IncentiveSchemeNotifier extends StateNotifier<IncentiveSchemeState> {
             gradeName: g['grade_name'] ?? 'Grade',
             targetFrom: double.tryParse(g['target_from']?.toString() ?? '0') ?? 0.0,
             targetTo: double.tryParse(g['target_to']?.toString() ?? '0') ?? 0.0,
+            multiplierRate: g['multiplier_rate'] != null ? double.tryParse(g['multiplier_rate'].toString()) : null,
             gradeBobots: bList,
           );
         }).toList();
@@ -226,6 +227,7 @@ class IncentiveSchemeNotifier extends StateNotifier<IncentiveSchemeState> {
           salesType: data['sales_type']?.toString() ?? 'ASM',
           type: data['type'] ?? 'Sell-In',
           bobot: double.tryParse(data['bobot']?.toString() ?? '100') ?? 100.0,
+          minAchievementPct: double.tryParse(data['min_achievement_pct']?.toString() ?? '0') ?? 0.0,
           aktif: data['aktif'] ?? true,
           aktifFrom: data['aktif_from'] ?? '20260101',
           aktifTo: data['aktif_to'] ?? '20261231',
@@ -248,6 +250,7 @@ class IncentiveSchemeNotifier extends StateNotifier<IncentiveSchemeState> {
               salesTypeName: h.salesTypeName,
               type: data['type'] ?? h.type,
               bobot: double.tryParse(data['bobot']?.toString() ?? '${h.bobot}') ?? h.bobot,
+              minAchievementPct: double.tryParse(data['min_achievement_pct']?.toString() ?? '${h.minAchievementPct}') ?? h.minAchievementPct,
               aktif: data['aktif'] ?? h.aktif,
               aktifFrom: data['aktif_from'] ?? h.aktifFrom,
               aktifTo: data['aktif_to'] ?? h.aktifTo,
@@ -405,23 +408,27 @@ class IncentiveSchemeNotifier extends StateNotifier<IncentiveSchemeState> {
   }
 
   // ---------------- Level 2: Grade CRUD ----------------
-  Future<bool> saveGrade(int targetHeaderId, String gradeName, double targetFrom, double targetTo, {int? id}) async {
+  Future<bool> saveGrade(
+    int targetHeaderId,
+    String gradeName,
+    double targetFrom,
+    double targetTo, {
+    int? id,
+    double? multiplierRate,
+  }) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
+      final payload = {
+        'target_header_id': targetHeaderId,
+        'grade_name': gradeName,
+        'target_from': targetFrom,
+        'target_to': targetTo,
+        if (multiplierRate != null) 'multiplier_rate': multiplierRate,
+      };
       if (id == null) {
-        await DioClient.instance.post(ApiEndpoints.grades, data: {
-          'target_header_id': targetHeaderId,
-          'grade_name': gradeName,
-          'target_from': targetFrom,
-          'target_to': targetTo,
-        });
+        await DioClient.instance.post(ApiEndpoints.grades, data: payload);
       } else {
-        await DioClient.instance.put('${ApiEndpoints.grades}/$id', data: {
-          'target_header_id': targetHeaderId,
-          'grade_name': gradeName,
-          'target_from': targetFrom,
-          'target_to': targetTo,
-        });
+        await DioClient.instance.put('${ApiEndpoints.grades}/$id', data: payload);
       }
       await fetchSchemes();
       return true;
@@ -434,6 +441,7 @@ class IncentiveSchemeNotifier extends StateNotifier<IncentiveSchemeState> {
           gradeName: gradeName,
           targetFrom: targetFrom,
           targetTo: targetTo,
+          multiplierRate: multiplierRate,
         );
 
         final updatedHeaders = state.targetHeaders.map((h) {
@@ -473,6 +481,7 @@ class IncentiveSchemeNotifier extends StateNotifier<IncentiveSchemeState> {
                   gradeName: gradeName,
                   targetFrom: targetFrom,
                   targetTo: targetTo,
+                  multiplierRate: multiplierRate ?? g.multiplierRate,
                   gradeBobots: g.gradeBobots,
                 );
               }

@@ -10,6 +10,7 @@ use App\Http\Controllers\DistributorController;
 use App\Http\Controllers\GradeBobotController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\IncentiveCalculationController;
+use App\Http\Controllers\IndustriCustomerController;
 use App\Http\Controllers\MasterTargetController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\NilaiRewardController;
@@ -18,6 +19,10 @@ use App\Http\Controllers\PositionController;
 use App\Http\Controllers\RegionController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SalesAssignmentController;
+use App\Http\Controllers\SellinDistributorController;
+use App\Http\Controllers\SellinIndustriController;
+use App\Http\Controllers\SelloutDistributorController;
+use App\Http\Controllers\SelloutSalesSurabayaController;
 use App\Http\Controllers\TargetHeaderController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -33,6 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
 
     // Master Access & Users
+    Route::get('sap/sales-employees', [UserController::class, 'sapSalesEmployees']);
     Route::put('users/{user}/password', [UserController::class, 'updatePassword']);
     Route::apiResource('users', UserController::class);
     Route::apiResource('roles', RoleController::class);
@@ -45,14 +51,26 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('distributors', DistributorController::class);
     Route::apiResource('depos', DepoController::class);
     Route::apiResource('areas', AreaController::class);
+    Route::get('sap/industri-customers', [IndustriCustomerController::class, 'sapList']);
+    Route::apiResource('industri-customers', IndustriCustomerController::class);
+    Route::post('sellin-industris/sync-sap', [SellinIndustriController::class, 'syncFromSap']);
+    Route::apiResource('sellin-industris', SellinIndustriController::class);
+    Route::post('sellin-distributors/sync-sap', [SellinDistributorController::class, 'syncFromSap']);
+    Route::apiResource('sellin-distributors', SellinDistributorController::class)->only(['index', 'destroy']);
+    Route::apiResource('sellout-distributors', SelloutDistributorController::class)->only(['index', 'destroy']);
+    Route::apiResource('sellout-surabayas', SelloutSalesSurabayaController::class);
 
-    // Penugasan Sales (Distributor ASM/SPV & Surabaya)
+    // Penugasan Sales (Distributor ASM/SPV, Surabaya, & Industri)
     Route::get('sales-distributor-assignments', [SalesAssignmentController::class, 'indexDistributor']);
     Route::post('sales-distributor-assignments', [SalesAssignmentController::class, 'storeDistributor']);
+    Route::post('sales-distributor-assignments/bulk-map', [SalesAssignmentController::class, 'bulkMapDistributor']);
     Route::delete('sales-distributor-assignments/{id}', [SalesAssignmentController::class, 'destroyDistributor']);
     Route::get('sales-surabaya-assignments', [SalesAssignmentController::class, 'indexSurabaya']);
     Route::post('sales-surabaya-assignments', [SalesAssignmentController::class, 'storeSurabaya']);
     Route::delete('sales-surabaya-assignments/{id}', [SalesAssignmentController::class, 'destroySurabaya']);
+    Route::get('sales-industri-assignments', [SalesAssignmentController::class, 'indexIndustri']);
+    Route::post('sales-industri-assignments', [SalesAssignmentController::class, 'storeIndustri']);
+    Route::delete('sales-industri-assignments/{id}', [SalesAssignmentController::class, 'destroyIndustri']);
 
     // Setting Insentif (3-Level) & Penunjang
     Route::post('target-headers/{target_header}/duplicate', [TargetHeaderController::class, 'duplicate']);
@@ -69,6 +87,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/incentives/calculate', [IncentiveCalculationController::class, 'calculate']);
     Route::get('/incentives/results', [IncentiveCalculationController::class, 'index']);
     Route::get('/incentives/distributor-breakdown', [IncentiveCalculationController::class, 'distributorBreakdown']);
+    Route::get('/incentives/industri-breakdown', [IncentiveCalculationController::class, 'industriBreakdown']);
+    Route::get('/incentives/surabaya-breakdown', [IncentiveCalculationController::class, 'surabayaBreakdown']);
     Route::get('/incentives/export-excel', [IncentiveCalculationController::class, 'exportExcel']);
 
     // Batch Management & Rollback

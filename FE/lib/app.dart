@@ -37,6 +37,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/dashboard';
       }
 
+      if (isLoggedIn) {
+        final roleName = (authState.user?.role?.name ?? '').trim().toLowerCase();
+        if (roleName == 'sales' && state.matchedLocation != '/dashboard') {
+          return '/dashboard';
+        }
+      }
+
       return null;
     },
     routes: [

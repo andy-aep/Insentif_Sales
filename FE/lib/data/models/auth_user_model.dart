@@ -5,6 +5,8 @@ class UserModel {
   final String? email;
   final int roleId;
   final int? positionId;
+  final int? sapSalesCode;
+  final String? sapSalesName;
   final String aktifFrom;
   final String? aktifTo;
   final bool isEligibleKonsumsi;
@@ -20,6 +22,8 @@ class UserModel {
     this.email,
     required this.roleId,
     this.positionId,
+    this.sapSalesCode,
+    this.sapSalesName,
     required this.aktifFrom,
     this.aktifTo,
     required this.isEligibleKonsumsi,
@@ -49,6 +53,8 @@ class UserModel {
       email: json['email'],
       roleId: json['role_id'] is int ? json['role_id'] : int.tryParse(json['role_id'].toString()) ?? 0,
       positionId: json['position_id'] != null ? int.tryParse(json['position_id'].toString()) : null,
+      sapSalesCode: json['sap_sales_code'] != null ? int.tryParse(json['sap_sales_code'].toString()) : null,
+      sapSalesName: json['sap_sales_name']?.toString(),
       aktifFrom: _formatDate(json['aktif_from']),
       aktifTo: json['aktif_to'] != null && json['aktif_to'].toString().isNotEmpty
           ? _formatDate(json['aktif_to'])
@@ -69,6 +75,8 @@ class UserModel {
       'email': email,
       'role_id': roleId,
       'position_id': positionId,
+      'sap_sales_code': sapSalesCode,
+      'sap_sales_name': sapSalesName,
       'aktif_from': aktifFrom,
       'aktif_to': aktifTo,
       'is_eligible_konsumsi': isEligibleKonsumsi,

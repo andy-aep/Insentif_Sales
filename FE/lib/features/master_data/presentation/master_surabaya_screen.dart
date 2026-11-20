@@ -11,6 +11,7 @@ import '../../../data/models/master_model.dart';
 import '../../users_management/providers/user_management_provider.dart';
 import '../providers/master_data_provider.dart';
 import '../providers/sales_assignment_provider.dart';
+import 'widgets/distributor_assignment_hierarchy_view.dart';
 
 class MasterSurabayaScreen extends ConsumerStatefulWidget {
   const MasterSurabayaScreen({super.key});
@@ -23,15 +24,22 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
   late TabController _tabController;
   int _activeTabIndex = 0;
 
-  // Filter & Search state for Distributor tab
+  // Filter, Search & Pagination state for Distributor tab
   final _searchDistributorCtrl = TextEditingController();
   String _searchDistributorQuery = '';
   String _filterPosition = 'ALL'; // 'ALL', 'NSM', 'LSM', 'ASM', 'SPV'
+  String _filterPeriod = 'ALL';
+  int _distributorPage = 1;
+  int _distributorPerPage = 20;
+
+  // Filter & Search state for Industri tab
+  final _searchIndustriCtrl = TextEditingController();
+  String _searchIndustriQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging && _tabController.index != _activeTabIndex) {
         setState(() => _activeTabIndex = _tabController.index);
@@ -56,6 +64,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
   void dispose() {
     _tabController.dispose();
     _searchDistributorCtrl.dispose();
+    _searchIndustriCtrl.dispose();
     super.dispose();
   }
 
@@ -1125,7 +1134,10 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
   void _showAssignSurabayaDialog() {
     final colors = context.colors;
     final userState = ref.read(userManagementProvider);
-    final coordinators = userState.users.where((u) => u.isEligibleSurabaya || u.position?.code == 'COORD').toList();
+    final coordinators = userState.users.where((u) {
+      final code = (u.position?.code ?? '').toUpperCase();
+      return u.isEligibleSurabaya || code == 'ASC' || code == 'COORD';
+    }).toList();
     final allSales = userState.users;
 
     if (allSales.isEmpty) return;
@@ -1195,7 +1207,8 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                     decoration: const InputDecoration(labelText: 'Tipe Penugasan Khusus'),
                     items: const [
                       DropdownMenuItem(value: 'Taking Order', child: Text('Sales Taking Order (TO)')),
-                      DropdownMenuItem(value: 'Canvasing', child: Text('Sales Canvasing (Ujung Tombak)')),
+                      DropdownMenuItem(value: 'Sales Motoris', child: Text('Sales Motoris (SM)')),
+                      DropdownMenuItem(value: 'Canvasing', child: Text('Sales Canvasing')),
                     ],
                     onChanged: (val) {
                       if (val != null) setDialogState(() => selectedType = val);
@@ -1263,7 +1276,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                           border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.3)),
                         ),
                         child: const Text(
-                          'Konsumsi & Surabaya',
+                          'Konsumsi, Surabaya & Industri',
                           style: TextStyle(color: AppColors.primaryLight, fontSize: 11, fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -1271,7 +1284,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Manajemen penugasan Distributor untuk Sales Konsumsi (NSM, LSM, ASM, SPV) dan Tim Sales Surabaya',
+                    'Manajemen penugasan Sales Konsumsi (NSM, LSM, ASM, SPV), Tim Surabaya, & Customer Sales Industri (ASM, SPV, ASC)',
                     style: GoogleFonts.inter(fontSize: 13, color: context.colors.textMuted),
                   ),
                 ],
@@ -1299,7 +1312,33 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                           label: const Text('Assign Koordinator Surabaya', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
                           onPressed: _showAssignSurabayaDialog,
                         )
-                      : const SizedBox.shrink());
+                      : Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.success,
+                                side: const BorderSide(color: AppColors.success),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              icon: const Icon(LucideIcons.building, size: 15),
+                              label: const Text('Tambah Customer Industri', style: TextStyle(fontWeight: FontWeight.bold)),
+                              onPressed: () => _showIndustriCustomerDialog(),
+                            ),
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.success,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              icon: const Icon(LucideIcons.userPlus, size: 16, color: Colors.white),
+                              label: const Text('Assign Sales Industri', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              onPressed: () => _showAssignIndustriDialog(),
+                            ),
+                          ],
+                        ));
 
               if (isNarrow) {
                 return Column(
@@ -1351,7 +1390,9 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                   isScrollable: true,
                   onTap: (val) => setState(() => _activeTabIndex = val),
                   dividerColor: Colors.transparent,
-                  indicatorColor: _activeTabIndex == 0 ? AppColors.primaryLight : AppColors.warning,
+                  indicatorColor: _activeTabIndex == 0
+                      ? AppColors.primaryLight
+                      : (_activeTabIndex == 1 ? AppColors.warning : AppColors.success),
                   labelColor: context.colors.textPrimary,
                   unselectedLabelColor: context.colors.textMuted,
                   tabs: [
@@ -1373,11 +1414,47 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                         ],
                       ),
                     ),
+                    Tab(
+                      child: Row(
+                        children: [
+                          const Icon(LucideIcons.factory, size: 16),
+                          const SizedBox(width: 8),
+                          Text('Tim & Customer Industri (${assignmentState.industriAssignments.length})'),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
                 Divider(height: 1, color: context.colors.border),
                 const SizedBox(height: 16),
+
+                if (assignmentState.errorMessage != null)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.danger.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.danger.withValues(alpha: 0.35)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(LucideIcons.alertCircle, size: 18, color: AppColors.danger),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            assignmentState.errorMessage!,
+                            style: const TextStyle(color: AppColors.danger, fontSize: 12.5),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => ref.read(salesAssignmentProvider.notifier).fetchAllAssignments(force: true),
+                          child: const Text('Coba Lagi'),
+                        ),
+                      ],
+                    ),
+                  ),
 
                 if (assignmentState.isLoading)
                   const Padding(
@@ -1388,7 +1465,11 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                     ),
                   ),
 
-                if (assignmentState.isLoading && assignmentState.distributorAssignments.isEmpty && assignmentState.surabayaAssignments.isEmpty)
+                if (assignmentState.isLoading &&
+                    assignmentState.distributorAssignments.isEmpty &&
+                    assignmentState.surabayaAssignments.isEmpty &&
+                    assignmentState.industriAssignments.isEmpty &&
+                    assignmentState.industriCustomers.isEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 40),
                     child: Center(
@@ -1419,10 +1500,14 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
   Widget _buildActiveTabContent() {
     switch (_activeTabIndex) {
       case 0:
-        return _buildDistributorAssignmentTab();
+        return DistributorAssignmentHierarchyView(
+          legacyTableBuilder: _buildDistributorAssignmentTab,
+        );
       case 1:
-      default:
         return _buildSurabayaAssignmentTab();
+      case 2:
+      default:
+        return _buildIndustriAssignmentTab();
     }
   }
 
@@ -1433,13 +1518,39 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
     final assignmentState = ref.watch(salesAssignmentProvider);
     final rawList = assignmentState.distributorAssignments;
 
-    // Filter by position & query
+    // Precompute KPI counts, periods & O(1) NSM lookup map
+    int nsmCount = 0;
+    int lsmCount = 0;
+    int asmCount = 0;
+    int spvCount = 0;
+    final Set<String> periodSet = {};
+    final Map<int, SalesDistributorAssignmentModel> nsmAssignByUserId = {};
+
+    for (final i in rawList) {
+      final code = i.user?.position?.code.toUpperCase() ?? '';
+      if (code == 'NSM') {
+        nsmCount++;
+        nsmAssignByUserId.putIfAbsent(i.userId, () => i);
+      } else if (code == 'LSM') {
+        lsmCount++;
+      } else if (code == 'ASM') {
+        asmCount++;
+      } else if (code == 'SPV') {
+        spvCount++;
+      }
+      if (i.period.isNotEmpty) {
+        periodSet.add(i.period);
+      }
+    }
+
+    final periods = periodSet.toList()..sort((a, b) => b.compareTo(a));
+    final activePeriodFilter = (_filterPeriod != 'ALL' && !periods.contains(_filterPeriod)) ? 'ALL' : _filterPeriod;
+
+    // Filter by position, period & query
     final filteredList = rawList.where((item) {
       final posCode = item.user?.position?.code.toUpperCase() ?? '';
-      if (_filterPosition == 'NSM' && posCode != 'NSM') return false;
-      if (_filterPosition == 'LSM' && posCode != 'LSM') return false;
-      if (_filterPosition == 'ASM' && posCode != 'ASM') return false;
-      if (_filterPosition == 'SPV' && posCode != 'SPV') return false;
+      if (_filterPosition != 'ALL' && posCode != _filterPosition) return false;
+      if (activePeriodFilter != 'ALL' && item.period != activePeriodFilter) return false;
 
       if (_searchDistributorQuery.isNotEmpty) {
         final q = _searchDistributorQuery.toLowerCase();
@@ -1463,79 +1574,84 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
       return true;
     }).toList();
 
-    final nsmCount = rawList.where((i) => i.user?.position?.code.toUpperCase() == 'NSM').length;
-    final lsmCount = rawList.where((i) => i.user?.position?.code.toUpperCase() == 'LSM').length;
-    final asmCount = rawList.where((i) => i.user?.position?.code.toUpperCase() == 'ASM').length;
-    final spvCount = rawList.where((i) => i.user?.position?.code.toUpperCase() == 'SPV').length;
+    final totalRows = filteredList.length;
+    final totalPages = (totalRows / _distributorPerPage).ceil().clamp(1, 999999);
+    final currentPage = _distributorPage.clamp(1, totalPages);
+    final startIndex = (currentPage - 1) * _distributorPerPage;
+    final displayedList = filteredList.skip(startIndex).take(_distributorPerPage).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Summary KPI Banner
-        LayoutBuilder(
-          builder: (context, constraints) {
-            return Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _buildMiniKpiCard(
-                  title: 'Total Penugasan Konsumsi',
-                  value: '${rawList.length}',
-                  icon: LucideIcons.fileSpreadsheet,
-                  color: AppColors.primary,
-                ),
-                _buildMiniKpiCard(
-                  title: 'NSM (Nasional)',
-                  value: '$nsmCount Orang',
-                  icon: LucideIcons.globe,
-                  color: const Color(0xFFF47A60),
-                ),
-                _buildMiniKpiCard(
-                  title: 'LSM (Region)',
-                  value: '$lsmCount Orang',
-                  icon: LucideIcons.shieldCheck,
-                  color: const Color(0xFF24968B),
-                ),
-                _buildMiniKpiCard(
-                  title: 'ASM (Distributor)',
-                  value: '$asmCount Orang',
-                  icon: LucideIcons.crown,
-                  color: AppColors.primaryLight,
-                ),
-                _buildMiniKpiCard(
-                  title: 'SPV (Area)',
-                  value: '$spvCount Orang',
-                  icon: LucideIcons.target,
-                  color: AppColors.info,
-                ),
-              ],
-            );
-          },
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            _buildMiniKpiCard(
+              title: 'Total Penugasan Konsumsi',
+              value: '${rawList.length}',
+              icon: LucideIcons.fileSpreadsheet,
+              color: AppColors.primary,
+            ),
+            _buildMiniKpiCard(
+              title: 'NSM (Nasional)',
+              value: '$nsmCount Baris',
+              icon: LucideIcons.globe,
+              color: const Color(0xFFF47A60),
+            ),
+            _buildMiniKpiCard(
+              title: 'LSM (Region)',
+              value: '$lsmCount Baris',
+              icon: LucideIcons.shieldCheck,
+              color: const Color(0xFF24968B),
+            ),
+            _buildMiniKpiCard(
+              title: 'ASM (Distributor)',
+              value: '$asmCount Baris',
+              icon: LucideIcons.crown,
+              color: AppColors.primaryLight,
+            ),
+            _buildMiniKpiCard(
+              title: 'SPV (Area)',
+              value: '$spvCount Baris',
+              icon: LucideIcons.target,
+              color: AppColors.info,
+            ),
+          ],
         ),
         const SizedBox(height: 16),
 
         // Filter & Search Toolbar
-        Row(
+        Wrap(
+          spacing: 12,
+          runSpacing: 10,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Expanded(
+            SizedBox(
+              width: 340,
               child: TextField(
                 controller: _searchDistributorCtrl,
                 style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
                 decoration: InputDecoration(
-                  hintText: 'Cari Sales, Region, Distributor, Depo, atau Area...',
+                  hintText: 'Cari Sales, Region, Distributor, Depo, Area...',
                   hintStyle: TextStyle(color: context.colors.textMuted, fontSize: 13),
                   prefixIcon: const Icon(LucideIcons.search, size: 16),
+                  prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                   isDense: true,
                   filled: true,
                   fillColor: context.colors.bgElevated,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: context.colors.border)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 ),
-                onChanged: (val) => setState(() => _searchDistributorQuery = val.trim()),
+                onChanged: (val) => setState(() {
+                  _searchDistributorQuery = val.trim();
+                  _distributorPage = 1;
+                }),
               ),
             ),
-            const SizedBox(width: 12),
             Container(
+              width: 205,
               padding: const EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
                 color: context.colors.bgElevated,
@@ -1544,22 +1660,58 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
+                  isExpanded: true,
                   value: _filterPosition,
                   dropdownColor: context.colors.bgElevated,
                   style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
                   items: const [
-                    DropdownMenuItem(value: 'ALL', child: Text('Semua Posisi')),
-                    DropdownMenuItem(value: 'NSM', child: Text('Hanya NSM (Nasional)')),
-                    DropdownMenuItem(value: 'LSM', child: Text('Hanya LSM (Region)')),
-                    DropdownMenuItem(value: 'ASM', child: Text('Hanya ASM (Distributor)')),
-                    DropdownMenuItem(value: 'SPV', child: Text('Hanya SPV (Area)')),
+                    DropdownMenuItem(value: 'ALL', child: Text('Semua Posisi', overflow: TextOverflow.ellipsis)),
+                    DropdownMenuItem(value: 'NSM', child: Text('Hanya NSM (Nasional)', overflow: TextOverflow.ellipsis)),
+                    DropdownMenuItem(value: 'LSM', child: Text('Hanya LSM (Region)', overflow: TextOverflow.ellipsis)),
+                    DropdownMenuItem(value: 'ASM', child: Text('Hanya ASM (Distributor)', overflow: TextOverflow.ellipsis)),
+                    DropdownMenuItem(value: 'SPV', child: Text('Hanya SPV (Area)', overflow: TextOverflow.ellipsis)),
                   ],
                   onChanged: (val) {
-                    if (val != null) setState(() => _filterPosition = val);
+                    if (val != null) {
+                      setState(() {
+                        _filterPosition = val;
+                        _distributorPage = 1;
+                      });
+                    }
                   },
                 ),
               ),
             ),
+            if (periods.isNotEmpty)
+              Container(
+                width: 170,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: context.colors.bgElevated,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: context.colors.border),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    isExpanded: true,
+                    value: activePeriodFilter,
+                    dropdownColor: context.colors.bgElevated,
+                    style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
+                    items: [
+                      const DropdownMenuItem(value: 'ALL', child: Text('Semua Periode', overflow: TextOverflow.ellipsis)),
+                      ...periods.map((p) => DropdownMenuItem(value: p, child: Text('Periode $p', overflow: TextOverflow.ellipsis))),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() {
+                          _filterPeriod = val;
+                          _distributorPage = 1;
+                        });
+                      }
+                    },
+                  ),
+                ),
+              ),
           ],
         ),
         const SizedBox(height: 16),
@@ -1577,7 +1729,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
               ],
             ),
           )
-        else
+        else ...[
           ResponsiveTableCard(
             minWidth: 1040,
             child: DataTable(
@@ -1596,7 +1748,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                 DataColumn(label: Text('Status', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Aksi', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
               ],
-              rows: filteredList.map((item) {
+              rows: displayedList.map((item) {
                 final pos = item.user?.position?.code.toUpperCase() ?? '';
                 final isNsm = pos == 'NSM';
                 final isLsm = pos == 'LSM';
@@ -1668,7 +1820,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                               ? (item.nsm != null
                                   ? Builder(
                                       builder: (_) {
-                                        final nsmAssign = rawList.firstWhereOrNull((a) => a.userId == item.nsmId);
+                                        final nsmAssign = item.nsmId != null ? nsmAssignByUserId[item.nsmId!] : null;
                                         final territoryNote = (nsmAssign?.notes != null && nsmAssign!.notes!.isNotEmpty && nsmAssign.notes != 'Nasional Penuh')
                                             ? ' [${nsmAssign.notes}]'
                                             : '';
@@ -1842,6 +1994,99 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
               }).toList(),
             ),
           ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: context.colors.bgElevated,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: context.colors.border),
+            ),
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                Text(
+                  'Menampilkan ${startIndex + 1} - ${startIndex + displayedList.length} dari $totalRows penugasan',
+                  style: TextStyle(fontSize: 12.5, color: context.colors.textMuted, fontWeight: FontWeight.w500),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Baris: ', style: TextStyle(fontSize: 12, color: context.colors.textMuted)),
+                    DropdownButton<int>(
+                      value: _distributorPerPage,
+                      isDense: true,
+                      underline: const SizedBox.shrink(),
+                      dropdownColor: context.colors.bgCard,
+                      style: TextStyle(fontSize: 12, color: context.colors.textPrimary, fontWeight: FontWeight.w600),
+                      items: const [
+                        DropdownMenuItem(value: 20, child: Text('20')),
+                        DropdownMenuItem(value: 50, child: Text('50')),
+                        DropdownMenuItem(value: 100, child: Text('100')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            _distributorPerPage = val;
+                            _distributorPage = 1;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 12),
+                    IconButton(
+                      icon: const Icon(LucideIcons.chevronsLeft, size: 15),
+                      tooltip: 'Halaman Pertama',
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(),
+                      onPressed: currentPage > 1 ? () => setState(() => _distributorPage = 1) : null,
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(LucideIcons.chevronLeft, size: 15),
+                      tooltip: 'Halaman Sebelumnya',
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(),
+                      onPressed: currentPage > 1 ? () => setState(() => _distributorPage = currentPage - 1) : null,
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: context.colors.bgCard,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: context.colors.border),
+                      ),
+                      child: Text(
+                        '$currentPage / $totalPages',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(LucideIcons.chevronRight, size: 15),
+                      tooltip: 'Halaman Selanjutnya',
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(),
+                      onPressed: currentPage < totalPages ? () => setState(() => _distributorPage = currentPage + 1) : null,
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(LucideIcons.chevronsRight, size: 15),
+                      tooltip: 'Halaman Terakhir',
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(),
+                      onPressed: currentPage < totalPages ? () => setState(() => _distributorPage = totalPages) : null,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -1978,6 +2223,663 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  // =========================================================================
+  // TAB 2: TIM SALES & CUSTOMER INDUSTRI (ASM / SPV / ASC -> CUSTOMER)
+  // =========================================================================
+  Widget _buildIndustriAssignmentTab() {
+    final assignmentState = ref.watch(salesAssignmentProvider);
+    final assignments = assignmentState.industriAssignments;
+    final customers = assignmentState.industriCustomers;
+
+    final q = _searchIndustriQuery.trim().toLowerCase();
+    final filteredAssignments = assignments.where((a) {
+      if (q.isEmpty) return true;
+      final salesName = (a.user?.name ?? '').toLowerCase();
+      final posCode = (a.user?.position?.code ?? '').toLowerCase();
+      final custName = (a.customer?.customerName ?? '').toLowerCase();
+      final custCode = (a.customer?.customerCode ?? '').toLowerCase();
+      return salesName.contains(q) || posCode.contains(q) || custName.contains(q) || custCode.contains(q);
+    }).toList();
+
+    final filteredCustomers = customers.where((c) {
+      if (q.isEmpty) return true;
+      return c.customerName.toLowerCase().contains(q) ||
+          c.customerCode.toLowerCase().contains(q) ||
+          (c.city ?? '').toLowerCase().contains(q);
+    }).toList();
+
+    final newCustCount = customers.where((c) => c.customerType.toUpperCase() == 'NEW').length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            _buildMiniKpiCard(
+              title: 'Relasi Sales - Customer',
+              value: '${assignments.length}',
+              icon: LucideIcons.link,
+              color: AppColors.success,
+            ),
+            _buildMiniKpiCard(
+              title: 'Master Customer Industri',
+              value: '${customers.length} Perusahaan',
+              icon: LucideIcons.factory,
+              color: AppColors.primary,
+            ),
+            _buildMiniKpiCard(
+              title: 'Customer Baru (Potensi NOO)',
+              value: '$newCustCount Outlet',
+              icon: LucideIcons.sparkles,
+              color: AppColors.warning,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _searchIndustriCtrl,
+          onChanged: (v) => setState(() => _searchIndustriQuery = v),
+          style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
+          decoration: InputDecoration(
+            hintText: 'Cari nama sales (ASM/SPV/ASC), kode atau nama customer industri...',
+            prefixIcon: const Icon(LucideIcons.search, size: 16),
+            prefixIconConstraints: const BoxConstraints(minWidth: 36, maxWidth: 36, minHeight: 36),
+            suffixIcon: _searchIndustriQuery.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(LucideIcons.x, size: 14),
+                    onPressed: () {
+                      _searchIndustriCtrl.clear();
+                      setState(() => _searchIndustriQuery = '');
+                    },
+                  )
+                : null,
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        Text(
+          '1. Penugasan Sales Industri ke Customer (${filteredAssignments.length})',
+          style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+        ),
+        const SizedBox(height: 10),
+        if (filteredAssignments.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(28),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: context.colors.bgElevated,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: context.colors.border),
+            ),
+            child: Text(
+              'Belum ada penugasan Sales -> Customer Industri. Klik "Assign Sales Industri" untuk menghubungkan sales (ASM/SPV/ASC) dengan customer.',
+              style: TextStyle(color: context.colors.textMuted, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+          )
+        else
+          ResponsiveTableCard(
+            minWidth: 820,
+            child: DataTable(
+              headingRowColor: WidgetStateProperty.all(context.colors.bgTableHead),
+              columns: [
+                DataColumn(label: Text('Nama Sales Industri', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Posisi', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Customer Industri', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Tipe Customer', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Periode', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Aksi', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+              ],
+              rows: filteredAssignments.map((item) {
+                final posCode = item.user?.position?.code ?? '-';
+                final isNewCust = (item.customer?.customerType ?? 'NEW').toUpperCase() == 'NEW';
+                return DataRow(
+                  cells: [
+                    DataCell(Text(item.user?.name ?? 'User #${item.userId}', style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.bold))),
+                    DataCell(
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(6)),
+                        child: Text(posCode, style: const TextStyle(color: AppColors.primaryLight, fontSize: 11, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    DataCell(
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(item.customer?.customerName ?? '-', style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.w600)),
+                          Text(item.customer?.customerCode ?? '-', style: TextStyle(color: context.colors.textMuted, fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                    DataCell(
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: (isNewCust ? AppColors.success : AppColors.info).withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          item.customer?.customerType ?? 'NEW',
+                          style: TextStyle(color: isNewCust ? AppColors.success : AppColors.info, fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    DataCell(Text(item.period != null && item.period!.isNotEmpty ? item.period! : 'Semua Periode', style: TextStyle(color: context.colors.textMuted, fontSize: 12))),
+                    DataCell(
+                      IconButton(
+                        icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
+                        tooltip: 'Hapus Penugasan',
+                        onPressed: () async {
+                          final ok = await showConfirmDeleteDialog(
+                            context: context,
+                            title: 'Hapus Penugasan Industri',
+                            message: 'Hapus penugasan "${item.user?.name ?? '-'}" terhadap customer "${item.customer?.customerName ?? '-'}"?',
+                          );
+                          if (ok == true) {
+                            await ref.read(salesAssignmentProvider.notifier).deleteIndustriAssignment(item.id);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+
+        const SizedBox(height: 24),
+        Text(
+          '2. Master Daftar Customer Industri (${filteredCustomers.length})',
+          style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+        ),
+        const SizedBox(height: 10),
+        if (filteredCustomers.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(24),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: context.colors.bgElevated,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: context.colors.border),
+            ),
+            child: Text('Belum ada data Master Customer Industri.', style: TextStyle(color: context.colors.textMuted, fontSize: 13)),
+          )
+        else
+          ResponsiveTableCard(
+            minWidth: 820,
+            child: DataTable(
+              headingRowColor: WidgetStateProperty.all(context.colors.bgTableHead),
+              columns: [
+                DataColumn(label: Text('Kode', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Nama Perusahaan', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Kota', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Tipe', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('PIC Sales', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Aksi', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
+              ],
+              rows: filteredCustomers.map((c) {
+                final picNames = c.assignments.map((a) => a.user?.name).whereType<String>().join(', ');
+                final isNew = c.customerType.toUpperCase() == 'NEW';
+                return DataRow(
+                  cells: [
+                    DataCell(Text(c.customerCode, style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.w600))),
+                    DataCell(Text(c.customerName, style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.bold))),
+                    DataCell(Text(c.city ?? '-', style: TextStyle(color: context.colors.textMuted))),
+                    DataCell(
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: (isNew ? AppColors.success : AppColors.info).withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(c.customerType, style: TextStyle(color: isNew ? AppColors.success : AppColors.info, fontSize: 11, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    DataCell(Text(picNames.isNotEmpty ? picNames : 'Belum Di-assign', style: TextStyle(color: picNames.isNotEmpty ? context.colors.textPrimary : AppColors.warning, fontSize: 12))),
+                    DataCell(
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(LucideIcons.userPlus, size: 15, color: AppColors.success),
+                            tooltip: 'Assign Sales ke Customer Ini',
+                            onPressed: () => _showAssignIndustriDialog(preselectedCustomer: c),
+                          ),
+                          IconButton(
+                            icon: const Icon(LucideIcons.pencil, size: 15, color: AppColors.info),
+                            tooltip: 'Edit Customer',
+                            onPressed: () => _showIndustriCustomerDialog(customer: c),
+                          ),
+                          IconButton(
+                            icon: const Icon(LucideIcons.trash2, size: 15, color: AppColors.danger),
+                            tooltip: 'Hapus Customer',
+                            onPressed: () async {
+                              final ok = await showConfirmDeleteDialog(
+                                context: context,
+                                title: 'Hapus Customer Industri',
+                                message: 'Hapus customer "${c.customerName}" beserta penugasannya?',
+                              );
+                              if (ok == true) {
+                                await ref.read(salesAssignmentProvider.notifier).deleteIndustriCustomer(c.id);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _showIndustriCustomerDialog({IndustriCustomerModel? customer}) {
+    final isEdit = customer != null;
+    final codeCtrl = TextEditingController(text: customer?.customerCode ?? '');
+    final nameCtrl = TextEditingController(text: customer?.customerName ?? '');
+    final cityCtrl = TextEditingController(text: customer?.city ?? '');
+    final firstPeriodCtrl = TextEditingController(text: customer?.firstTransactionPeriod ?? '');
+    String customerType = customer?.customerType ?? 'NEW';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDState) => AlertDialog(
+          backgroundColor: context.colors.bgDialog,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: context.colors.border)),
+          title: Row(
+            children: [
+              Icon(LucideIcons.factory, color: AppColors.success, size: 20),
+              const SizedBox(width: 8),
+              Text(isEdit ? 'Edit Customer Industri' : 'Tambah Customer Industri', style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
+            ],
+          ),
+          content: SizedBox(
+            width: 440,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: codeCtrl,
+                    style: TextStyle(color: context.colors.textPrimary),
+                    decoration: const InputDecoration(labelText: 'Kode Customer (Kosongkan = Auto-generate)'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: nameCtrl,
+                    style: TextStyle(color: context.colors.textPrimary),
+                    decoration: const InputDecoration(labelText: 'Nama Customer / Pabrik *'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: cityCtrl,
+                    style: TextStyle(color: context.colors.textPrimary),
+                    decoration: const InputDecoration(labelText: 'Kota / Lokasi (Opsional)'),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: customerType,
+                    isExpanded: true,
+                    dropdownColor: context.colors.bgElevated,
+                    style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
+                    decoration: const InputDecoration(labelText: 'Status Customer *'),
+                    items: const [
+                      DropdownMenuItem(value: 'NEW', child: Text('NEW (Berpotensi NOO pada pembelian pertama)', overflow: TextOverflow.ellipsis)),
+                      DropdownMenuItem(value: 'EXISTING', child: Text('EXISTING (Pelanggan lama, bukan NOO)', overflow: TextOverflow.ellipsis)),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) setDState(() => customerType = v);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: firstPeriodCtrl,
+                    style: TextStyle(color: context.colors.textPrimary),
+                    decoration: const InputDecoration(labelText: 'Periode Transaksi Pertama Sebelumnya (YYYYMM, Opsional)'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: TextStyle(color: context.colors.textMuted))),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
+              onPressed: () async {
+                if (nameCtrl.text.trim().isEmpty) return;
+                Navigator.pop(ctx);
+                await ref.read(salesAssignmentProvider.notifier).saveIndustriCustomer(
+                  id: customer?.id,
+                  customerCode: codeCtrl.text,
+                  customerName: nameCtrl.text,
+                  city: cityCtrl.text,
+                  customerType: customerType,
+                  firstTransactionPeriod: firstPeriodCtrl.text,
+                );
+              },
+              child: Text(isEdit ? 'Simpan Perubahan' : 'Simpan Customer'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAssignIndustriDialog({IndustriCustomerModel? preselectedCustomer}) {
+    final allUsers = ref.read(userManagementProvider).users;
+    final eligibleIndustriUsers = allUsers.where((u) {
+      final code = u.position?.code.toUpperCase() ?? '';
+      return u.isEligibleIndustri && ['ASM', 'SPV', 'ASC'].contains(code);
+    }).toList();
+
+    final assignState = ref.read(salesAssignmentProvider);
+    if (assignState.sapIndustriCustomers.isEmpty && !assignState.isLoadingSapCustomers) {
+      ref.read(salesAssignmentProvider.notifier).fetchSapIndustriCustomers();
+    }
+
+    int? selectedUserId = eligibleIndustriUsers.isNotEmpty ? eligibleIndustriUsers.first.id : null;
+    int? selectedCustomerId = preselectedCustomer?.id;
+    SapIndustriCustomerModel? selectedSapCustomer;
+    String selectedCustomerType = 'EXISTING';
+    String sapSearchQuery = '';
+    final sapSearchCtrl = TextEditingController();
+    final periodCtrl = TextEditingController();
+    final notesCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDState) => AlertDialog(
+          backgroundColor: context.colors.bgDialog,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: context.colors.border)),
+          title: Row(
+            children: [
+              const Icon(LucideIcons.userPlus, color: AppColors.success, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Assign Sales Industri ke Customer',
+                  style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 500,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (eligibleIndustriUsers.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(color: AppColors.warning.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(8)),
+                      child: const Text(
+                        'Belum ada user berposisi ASM/SPV/ASC dengan status Is Eligible Industri = Aktif. Aktifkan di Manajemen User terlebih dahulu.',
+                        style: TextStyle(color: AppColors.warning, fontSize: 12),
+                      ),
+                    ),
+                  DropdownButtonFormField<int>(
+                    initialValue: selectedUserId,
+                    isExpanded: true,
+                    dropdownColor: context.colors.bgElevated,
+                    style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
+                    decoration: const InputDecoration(
+                      labelText: 'Sales Industri (ASM / SPV / ASC) *',
+                      prefixIcon: Icon(LucideIcons.userCheck, size: 16),
+                      prefixIconConstraints: BoxConstraints(minWidth: 36, maxWidth: 36, minHeight: 36),
+                    ),
+                    items: eligibleIndustriUsers
+                        .map((u) => DropdownMenuItem(
+                              value: u.id,
+                              child: Text('${u.name} (${u.position?.code ?? "-"})', overflow: TextOverflow.ellipsis),
+                            ))
+                        .toList(),
+                    onChanged: (v) => setDState(() => selectedUserId = v),
+                  ),
+                  const SizedBox(height: 14),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final saState = ref.watch(salesAssignmentProvider);
+                      final sapList = saState.sapIndustriCustomers;
+                      final q = sapSearchQuery.trim().toLowerCase();
+                      final filteredSap = q.isEmpty
+                          ? sapList.take(50).toList()
+                          : sapList
+                              .where((c) =>
+                                  c.cardCode.toLowerCase().contains(q) ||
+                                  c.cardName.toLowerCase().contains(q) ||
+                                  c.city.toLowerCase().contains(q))
+                              .take(50)
+                              .toList();
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Customer Industri SAP (ListCustIndustri) *',
+                                  style: TextStyle(
+                                    color: context.colors.textSecondary,
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: 'Muat ulang Customer Industri dari SAP',
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                onPressed: saState.isLoadingSapCustomers
+                                    ? null
+                                    : () => ref.read(salesAssignmentProvider.notifier).fetchSapIndustriCustomers(force: true),
+                                icon: saState.isLoadingSapCustomers
+                                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                                    : const Icon(LucideIcons.refreshCw, size: 15, color: AppColors.primary),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          if (selectedSapCustomer != null || selectedCustomerId != null) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              margin: const EdgeInsets.only(bottom: 8),
+                              decoration: BoxDecoration(
+                                color: AppColors.success.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppColors.success.withValues(alpha: 0.35)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(LucideIcons.checkCircle2, size: 16, color: AppColors.success),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      selectedSapCustomer != null
+                                          ? '[${selectedSapCustomer!.cardCode}] ${selectedSapCustomer!.cardName}${selectedSapCustomer!.city.isNotEmpty ? " (${selectedSapCustomer!.city})" : ""}'
+                                          : '${preselectedCustomer?.customerCode ?? ""} - ${preselectedCustomer?.customerName ?? ""}',
+                                      style: TextStyle(
+                                        color: context.colors.textPrimary,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12.5,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(LucideIcons.x, size: 15),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    onPressed: () => setDState(() {
+                                      selectedSapCustomer = null;
+                                      selectedCustomerId = null;
+                                    }),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          TextField(
+                            controller: sapSearchCtrl,
+                            style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
+                            decoration: InputDecoration(
+                              hintText: saState.isLoadingSapCustomers
+                                  ? 'Memuat data dari SAP...'
+                                  : 'Cari kode / nama / depo (${sapList.length} customer SAP)...',
+                              prefixIcon: const Icon(LucideIcons.search, size: 16),
+                              prefixIconConstraints: const BoxConstraints(minWidth: 36, maxWidth: 36, minHeight: 36),
+                              suffixIcon: sapSearchQuery.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(LucideIcons.x, size: 15),
+                                      onPressed: () {
+                                        sapSearchCtrl.clear();
+                                        setDState(() => sapSearchQuery = '');
+                                      },
+                                    )
+                                  : null,
+                            ),
+                            onChanged: (v) => setDState(() => sapSearchQuery = v),
+                          ),
+                          if (saState.sapCustomersError != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                'SAP Error: ${saState.sapCustomersError}',
+                                style: const TextStyle(color: AppColors.danger, fontSize: 11.5),
+                              ),
+                            ),
+                          const SizedBox(height: 6),
+                          Container(
+                            height: 170,
+                            decoration: BoxDecoration(
+                              color: context.colors.bgSubtle,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: context.colors.border),
+                            ),
+                            child: saState.isLoadingSapCustomers && sapList.isEmpty
+                                ? const Center(child: CircularProgressIndicator())
+                                : filteredSap.isEmpty
+                                    ? Center(
+                                        child: Text(
+                                          'Tidak ada customer SAP cocok',
+                                          style: TextStyle(color: context.colors.textMuted, fontSize: 12),
+                                        ),
+                                      )
+                                    : ListView.separated(
+                                        itemCount: filteredSap.length,
+                                        separatorBuilder: (_, __) => Divider(height: 1, color: context.colors.border),
+                                        itemBuilder: (context, idx) {
+                                          final c = filteredSap[idx];
+                                          final isSelected = selectedSapCustomer?.cardCode == c.cardCode;
+                                          return ListTile(
+                                            dense: true,
+                                            selected: isSelected,
+                                            selectedTileColor: AppColors.success.withValues(alpha: 0.12),
+                                            title: Text(
+                                              c.cardName,
+                                              style: TextStyle(
+                                                color: context.colors.textPrimary,
+                                                fontSize: 12.5,
+                                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            subtitle: Text(
+                                              '${c.cardCode}${c.city.isNotEmpty ? " • ${c.city}" : ""}',
+                                              style: TextStyle(color: context.colors.textMuted, fontSize: 11),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            trailing: isSelected
+                                                ? const Icon(LucideIcons.check, size: 16, color: AppColors.success)
+                                                : null,
+                                            onTap: () => setDState(() {
+                                              selectedSapCustomer = c;
+                                              selectedCustomerId = null;
+                                            }),
+                                          );
+                                        },
+                                      ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  if (selectedSapCustomer != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: DropdownButtonFormField<String>(
+                        initialValue: selectedCustomerType,
+                        isExpanded: true,
+                        dropdownColor: context.colors.bgElevated,
+                        style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
+                        decoration: const InputDecoration(
+                          labelText: 'Tipe Customer Industri',
+                          prefixIcon: Icon(LucideIcons.tag, size: 16),
+                          prefixIconConstraints: BoxConstraints(minWidth: 36, maxWidth: 36, minHeight: 36),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'EXISTING', child: Text('EXISTING (Pelanggan Lama)', overflow: TextOverflow.ellipsis)),
+                          DropdownMenuItem(value: 'NEW', child: Text('NEW (Potensi NOO)', overflow: TextOverflow.ellipsis)),
+                        ],
+                        onChanged: (v) {
+                          if (v != null) setDState(() => selectedCustomerType = v);
+                        },
+                      ),
+                    ),
+                  TextField(
+                    controller: periodCtrl,
+                    style: TextStyle(color: context.colors.textPrimary),
+                    decoration: const InputDecoration(labelText: 'Periode (YYYYMM, kosongkan = berlaku semua periode)'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: notesCtrl,
+                    style: TextStyle(color: context.colors.textPrimary),
+                    decoration: const InputDecoration(labelText: 'Catatan Penugasan (Opsional)'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: TextStyle(color: context.colors.textMuted))),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
+              onPressed: (selectedUserId == null || (selectedCustomerId == null && selectedSapCustomer == null))
+                  ? null
+                  : () async {
+                      Navigator.pop(ctx);
+                      await ref.read(salesAssignmentProvider.notifier).saveIndustriAssignment(
+                        userId: selectedUserId!,
+                        industriCustomerId: selectedCustomerId,
+                        sapCustomer: selectedSapCustomer,
+                        customerType: selectedCustomerType,
+                        period: periodCtrl.text,
+                        notes: notesCtrl.text,
+                      );
+                    },
+              child: const Text('Simpan Penugasan'),
+            ),
+          ],
+        ),
       ),
     );
   }

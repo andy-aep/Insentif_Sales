@@ -21,6 +21,8 @@ class UploadBatch extends Model
         'entity_type',
         'file_name',
         'file_path',
+        'period',
+        'distributor_id',
         'total_rows',
         'success_rows',
         'failed_rows',
@@ -42,6 +44,11 @@ class UploadBatch extends Model
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
+    }
+
+    public function distributor(): BelongsTo
+    {
+        return $this->belongsTo(Distributor::class, 'distributor_id');
     }
 
     public function sellinDistributors(): HasMany

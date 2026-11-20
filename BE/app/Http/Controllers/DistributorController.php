@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Area;
 use App\Models\Depo;
 use App\Models\Distributor;
+use App\Models\SellinDistributor;
+use App\Models\SelloutDistributor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -32,10 +34,39 @@ class DistributorController extends Controller
         return response()->json($query->latest('id')->limit($limit)->get());
     }
 
+    /**
+     * Generate sequential code with prefix (e.g. DST0001, AR00001) safely without colliding with existing records.
+     */
+    public static function nextSequentialCode(string $modelClass, string $prefix, int $padLength): string
+    {
+        $codes = $modelClass::query()
+            ->whereRaw('LOWER(code) LIKE ?', [strtolower($prefix) . '%'])
+            ->pluck('code');
+
+        $maxNum = 0;
+        $pattern = '/^' . preg_quote($prefix, '/') . '(\d+)$/i';
+        foreach ($codes as $c) {
+            if (preg_match($pattern, trim((string) $c), $m)) {
+                $num = (int) $m[1];
+                if ($num > $maxNum) {
+                    $maxNum = $num;
+                }
+            }
+        }
+
+        $next = $maxNum + 1;
+        do {
+            $candidate = $prefix . str_pad((string) $next, $padLength, '0', STR_PAD_LEFT);
+            $next++;
+        } while ($modelClass::where('code', $candidate)->exists());
+
+        return $candidate;
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'code' => 'required|string|max:50|unique:distributors,code',
+            'code' => 'nullable|string|max:50|unique:distributors,code',
             'name' => 'required|string|max:150',
             'region_id' => 'nullable|exists:regions,id',
             'depos' => 'nullable|array',
@@ -47,8 +78,12 @@ class DistributorController extends Controller
         ]);
 
         return DB::transaction(function () use ($validated) {
+            $distCode = !empty($validated['code'])
+                ? strtoupper(trim($validated['code']))
+                : self::nextSequentialCode(Distributor::class, 'DST', 4);
+
             $distributor = Distributor::create([
-                'code' => $validated['code'],
+                'code' => $distCode,
                 'name' => $validated['name'],
                 'region_id' => $validated['region_id'] ?? null,
             ]);
@@ -73,8 +108,8 @@ class DistributorController extends Controller
                     if (!empty($depoData['areas'])) {
                         foreach ($depoData['areas'] as $aIdx => $areaData) {
                             $areaCode = !empty($areaData['code'])
-                                ? trim($areaData['code'])
-                                : $depo->code . '-AR' . ($aIdx + 1);
+                                ? strtoupper(trim($areaData['code']))
+                                : self::nextSequentialCode(Area::class, 'AR', 5);
 
                             $baseAreaCode = $areaCode;
                             $aCounter = 1;
@@ -164,13 +199,15 @@ class DistributorController extends Controller
                             foreach ($depoData['areas'] as $aIdx => $areaData) {
                                 $areaId = $areaData['id'] ?? null;
                                 $areaName = $areaData['name'] ?? '';
-                                $areaCode = !empty($areaData['code']) ? trim($areaData['code']) : $depo->code . '-AR' . ($aIdx + 1);
+                                $areaCode = !empty($areaData['code'])
+                                    ? strtoupper(trim($areaData['code']))
+                                    : ($areaId ? '' : self::nextSequentialCode(Area::class, 'AR', 5));
 
                                 if ($areaId) {
                                     $area = Area::where('id', $areaId)->where('depo_id', $depo->id)->first();
                                     if ($area) {
                                         $area->update([
-                                            'code' => $areaCode,
+                                            'code' => $areaCode !== '' ? $areaCode : $area->code,
                                             'name' => $areaName,
                                         ]);
                                     }
@@ -206,7 +243,16 @@ class DistributorController extends Controller
 
     public function destroy(Distributor $distributor): JsonResponse
     {
-        $distributor->delete();
+        $sellinCount = SellinDistributor::where('distributor_id', $distributor->id)->count();
+        $selloutCount = SelloutDistributor::where('distributor_id', $distributor->id)->count();
+
+        if ($sellinCount > 0 || $selloutCount > 0) {
+            return response()->json([
+                'message' => "Distributor \"{$distributor->name}\" tidak dapat dihapus karena masih memiliki {$sellinCount} transaksi Sell-In dan {$selloutCount} transaksi Sell-Out. Hapus atau rollback data transaksi terkait terlebih dahulu.",
+            ], 422);
+        }
+
+        DB::transaction(fn () => $distributor->delete());
 
         return response()->json(['message' => 'Distributor berhasil dihapus']);
     }

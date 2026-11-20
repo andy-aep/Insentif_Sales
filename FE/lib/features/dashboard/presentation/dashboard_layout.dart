@@ -106,21 +106,38 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
   ];
 
   bool _isItemAllowed(NavItemData item, dynamic role) {
-    if (role == null) return true;
-    final menuPermissions = role.menuPermissions;
-    if (menuPermissions == null || menuPermissions.isEmpty) return true;
+    if (role == null) return false;
+    final roleName = (role.name ?? '').toString().trim().toLowerCase();
+    if (roleName == 'administrator' || roleName == 'superadmin' || roleName == 'admin') {
+      return true;
+    }
 
+    final menuPermissions = role.menuPermissions as List?;
+    if (menuPermissions == null || menuPermissions.isEmpty) {
+      return item.route == '/dashboard';
+    }
+
+    final routeLower = item.route.toLowerCase();
     for (final perm in menuPermissions) {
-      final menuRoute = perm.menu?.route?.toLowerCase() ?? '';
-      final menuName = perm.menu?.name?.toLowerCase() ?? '';
-      if (menuRoute.isNotEmpty && item.route.toLowerCase().contains(menuRoute)) {
-        return perm.canView;
+      final menuRoute = (perm.menu?.route ?? '').toString().trim().toLowerCase();
+      final menuName = (perm.menu?.name ?? '').toString().trim().toLowerCase();
+      if (menuRoute.isNotEmpty) {
+        if (routeLower == menuRoute) {
+          return perm.canView == true;
+        }
+        // Cocokkan prefix group menu: /master/* -> /master, /incentives/* -> /incentives/calculate
+        if (menuRoute == '/master' && routeLower.startsWith('/master')) {
+          return perm.canView == true;
+        }
+        if (menuRoute.startsWith('/incentives') && routeLower.startsWith('/incentives')) {
+          return perm.canView == true;
+        }
       }
       if (menuName.isNotEmpty && item.title.toLowerCase().contains(menuName)) {
-        return perm.canView;
+        return perm.canView == true;
       }
     }
-    return true;
+    return false;
   }
 
   void _showQuickJumpDialog(List<NavItemData> items) {
@@ -775,35 +792,6 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                           ),
 
                         const Spacer(),
-
-                        // Active Period Soft Pill
-                        if (screenWidth >= 860) ...[
-                          Container(
-                            height: 42,
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            decoration: BoxDecoration(
-                              color: context.colors.bgCard,
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(color: context.colors.border.withValues(alpha: 0.8)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(LucideIcons.calendar, size: 15, color: AppColors.primary),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Periode 202610',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 12.5,
-                                    color: context.colors.textPrimary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                        ],
 
                         // Quick Upload Circle Button
                         _buildTopCircleButton(

@@ -17,6 +17,7 @@ class TargetHeader extends Model
         'sales_type',
         'type',
         'bobot',
+        'min_achievement_pct',
         'aktif',
         'aktif_from',
         'aktif_to',
@@ -26,6 +27,7 @@ class TargetHeader extends Model
     {
         return [
             'bobot' => 'decimal:2',
+            'min_achievement_pct' => 'decimal:2',
             'aktif' => 'boolean',
         ];
     }

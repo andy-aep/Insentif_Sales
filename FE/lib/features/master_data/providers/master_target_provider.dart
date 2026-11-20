@@ -162,7 +162,7 @@ class MasterTargetNotifier extends StateNotifier<MasterTargetState> {
     bool clearSearch = false,
     bool force = false,
   }) async {
-    if (state.isLoading) return;
+    if (!force && state.isLoading) return;
 
     final targetLevel = clearLevel ? null : (level ?? state.activeLevel);
     final targetKategori = clearKategori ? null : (kategori ?? state.activeKategori);
@@ -328,6 +328,101 @@ class MasterTargetNotifier extends StateNotifier<MasterTargetState> {
       state = state.copyWith(
         isLoading: false,
         errorMessage: e.response?.data?['message'] ?? 'Gagal menyimpan Master Target',
+      );
+      return false;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      return false;
+    }
+  }
+
+  Future<bool> saveDistributorBundle({
+    required int distributorId,
+    required int depoId,
+    required int brandId,
+    required String period,
+    bool isFullYear = false,
+    String? year,
+    int? asmUserId,
+    double? depoSellInQuota,
+    required List<Map<String, dynamic>> areaTargets,
+  }) async {
+    state = state.copyWith(isLoading: true, clearError: true, clearSuccess: true);
+    try {
+      int savedDepoCount = 0;
+      int savedAreaCount = 0;
+
+      // 1. Simpan Target Depo (SELL_IN) jika diisi > 0
+      if (depoSellInQuota != null && depoSellInQuota > 0) {
+        final depoPayload = <String, dynamic>{
+          'kategori_skema': 'KONSUMSI',
+          'level': 'DEPO',
+          'metrik_target': 'SELL_IN',
+          'distributor_id': distributorId,
+          'depo_id': depoId,
+          'brand_id': brandId,
+          'target_quota': depoSellInQuota,
+        };
+        if (asmUserId != null) depoPayload['user_id'] = asmUserId;
+        if (isFullYear) {
+          depoPayload['is_full_year'] = true;
+          depoPayload['year'] = (year != null && year.trim().isNotEmpty) ? year.trim() : period.substring(0, 4);
+        } else {
+          depoPayload['period'] = period;
+        }
+        await DioClient.instance.post(ApiEndpoints.masterTargets, data: depoPayload);
+        savedDepoCount = 1;
+      }
+
+      // 2. Simpan setiap Target Area (SELL_OUT + AO sekaligus dalam 1 baris AREA)
+      for (final item in areaTargets) {
+        final int areaId = item['area_id'] as int;
+        final double sellOut = (item['sell_out'] as num?)?.toDouble() ?? 0.0;
+        final int ao = (item['ao'] as num?)?.toInt() ?? 0;
+        final int? spvUserId = item['user_id'] as int?;
+        if (sellOut <= 0 && ao <= 0) continue;
+
+        final areaPayload = <String, dynamic>{
+          'kategori_skema': 'KONSUMSI',
+          'level': 'AREA',
+          'metrik_target': 'SELL_OUT',
+          'distributor_id': distributorId,
+          'depo_id': depoId,
+          'area_id': areaId,
+          'brand_id': brandId,
+          'target_quota': sellOut,
+          'target_outlet': ao,
+        };
+        if (spvUserId != null) areaPayload['user_id'] = spvUserId;
+        if (isFullYear) {
+          areaPayload['is_full_year'] = true;
+          areaPayload['year'] = (year != null && year.trim().isNotEmpty) ? year.trim() : period.substring(0, 4);
+        } else {
+          areaPayload['period'] = period;
+        }
+        await DioClient.instance.post(ApiEndpoints.masterTargets, data: areaPayload);
+        savedAreaCount++;
+      }
+
+      await fetchPeriods();
+      await fetchTargets(force: true);
+
+      final parts = <String>[];
+      if (savedDepoCount > 0) parts.add('Target Depo (Sell-In)');
+      if (savedAreaCount > 0) parts.add('$savedAreaCount Target Area (Sell-Out & AO)');
+      final label = parts.isEmpty ? 'Target' : parts.join(' & ');
+
+      state = state.copyWith(
+        isLoading: false,
+        successMessage: isFullYear
+            ? '$label untuk 12 bulan tahun ${year ?? period.substring(0, 4)} berhasil disimpan'
+            : '$label berhasil disimpan',
+      );
+      return true;
+    } on DioException catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: e.response?.data?['message'] ?? 'Gagal menyimpan Master Target Distributor',
       );
       return false;
     } catch (e) {
