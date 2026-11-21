@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/responsive_table.dart';
 import '../providers/master_data_provider.dart';
 
@@ -39,6 +38,8 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
     final colors = context.colors;
     final state = ref.watch(masterDataProvider);
     final notifier = ref.read(masterDataProvider.notifier);
@@ -51,44 +52,23 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
           // Responsive Header
           LayoutBuilder(
             builder: (context, constraints) {
-              final isNarrow = constraints.maxWidth < 650;
               final titleWidget = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Master Organisasi & Wilayah',
-                    style: GoogleFonts.outfit(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: colors.textPrimary,
-                    ),
-                  ),
+                  Text('Master Organisasi & Wilayah', style: tt.headlineMedium),
                   const SizedBox(height: 4),
                   Text(
                     'Manajemen data referensi hierarki Distributor, Depo, Area Operasional, dan Brand Produk',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: colors.textSecondary,
-                    ),
+                    style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                   ),
                 ],
               );
 
               final refreshBtn = IconButton(
-                icon: Icon(LucideIcons.refreshCw, color: colors.textSecondary),
+                icon: Icon(LucideIcons.refreshCw, color: cs.onSurfaceVariant, size: 18),
                 tooltip: 'Segarkan Master Data',
                 onPressed: () => notifier.fetchAllMasterData(force: true),
               );
-
-              if (isNarrow) {
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(child: titleWidget),
-                    refreshBtn,
-                  ],
-                );
-              }
 
               return Row(
                 children: [
@@ -102,11 +82,11 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
 
           // Search & Tab Bar Container
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: colors.bgCard,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: colors.border, width: 1.2),
+              color: cs.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: cs.outlineVariant),
               boxShadow: colors.cardShadows,
             ),
             child: Column(
@@ -120,10 +100,9 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
                       isScrollable: true,
                       onTap: (val) => setState(() => _activeTabIndex = val),
                       dividerColor: Colors.transparent,
-                      indicatorColor: AppColors.primary,
-                      labelColor: colors.textPrimary,
-                      unselectedLabelColor: colors.textSecondary,
-                      labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13.5),
+                      indicatorColor: cs.primary,
+                      labelColor: cs.primary,
+                      unselectedLabelColor: cs.onSurfaceVariant,
                       tabs: [
                         Tab(text: 'Distributor (${state.distributors.length})'),
                         Tab(text: 'Depo (${state.depos.length})'),
@@ -133,20 +112,14 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
                     );
 
                     final searchWidget = SizedBox(
-                      width: isNarrow ? double.infinity : 220,
+                      width: isNarrow ? double.infinity : 240,
                       child: TextField(
                         controller: _searchController,
-                        style: TextStyle(color: colors.textPrimary, fontSize: 13),
+                        style: tt.bodyMedium?.copyWith(color: cs.onSurface),
                         decoration: InputDecoration(
                           hintText: 'Cari kode / nama...',
-                          hintStyle: TextStyle(color: colors.textMuted),
-                          prefixIcon: Icon(LucideIcons.search, size: 16, color: colors.textSecondary),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                          filled: true,
-                          fillColor: colors.bgInput,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: colors.borderMuted)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: colors.borderMuted)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.primary)),
+                          prefixIcon: Icon(LucideIcons.search, size: 16, color: cs.onSurfaceVariant),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                         ),
                         onChanged: (val) {
                           setState(() {
@@ -177,14 +150,14 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
                   },
                 ),
                 const SizedBox(height: 16),
-                Divider(height: 1, color: colors.border),
+                const Divider(height: 1),
                 const SizedBox(height: 16),
 
                 // Tab Content
                 if (state.isLoading)
-                  const Padding(
-                    padding: EdgeInsets.all(40),
-                    child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+                  Padding(
+                    padding: const EdgeInsets.all(40),
+                    child: Center(child: CircularProgressIndicator(color: cs.primary)),
                   )
                 else
                   _buildActiveTabContent(context, state),
@@ -212,7 +185,8 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
   }
 
   Widget _buildDistributorsTable(BuildContext context, MasterDataState state) {
-    final colors = context.colors;
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
     final filtered = state.distributors.where((d) {
       if (_searchQuery.isEmpty) return true;
       return d.name.toLowerCase().contains(_searchQuery) || d.code.toLowerCase().contains(_searchQuery);
@@ -223,28 +197,25 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
     return ResponsiveTableCard(
       minWidth: 700,
       child: DataTable(
-        headingRowColor: WidgetStateProperty.all(colors.bgTableHead),
-        dataRowMinHeight: 52,
-        dataRowMaxHeight: 68,
-        columns: [
-          DataColumn(label: Text('Kode', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Nama Distributor', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Alamat Kantor', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
+        columns: const [
+          DataColumn(label: Text('KODE')),
+          DataColumn(label: Text('NAMA DISTRIBUTOR')),
+          DataColumn(label: Text('ALAMAT KANTOR')),
         ],
         rows: filtered.map((d) {
           return DataRow(
             cells: [
-              DataCell(Text(d.code, style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.bold))),
+              DataCell(Text(d.code, style: tt.labelLarge?.copyWith(color: cs.primary))),
               DataCell(
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 240),
-                  child: Text(d.name, style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w500), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  child: Text(d.name, style: tt.bodyMedium?.copyWith(color: cs.onSurface, fontWeight: FontWeight.w500), maxLines: 2, overflow: TextOverflow.ellipsis),
                 ),
               ),
               DataCell(
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 300),
-                  child: Text(d.address ?? '-', style: TextStyle(color: colors.textSecondary), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  child: Text(d.address ?? '-', style: tt.bodyMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
                 ),
               ),
             ],
@@ -255,7 +226,8 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
   }
 
   Widget _buildDeposTable(BuildContext context, MasterDataState state) {
-    final colors = context.colors;
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
     final filtered = state.depos.where((d) {
       if (_searchQuery.isEmpty) return true;
       return d.name.toLowerCase().contains(_searchQuery) || d.code.toLowerCase().contains(_searchQuery);
@@ -266,28 +238,25 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
     return ResponsiveTableCard(
       minWidth: 700,
       child: DataTable(
-        headingRowColor: WidgetStateProperty.all(colors.bgTableHead),
-        dataRowMinHeight: 52,
-        dataRowMaxHeight: 68,
-        columns: [
-          DataColumn(label: Text('Kode Depo', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Nama Depo', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Induk Distributor', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
+        columns: const [
+          DataColumn(label: Text('KODE DEPO')),
+          DataColumn(label: Text('NAMA DEPO')),
+          DataColumn(label: Text('INDUK DISTRIBUTOR')),
         ],
         rows: filtered.map((d) {
           return DataRow(
             cells: [
-              DataCell(Text(d.code, style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.bold))),
+              DataCell(Text(d.code, style: tt.labelLarge?.copyWith(color: cs.primary))),
               DataCell(
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 240),
-                  child: Text(d.name, style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w500), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  child: Text(d.name, style: tt.bodyMedium?.copyWith(color: cs.onSurface, fontWeight: FontWeight.w500), maxLines: 2, overflow: TextOverflow.ellipsis),
                 ),
               ),
               DataCell(
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 260),
-                  child: Text(d.distributor?.name ?? 'Distributor #${d.distributorId ?? "-"}', style: TextStyle(color: colors.textSecondary), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  child: Text(d.distributor?.name ?? 'Distributor #${d.distributorId ?? "-"}', style: tt.bodyMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
                 ),
               ),
             ],
@@ -298,7 +267,8 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
   }
 
   Widget _buildAreasTable(BuildContext context, MasterDataState state) {
-    final colors = context.colors;
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
     final filtered = state.areas.where((a) {
       if (_searchQuery.isEmpty) return true;
       return a.name.toLowerCase().contains(_searchQuery) || a.code.toLowerCase().contains(_searchQuery);
@@ -309,21 +279,18 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
     return ResponsiveTableCard(
       minWidth: 650,
       child: DataTable(
-        headingRowColor: WidgetStateProperty.all(colors.bgTableHead),
-        dataRowMinHeight: 52,
-        dataRowMaxHeight: 68,
-        columns: [
-          DataColumn(label: Text('Kode Area', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Nama Area Operasional', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
+        columns: const [
+          DataColumn(label: Text('KODE AREA')),
+          DataColumn(label: Text('NAMA AREA OPERASIONAL')),
         ],
         rows: filtered.map((a) {
           return DataRow(
             cells: [
-              DataCell(Text(a.code, style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.bold))),
+              DataCell(Text(a.code, style: tt.labelLarge?.copyWith(color: cs.primary))),
               DataCell(
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 300),
-                  child: Text(a.name, style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w500), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  child: Text(a.name, style: tt.bodyMedium?.copyWith(color: cs.onSurface, fontWeight: FontWeight.w500), maxLines: 2, overflow: TextOverflow.ellipsis),
                 ),
               ),
             ],
@@ -334,7 +301,8 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
   }
 
   Widget _buildBrandsTable(BuildContext context, MasterDataState state) {
-    final colors = context.colors;
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
     final filtered = state.brands.where((b) {
       if (_searchQuery.isEmpty) return true;
       return b.name.toLowerCase().contains(_searchQuery) || b.code.toLowerCase().contains(_searchQuery);
@@ -345,21 +313,18 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
     return ResponsiveTableCard(
       minWidth: 650,
       child: DataTable(
-        headingRowColor: WidgetStateProperty.all(colors.bgTableHead),
-        dataRowMinHeight: 52,
-        dataRowMaxHeight: 68,
-        columns: [
-          DataColumn(label: Text('Kode Brand', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Nama Merek Dagang', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
+        columns: const [
+          DataColumn(label: Text('KODE BRAND')),
+          DataColumn(label: Text('NAMA MEREK DAGANG')),
         ],
         rows: filtered.map((b) {
           return DataRow(
             cells: [
-              DataCell(Text(b.code, style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.bold))),
+              DataCell(Text(b.code, style: tt.labelLarge?.copyWith(color: cs.primary))),
               DataCell(
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 300),
-                  child: Text(b.name, style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w500), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  child: Text(b.name, style: tt.bodyMedium?.copyWith(color: cs.onSurface, fontWeight: FontWeight.w500), maxLines: 2, overflow: TextOverflow.ellipsis),
                 ),
               ),
             ],
@@ -370,15 +335,19 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> with Si
   }
 
   Widget _buildEmptyMessage(BuildContext context, String msg) {
-    final colors = context.colors;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(LucideIcons.inbox, size: 40, color: colors.textMuted),
-          const SizedBox(height: 12),
-          Text(msg, style: GoogleFonts.inter(color: colors.textSecondary, fontSize: 13)),
-        ],
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(LucideIcons.inbox, size: 36, color: cs.onSurfaceVariant),
+            const SizedBox(height: 10),
+            Text(msg, style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+          ],
+        ),
       ),
     );
   }

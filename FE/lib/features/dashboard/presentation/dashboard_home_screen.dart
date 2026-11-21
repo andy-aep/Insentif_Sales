@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/dashboard_provider.dart';
@@ -36,7 +36,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
             border: Border(bottom: BorderSide(color: context.colors.border.withValues(alpha: 0.7))),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
+                color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.04),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -131,15 +131,15 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                   decoration: BoxDecoration(
-                    color: (isAdmin ? AppColors.primary : AppColors.petrol).withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(20),
+                    color: (isAdmin ? Theme.of(context).colorScheme.primary : context.semantic.secondaryAccent).withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     portalBadge,
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w700,
-                      color: isAdmin ? AppColors.primary : AppColors.petrol,
+                      color: isAdmin ? Theme.of(context).colorScheme.primary : context.semantic.secondaryAccent,
                       letterSpacing: 0.4,
                     ),
                   ),
@@ -174,21 +174,21 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                         : 'Periode: ${selectedList.length} Bulan (${selectedList.first}–${selectedList.last})';
 
                     return InkWell(
-                      borderRadius: BorderRadius.circular(30),
+                      borderRadius: BorderRadius.circular(8),
                       onTap: () => _showMultiPeriodPickerDialog(context, ref, state),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
                           color: context.colors.bgElevated,
-                          borderRadius: BorderRadius.circular(30),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: selectedList.length > 1 ? AppColors.primary : context.colors.border,
+                            color: selectedList.length > 1 ? Theme.of(context).colorScheme.primary : context.colors.border,
                           ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(LucideIcons.calendar, size: 15, color: AppColors.primary),
+                            Icon(LucideIcons.calendar, size: 15, color: Theme.of(context).colorScheme.primary),
                             const SizedBox(width: 8),
                             Text(
                               labelText,
@@ -226,11 +226,11 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                 if (canManage)
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-                      shape: const StadiumBorder(),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                     icon: const Icon(LucideIcons.uploadCloud, size: 15),
                     label: Text('Upload Data', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 12.5)),
@@ -241,7 +241,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                     foregroundColor: context.colors.textPrimary,
                     side: BorderSide(color: context.colors.border),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                    shape: const StadiumBorder(),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   icon: const Icon(LucideIcons.calculator, size: 14),
                   label: Text('Lihat Insentif', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 12.5)),
@@ -308,7 +308,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
               value: '${CurrencyFormatter.formatNumber(targetSellIn)} Kg',
               subValue: 'Realisasi: ${CurrencyFormatter.formatNumber(realSellIn)} Kg',
               badgeText: '${achSellIn.toStringAsFixed(1)}%',
-              badgeColor: achSellIn >= 100 ? AppColors.success : (achSellIn > 0 ? AppColors.primary : AppColors.slate400),
+              badgeColor: achSellIn >= 100 ? context.semantic.success : (achSellIn > 0 ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant),
               icon: LucideIcons.truck,
               footerText: '$totalDist Distributor ($scopeLabel)',
               progress: (achSellIn / 100).clamp(0.0, 1.0),
@@ -319,7 +319,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
               value: '${CurrencyFormatter.formatNumber(targetSellOut)} Kg',
               subValue: 'Realisasi: ${CurrencyFormatter.formatNumber(realSellOut)} Kg',
               badgeText: '${achSellOut.toStringAsFixed(1)}%',
-              badgeColor: achSellOut >= 100 ? AppColors.success : (achSellOut > 0 ? AppColors.primary : AppColors.slate400),
+              badgeColor: achSellOut >= 100 ? context.semantic.success : (achSellOut > 0 ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant),
               icon: LucideIcons.shoppingBag,
               footerText: 'Konsumsi Multi-Brand',
               progress: (achSellOut / 100).clamp(0.0, 1.0),
@@ -330,7 +330,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
               value: '${CurrencyFormatter.formatNumber(targetOutlet)} Toko',
               subValue: 'Aktual: ${CurrencyFormatter.formatNumber(realOutlet)} Toko',
               badgeText: '${achOutlet.toStringAsFixed(1)}%',
-              badgeColor: achOutlet >= 100 ? AppColors.success : (achOutlet > 0 ? AppColors.primary : AppColors.slate400),
+              badgeColor: achOutlet >= 100 ? context.semantic.success : (achOutlet > 0 ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant),
               icon: LucideIcons.store,
               footerText: 'Cakupan Toko Ritel Area',
               progress: (achOutlet / 100).clamp(0.0, 1.0),
@@ -341,7 +341,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
               value: CurrencyFormatter.formatRupiah(totalReward),
               subValue: totalReward > 0 ? 'Terkalkulasi Periode Aktif' : 'Belum Dijalankan',
               badgeText: '$totalSales Sales',
-              badgeColor: AppColors.petrol,
+              badgeColor: context.semantic.secondaryAccent,
               icon: LucideIcons.coins,
               footerText: 'Skema Konsumsi & Industri',
               progress: totalReward > 0 ? 1.0 : 0.0,
@@ -517,7 +517,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                     value: '${CurrencyFormatter.formatNumber(myTargetSellIn)} Kg',
                     subValue: 'Realisasi: ${CurrencyFormatter.formatNumber(realSellIn)} Kg',
                     badgeText: '${achSellIn.toStringAsFixed(1)}%',
-                    badgeColor: achSellIn >= 100 ? AppColors.success : AppColors.primary,
+                    badgeColor: achSellIn >= 100 ? context.semantic.success : Theme.of(context).colorScheme.primary,
                     icon: LucideIcons.truck,
                     footerText: '$assignedDepos Depo di Bawah Tanggung Jawab',
                     progress: (achSellIn / 100).clamp(0.0, 1.0),
@@ -527,7 +527,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                     value: '${CurrencyFormatter.formatNumber(myTargetSellOut)} Kg',
                     subValue: 'Realisasi: ${CurrencyFormatter.formatNumber(realSellOut)} Kg',
                     badgeText: '${achSellOut.toStringAsFixed(1)}%',
-                    badgeColor: achSellOut >= 100 ? AppColors.success : AppColors.primary,
+                    badgeColor: achSellOut >= 100 ? context.semantic.success : Theme.of(context).colorScheme.primary,
                     icon: LucideIcons.shoppingBag,
                     footerText: '$assignedAreas Area di Bawah Tanggung Jawab',
                     progress: (achSellOut / 100).clamp(0.0, 1.0),
@@ -539,7 +539,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                     value: '$assignedDepos Depo',
                     subValue: 'Distributor ASM Area Kerja',
                     badgeText: 'ASM Konsumsi',
-                    badgeColor: AppColors.petrol,
+                    badgeColor: context.semantic.secondaryAccent,
                     icon: LucideIcons.mapPin,
                     footerText: 'Tingkat Depo Konsumsi',
                     progress: 1.0,
@@ -549,7 +549,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                     value: '${CurrencyFormatter.formatNumber(myTargetOutlet)} Toko',
                     subValue: 'Realisasi: ${CurrencyFormatter.formatNumber(realOutlet)} Toko',
                     badgeText: '${achOutlet.toStringAsFixed(1)}%',
-                    badgeColor: achOutlet >= 100 ? AppColors.success : AppColors.primary,
+                    badgeColor: achOutlet >= 100 ? context.semantic.success : Theme.of(context).colorScheme.primary,
                     icon: LucideIcons.store,
                     footerText: 'Target Sebaran Toko Aktif',
                     progress: (achOutlet / 100).clamp(0.0, 1.0),
@@ -560,7 +560,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
               value: CurrencyFormatter.formatRupiah(estimatedReward),
               subValue: grade != '-' ? '$gradeBadge (${overallAch.toStringAsFixed(1)}%)' : 'Belum Ada Kalkulasi',
               badgeText: gradeBadge,
-              badgeColor: estimatedReward > 0 ? AppColors.success : AppColors.slate400,
+              badgeColor: estimatedReward > 0 ? context.semantic.success : Theme.of(context).colorScheme.onSurfaceVariant,
               icon: LucideIcons.award,
               footerText: 'Periode ${state.selectedPeriod}',
               progress: estimatedReward > 0 ? (overallAch / 100).clamp(0.0, 1.0) : 0.0,
@@ -643,7 +643,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
               subValue:
                   'Min Ach: ${sellInMinAch.toStringAsFixed(0)}% • Tarif: Rp ${CurrencyFormatter.formatNumber(sellInRate)}/Kg',
               badgeText: '${sellInAch.toStringAsFixed(1)}% (${sellInPassed ? "Lolos" : "Tidak Lolos"})',
-              badgeColor: sellInPassed ? AppColors.success : AppColors.danger,
+              badgeColor: sellInPassed ? context.semantic.success : context.semantic.danger,
               icon: LucideIcons.factory,
               footerText: 'Insentif Sell-In: ${CurrencyFormatter.formatRupiah(sellInReward)} • $sellInGrade',
               progress: (sellInAch / 100).clamp(0.0, 1.0),
@@ -655,7 +655,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
               subValue:
                   'Volume NOO: ${CurrencyFormatter.formatNumber(nooVolumeKg)} Kg • Tarif: Rp ${CurrencyFormatter.formatNumber(nooRate)}/Kg',
               badgeText: '${nooAch.toStringAsFixed(1)}% (${nooPassed ? "Lolos" : "Tidak Lolos"})',
-              badgeColor: nooPassed ? AppColors.success : AppColors.danger,
+              badgeColor: nooPassed ? context.semantic.success : context.semantic.danger,
               icon: LucideIcons.userPlus,
               footerText: 'Insentif NOO: ${CurrencyFormatter.formatRupiah(nooReward)} • $nooGrade',
               progress: (nooAch / 100).clamp(0.0, 1.0),
@@ -667,7 +667,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
               subValue:
                   'Sell-In: ${CurrencyFormatter.formatRupiah(sellInReward)} + NOO: ${CurrencyFormatter.formatRupiah(nooReward)}',
               badgeText: 'Posisi $posCode',
-              badgeColor: totalReward > 0 ? AppColors.success : AppColors.slate400,
+              badgeColor: totalReward > 0 ? context.semantic.success : Theme.of(context).colorScheme.onSurfaceVariant,
               icon: LucideIcons.award,
               footerText: 'Periode ${state.selectedPeriod} • ${customers.length} Customer Industri',
               progress: totalReward > 0 ? 1.0 : 0.0,
@@ -703,7 +703,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
             color: context.colors.bgCard,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
             boxShadow: context.colors.cardShadows,
           ),
@@ -712,7 +712,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(LucideIcons.calculator, color: AppColors.primary, size: 20),
+                  Icon(LucideIcons.calculator, color: Theme.of(context).colorScheme.primary, size: 20),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -761,7 +761,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
             color: context.colors.bgCard,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
             boxShadow: context.colors.cardShadows,
           ),
@@ -774,7 +774,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                   Expanded(
                     child: Row(
                       children: [
-                        const Icon(LucideIcons.building2, color: AppColors.petrol, size: 20),
+                        Icon(LucideIcons.building2, color: context.semantic.secondaryAccent, size: 20),
                         const SizedBox(width: 10),
                         Flexible(
                           child: Text(
@@ -825,13 +825,13 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: (isNoo ? AppColors.success : AppColors.slate400).withValues(alpha: 0.15),
+                            color: (isNoo ? context.semantic.success : Theme.of(context).colorScheme.onSurfaceVariant).withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             isNoo ? 'NOO VALID' : custType,
                             style: GoogleFonts.plusJakartaSans(
-                              color: isNoo ? AppColors.success : context.colors.textSecondary,
+                              color: isNoo ? context.semantic.success : context.colors.textSecondary,
                               fontSize: 10.5,
                               fontWeight: FontWeight.w700,
                             ),
@@ -870,7 +870,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                               style: GoogleFonts.plusJakartaSans(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 13.5,
-                                color: isNoo ? AppColors.success : AppColors.primary,
+                                color: isNoo ? context.semantic.success : Theme.of(context).colorScheme.primary,
                               ),
                             ),
                             Text(
@@ -929,7 +929,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                     value: '${subordinates.length} Sales Bawahan',
                     subValue: '$achievedSubCount dari ${subordinates.length} Bawahan Mencapai Target',
                     badgeText: 'Koordinator ASC',
-                    badgeColor: AppColors.petrol,
+                    badgeColor: context.semantic.secondaryAccent,
                     icon: LucideIcons.users,
                     footerText: 'Evaluasi Individu Per Bawahan (TO & SM)',
                     progress: subordinates.isEmpty ? 0.0 : (achievedSubCount / subordinates.length).clamp(0.0, 1.0),
@@ -939,7 +939,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                     value: '${CurrencyFormatter.formatNumber(targetKg)} Kg',
                     subValue: 'Syarat Pencapaian Minimum: ${minAchPct.toStringAsFixed(0)}%',
                     badgeText: 'Posisi $posCode',
-                    badgeColor: AppColors.petrol,
+                    badgeColor: context.semantic.secondaryAccent,
                     icon: LucideIcons.target,
                     footerText: 'Koordinator ASC: $ascName',
                     progress: 1.0,
@@ -952,7 +952,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                   ? 'Target Tim: ${CurrencyFormatter.formatNumber(targetKg)} Kg'
                   : 'Target Saya: ${CurrencyFormatter.formatNumber(targetKg)} Kg ($gradeName)',
               badgeText: '${achPct.toStringAsFixed(1)}% (${passed ? "Lolos" : "Tidak Lolos"})',
-              badgeColor: passed ? AppColors.success : AppColors.danger,
+              badgeColor: passed ? context.semantic.success : context.semantic.danger,
               icon: LucideIcons.trendingUp,
               footerText: isAsc
                   ? 'Akumulasi Tonase Bawahan TO & SM'
@@ -967,7 +967,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                   ? 'Akumulasi Kontribusi Bawahan Lolos Target'
                   : 'Rumus: ${CurrencyFormatter.formatNumber(actualKg)} Kg × Rp ${CurrencyFormatter.formatNumber(rate)} × ${headerWeightPct.toStringAsFixed(0)}%',
               badgeText: 'Periode ${state.selectedPeriod}',
-              badgeColor: totalReward > 0 ? AppColors.success : AppColors.slate400,
+              badgeColor: totalReward > 0 ? context.semantic.success : Theme.of(context).colorScheme.onSurfaceVariant,
               icon: LucideIcons.award,
               footerText: isAsc ? 'Skema Koordinator ASC Surabaya' : 'Skema Penjualan Langsung ($posCode)',
               progress: totalReward > 0 ? 1.0 : 0.0,
@@ -1033,7 +1033,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
         color: context.colors.bgSubtle,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: (passed ? AppColors.success : AppColors.danger).withValues(alpha: 0.35),
+          color: (passed ? context.semantic.success : context.semantic.danger).withValues(alpha: 0.35),
         ),
       ),
       child: Column(
@@ -1058,7 +1058,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                 style: GoogleFonts.plusJakartaSans(
                   fontWeight: FontWeight.w700,
                   fontSize: 11.5,
-                  color: passed ? AppColors.success : context.colors.textMuted,
+                  color: passed ? context.semantic.success : context.colors.textMuted,
                 ),
               ),
             ],
@@ -1069,7 +1069,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
             style: GoogleFonts.plusJakartaSans(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: passed ? AppColors.primary : AppColors.danger,
+              color: passed ? Theme.of(context).colorScheme.primary : context.semantic.danger,
             ),
           ),
         ],
@@ -1086,7 +1086,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
         color: context.colors.bgCard,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
         boxShadow: context.colors.cardShadows,
       ),
@@ -1095,7 +1095,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
         children: [
           Row(
             children: [
-              const Icon(LucideIcons.table, color: AppColors.primary, size: 20),
+              Icon(LucideIcons.table, color: Theme.of(context).colorScheme.primary, size: 20),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -1164,7 +1164,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: (passed ? AppColors.success : AppColors.danger).withValues(alpha: 0.15),
+                              color: (passed ? context.semantic.success : context.semantic.danger).withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -1172,7 +1172,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                               style: TextStyle(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w700,
-                                color: passed ? AppColors.success : AppColors.danger,
+                                color: passed ? context.semantic.success : context.semantic.danger,
                               ),
                             ),
                           ),
@@ -1187,7 +1187,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                           CurrencyFormatter.formatRupiah(contrib),
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
-                            color: contrib > 0 ? AppColors.success : context.colors.textMuted,
+                            color: contrib > 0 ? context.semantic.success : context.colors.textMuted,
                           ),
                         )),
                       ],
@@ -1208,9 +1208,9 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                       const DataCell(Text('')),
                       DataCell(Text(
                         CurrencyFormatter.formatRupiah(totalReward),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w800,
-                          color: AppColors.primary,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       )),
                     ],
@@ -1241,7 +1241,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
         color: context.colors.bgCard,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
         boxShadow: context.colors.cardShadows,
       ),
@@ -1250,7 +1250,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
         children: [
           Row(
             children: [
-              const Icon(LucideIcons.calculator, color: AppColors.primary, size: 20),
+              Icon(LucideIcons.calculator, color: Theme.of(context).colorScheme.primary, size: 20),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -1295,7 +1295,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: context.colors.bgCard,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
         boxShadow: context.colors.cardShadows,
       ),
@@ -1320,7 +1320,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: badgeColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     badgeText,
@@ -1406,12 +1406,12 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
           return AlertDialog(
             backgroundColor: colors.bgDialog,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               side: BorderSide(color: colors.border),
             ),
             title: Row(
               children: [
-                const Icon(LucideIcons.calendar, size: 19, color: AppColors.primary),
+                Icon(LucideIcons.calendar, size: 19, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -1454,7 +1454,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                     final isChecked = selected.contains(p);
                     return CheckboxListTile(
                       dense: true,
-                      activeColor: AppColors.primary,
+                      activeColor: Theme.of(context).colorScheme.primary,
                       value: isChecked,
                       title: Text(
                         p,
@@ -1485,9 +1485,9 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 onPressed: () {
                   final sorted = selected.toList()..sort();
@@ -1519,8 +1519,8 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     }
 
     final Color badgeColor = pct >= 100
-        ? AppColors.success
-        : (pct >= 80 ? AppColors.warning : AppColors.danger);
+        ? context.semantic.success
+        : (pct >= 80 ? context.semantic.warning : context.semantic.danger);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1559,7 +1559,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
         color: context.colors.bgCard,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
         boxShadow: context.colors.cardShadows,
       ),
@@ -1571,7 +1571,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(LucideIcons.trophy, color: AppColors.primary, size: 20),
+                  Icon(LucideIcons.trophy, color: Theme.of(context).colorScheme.primary, size: 20),
                   const SizedBox(width: 10),
                   Text(
                     'Leaderboard Personil Sales',
@@ -1636,13 +1636,13 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                       DataCell(
                         CircleAvatar(
                           radius: 12,
-                          backgroundColor: idx <= 3 ? AppColors.primary.withValues(alpha: 0.15) : context.colors.bgElevated,
+                          backgroundColor: idx <= 3 ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15) : context.colors.bgElevated,
                           child: Text(
                             '$idx',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: idx <= 3 ? AppColors.primary : context.colors.textMuted,
+                              color: idx <= 3 ? Theme.of(context).colorScheme.primary : context.colors.textMuted,
                             ),
                           ),
                         ),
@@ -1663,13 +1663,13 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                                   decoration: BoxDecoration(
-                                    color: (pos == 'ASM' ? AppColors.primary : AppColors.petrol).withValues(alpha: 0.15),
+                                    color: (pos == 'ASM' ? Theme.of(context).colorScheme.primary : context.semantic.secondaryAccent).withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
                                     pos,
                                     style: GoogleFonts.plusJakartaSans(
-                                      color: pos == 'ASM' ? AppColors.primary : AppColors.petrol,
+                                      color: pos == 'ASM' ? Theme.of(context).colorScheme.primary : context.semantic.secondaryAccent,
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -1723,9 +1723,9 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
   }
 
   Color _achColor(double pct) {
-    if (pct >= 100) return AppColors.success;
-    if (pct >= 80) return AppColors.warning;
-    return AppColors.danger;
+    if (pct >= 100) return context.semantic.success;
+    if (pct >= 80) return context.semantic.warning;
+    return context.semantic.danger;
   }
 
   String _formatCompactKg(double val) {
@@ -1746,15 +1746,15 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     required VoidCallback onTap,
     Color? activeColor,
   }) {
-    final color = activeColor ?? AppColors.primary;
+    final color = activeColor ?? Theme.of(context).colorScheme.primary;
     return InkWell(
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(12),
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
         decoration: BoxDecoration(
           color: isSelected ? color : context.colors.bgElevated,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: isSelected ? color : context.colors.border),
         ),
         child: Text(
@@ -1762,7 +1762,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
           style: GoogleFonts.plusJakartaSans(
             fontSize: 11.5,
             fontWeight: FontWeight.w600,
-            color: isSelected ? Colors.white : context.colors.textSecondary,
+            color: isSelected ? Theme.of(context).colorScheme.onPrimary : context.colors.textSecondary,
           ),
         ),
       ),
@@ -1782,16 +1782,16 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     final Color stColor;
     if (realSellIn <= 0) {
       stBadge = 'Menunggu Realisasi';
-      stColor = AppColors.slate400;
+      stColor = Theme.of(context).colorScheme.onSurfaceVariant;
     } else if (sellThroughPct >= 85) {
       stBadge = 'Stok Lancar';
-      stColor = AppColors.success;
+      stColor = context.semantic.success;
     } else if (sellThroughPct >= 65) {
       stBadge = 'Moderat';
-      stColor = AppColors.warning;
+      stColor = context.semantic.warning;
     } else {
       stBadge = 'Stok Menumpuk';
-      stColor = AppColors.danger;
+      stColor = context.semantic.danger;
     }
 
     final double displayOmzet = totalDppSellOut > 0 ? totalDppSellOut : totalDppSellIn;
@@ -1801,8 +1801,8 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
         ? 'Belum Dihitung'
         : (incentiveRatioPct <= 3.0 ? 'Efisien' : 'Perlu Pantau');
     final Color ratioColor = incentiveRatioPct <= 0
-        ? AppColors.slate400
-        : (incentiveRatioPct <= 3.0 ? AppColors.success : AppColors.warning);
+        ? Theme.of(context).colorScheme.onSurfaceVariant
+        : (incentiveRatioPct <= 3.0 ? context.semantic.success : context.semantic.warning);
 
     Widget buildTile({
       required IconData icon,
@@ -1817,7 +1817,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         decoration: BoxDecoration(
           color: context.colors.bgCard,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
           boxShadow: context.colors.cardShadows,
         ),
@@ -1828,7 +1828,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
               height: 40,
               decoration: BoxDecoration(
                 color: iconColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(icon, size: 19, color: iconColor),
             ),
@@ -1856,7 +1856,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                         decoration: BoxDecoration(
                           color: badgeColor.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           badge,
@@ -1910,11 +1910,11 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
 
     final tile2 = buildTile(
       icon: LucideIcons.banknote,
-      iconColor: AppColors.petrol,
+      iconColor: context.semantic.secondaryAccent,
       label: 'Total Omzet Penjualan',
       value: CurrencyFormatter.formatRupiah(displayOmzet),
       badge: omzetBadge,
-      badgeColor: AppColors.petrol,
+      badgeColor: context.semantic.secondaryAccent,
       caption: totalDppSellOut > 0
           ? 'DPP Sell-In: ${CurrencyFormatter.formatRupiah(totalDppSellIn)}'
           : 'Akumulasi nominal transaksi periode terpilih',
@@ -1967,7 +1967,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
         color: context.colors.bgCard,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
         boxShadow: context.colors.cardShadows,
       ),
@@ -2001,7 +2001,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
               Icon(
                 _showUnderperformingDist ? LucideIcons.alertTriangle : LucideIcons.building2,
                 size: 18,
-                color: _showUnderperformingDist ? AppColors.danger : context.colors.textMuted,
+                color: _showUnderperformingDist ? context.semantic.danger : context.colors.textMuted,
               ),
             ],
           ),
@@ -2018,7 +2018,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
               _buildToggleChip(
                 label: 'Perlu Perhatian (<80%)${underperformingDistributors.isNotEmpty ? ' (${underperformingDistributors.length})' : ''}',
                 isSelected: _showUnderperformingDist,
-                activeColor: AppColors.danger,
+                activeColor: context.semantic.danger,
                 onTap: () => setState(() => _showUnderperformingDist = true),
               ),
             ],
@@ -2033,7 +2033,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                     Icon(
                       _showUnderperformingDist ? LucideIcons.checkCircle2 : LucideIcons.inbox,
                       size: 28,
-                      color: _showUnderperformingDist ? AppColors.success : context.colors.textMuted,
+                      color: _showUnderperformingDist ? context.semantic.success : context.colors.textMuted,
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -2062,8 +2062,8 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                 final targetSo = (d['target_sell_out_kg'] as num?)?.toDouble() ?? 0.0;
                 final depoCount = (d['depos_count'] as num?)?.toInt() ?? 0;
                 final regionName = (d['region_name'] ?? '').toString();
-                final pctColor = targetSi > 0 ? _achColor(achSiPct) : AppColors.slate400;
-                final rankColor = _showUnderperformingDist ? AppColors.danger : AppColors.petrol;
+                final pctColor = targetSi > 0 ? _achColor(achSiPct) : Theme.of(context).colorScheme.onSurfaceVariant;
+                final rankColor = _showUnderperformingDist ? context.semantic.danger : context.semantic.secondaryAccent;
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2180,7 +2180,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
         color: context.colors.bgCard,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
         boxShadow: context.colors.cardShadows,
       ),
@@ -2189,7 +2189,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
         children: [
           Row(
             children: [
-              const Icon(LucideIcons.map, size: 18, color: AppColors.petrol),
+              Icon(LucideIcons.map, size: 18, color: context.semantic.secondaryAccent),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
@@ -2332,15 +2332,15 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: AppColors.petrol.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(10),
+                              color: context.semantic.secondaryAccent.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               'Sell-Through ${stPct.toStringAsFixed(1)}%',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.petrol,
+                                color: context.semantic.secondaryAccent,
                               ),
                             ),
                           ),
@@ -2389,7 +2389,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
         color: context.colors.bgCard,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
         boxShadow: context.colors.cardShadows,
       ),
@@ -2398,7 +2398,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
         children: [
           Row(
             children: [
-              const Icon(LucideIcons.tag, size: 18, color: AppColors.primary),
+              Icon(LucideIcons.tag, size: 18, color: Theme.of(context).colorScheme.primary),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
@@ -2445,7 +2445,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                 final realSo = (b['real_sell_out'] as num?)?.toDouble() ?? 0.0;
                 final achSo = (b['ach_sell_out_pct'] as num?)?.toDouble() ?? 0.0;
                 final shareSi = (b['share_sell_in_pct'] as num?)?.toDouble() ?? 0.0;
-                final color = targetSi > 0 ? _achColor(achSi) : AppColors.slate400;
+                final color = targetSi > 0 ? _achColor(achSi) : Theme.of(context).colorScheme.onSurfaceVariant;
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2468,15 +2468,15 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                           decoration: BoxDecoration(
-                            color: AppColors.petrol.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
+                            color: context.semantic.secondaryAccent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             'Share ${shareSi.toStringAsFixed(1)}%',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.petrol,
+                              color: context.semantic.secondaryAccent,
                             ),
                           ),
                         ),
@@ -2485,7 +2485,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                           decoration: BoxDecoration(
                             color: color.withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             '${achSi.toStringAsFixed(1)}%',
@@ -2544,8 +2544,8 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
 
   Widget _buildMonthlyTrendCard(BuildContext context, List<dynamic> trend) {
     final isSellIn = _trendMetric == 'SELL_IN';
-    final realColor = isSellIn ? AppColors.primary : AppColors.petrol;
-    final targetColor = AppColors.slate300;
+    final realColor = isSellIn ? Theme.of(context).colorScheme.primary : context.semantic.secondaryAccent;
+    final targetColor = Theme.of(context).colorScheme.outline;
 
     double maxVal = 0.0;
     for (final item in trend) {
@@ -2559,7 +2559,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
         color: context.colors.bgCard,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
         boxShadow: context.colors.cardShadows,
       ),
@@ -2605,13 +2605,13 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                   _buildToggleChip(
                     label: 'Sell-In',
                     isSelected: isSellIn,
-                    activeColor: AppColors.primary,
+                    activeColor: Theme.of(context).colorScheme.primary,
                     onTap: () => setState(() => _trendMetric = 'SELL_IN'),
                   ),
                   _buildToggleChip(
                     label: 'Sell-Out',
                     isSelected: !isSellIn,
-                    activeColor: AppColors.petrol,
+                    activeColor: context.semantic.secondaryAccent,
                     onTap: () => setState(() => _trendMetric = 'SELL_OUT'),
                   ),
                 ],
@@ -2629,7 +2629,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                 barTouchData: BarTouchData(
                   enabled: true,
                   touchTooltipData: BarTouchTooltipData(
-                    getTooltipColor: (_) => AppColors.slate900,
+                    getTooltipColor: (_) => Theme.of(context).colorScheme.inverseSurface,
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
                       final item = trend[groupIndex];
                       final period = item['period'].toString();
@@ -2639,18 +2639,18 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                       return BarTooltipItem(
                         '$period (${pct.toStringAsFixed(1)}%)\n',
                         GoogleFonts.plusJakartaSans(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onInverseSurface,
                           fontWeight: FontWeight.w700,
                           fontSize: 12,
                         ),
                         children: [
                           TextSpan(
                             text: 'Target: ${CurrencyFormatter.formatNumber(tVal)} Kg\n',
-                            style: GoogleFonts.plusJakartaSans(color: AppColors.slate300, fontSize: 11, fontWeight: FontWeight.w500),
+                            style: GoogleFonts.plusJakartaSans(color: Theme.of(context).colorScheme.onInverseSurface.withValues(alpha: 0.78), fontSize: 11, fontWeight: FontWeight.w500),
                           ),
                           TextSpan(
                             text: 'Real: ${CurrencyFormatter.formatNumber(rVal)} Kg',
-                            style: GoogleFonts.plusJakartaSans(color: AppColors.aqua, fontSize: 11, fontWeight: FontWeight.w600),
+                            style: GoogleFonts.plusJakartaSans(color: Theme.of(context).colorScheme.secondary, fontSize: 11, fontWeight: FontWeight.w600),
                           ),
                         ],
                       );
@@ -2758,7 +2758,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
         color: context.colors.bgCard,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
         boxShadow: context.colors.cardShadows,
       ),
@@ -2770,7 +2770,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
             children: [
               Row(
                 children: [
-                  Icon(isAsm ? LucideIcons.building2 : LucideIcons.mapPin, color: AppColors.primary, size: 20),
+                  Icon(isAsm ? LucideIcons.building2 : LucideIcons.mapPin, color: Theme.of(context).colorScheme.primary, size: 20),
                   const SizedBox(width: 10),
                   Text(
                     isAsm ? 'Rincian Target Depo Penugasan' : 'Rincian Target Area & Toko Penugasan',
@@ -2815,19 +2815,19 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                 return ExpansionTile(
                   tilePadding: EdgeInsets.zero,
                   collapsedIconColor: context.colors.textMuted,
-                  iconColor: AppColors.primary,
+                  iconColor: Theme.of(context).colorScheme.primary,
                   title: Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: (isAsm ? AppColors.primary : AppColors.petrol).withValues(alpha: 0.15),
+                          color: (isAsm ? Theme.of(context).colorScheme.primary : context.semantic.secondaryAccent).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           isAsm ? 'DEPO' : 'AREA',
                           style: GoogleFonts.plusJakartaSans(
-                            color: isAsm ? AppColors.primary : AppColors.petrol,
+                            color: isAsm ? Theme.of(context).colorScheme.primary : context.semantic.secondaryAccent,
                             fontSize: 10.5,
                             fontWeight: FontWeight.w700,
                           ),
@@ -2861,7 +2861,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                               '${CurrencyFormatter.formatNumber(realKg)} / ${CurrencyFormatter.formatNumber(targetKg)} Kg (${achPct.toStringAsFixed(1)}%)',
                               style: GoogleFonts.plusJakartaSans(
                                 fontWeight: FontWeight.w700,
-                                color: achPct >= 100 ? AppColors.success : AppColors.primary,
+                                color: achPct >= 100 ? context.semantic.success : Theme.of(context).colorScheme.primary,
                                 fontSize: 13,
                               ),
                             ),
@@ -2870,7 +2870,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                               'AO: $realOutlet / ${CurrencyFormatter.formatNumber(targetOutlet)} Toko',
                               style: GoogleFonts.plusJakartaSans(
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.petrol,
+                                color: context.semantic.secondaryAccent,
                                 fontSize: 12,
                               ),
                             ),
@@ -2894,7 +2894,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                             ),
                             child: Row(
                               children: [
-                                const Icon(LucideIcons.tag, size: 14, color: AppColors.petrol),
+                                Icon(LucideIcons.tag, size: 14, color: context.semantic.secondaryAccent),
                                 const SizedBox(width: 8),
                                 Text(
                                   b['brand_name'] ?? '-',
@@ -2910,7 +2910,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                                 if (bOutlet > 0)
                                   Text(
                                     '$bOutlet Toko',
-                                    style: GoogleFonts.plusJakartaSans(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600),
+                                    style: GoogleFonts.plusJakartaSans(color: Theme.of(context).colorScheme.primary, fontSize: 12, fontWeight: FontWeight.w600),
                                   ),
                               ],
                             ),
@@ -2951,7 +2951,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
         padding: const EdgeInsets.all(48),
         child: Column(
           children: [
-            const CircularProgressIndicator(color: AppColors.primary),
+            CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
             const SizedBox(height: 16),
             Text(
               'Memuat ringkasan dashboard...',
@@ -2984,21 +2984,21 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
         padding: const EdgeInsets.all(48),
         child: Column(
           children: [
-            const Icon(LucideIcons.alertTriangle, size: 36, color: AppColors.danger),
+            Icon(LucideIcons.alertTriangle, size: 36, color: context.semantic.danger),
             const SizedBox(height: 12),
             Text(
               displayMsg,
               textAlign: TextAlign.center,
-              style: GoogleFonts.plusJakartaSans(color: AppColors.danger, fontSize: 13.5),
+              style: GoogleFonts.plusJakartaSans(color: context.semantic.danger, fontSize: 13.5),
             ),
             const SizedBox(height: 16),
             if (isAuthError)
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 icon: const Icon(LucideIcons.logIn, size: 16),
                 label: const Text('Masuk Kembali (Login)'),
@@ -3010,10 +3010,10 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
             else
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 icon: const Icon(LucideIcons.refreshCw, size: 16),
                 label: const Text('Coba Lagi'),

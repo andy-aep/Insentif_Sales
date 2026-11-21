@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:file_picker/file_picker.dart';
-import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/responsive_table.dart';
 import '../../../data/models/upload_batch_model.dart';
 import '../../master_data/providers/master_data_provider.dart';
@@ -168,16 +168,16 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: colors.bgDialog,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           side: BorderSide(color: colors.border),
         ),
         title: Row(
           children: [
-            const Icon(LucideIcons.trash2, color: AppColors.danger, size: 22),
+            Icon(LucideIcons.trash2, color: context.semantic.danger, size: 22),
             const SizedBox(width: 10),
             Text(
               'Hapus Riwayat & Data Batch',
-              style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold),
+              style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -187,7 +187,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
           children: [
             Text(
               'Apakah Anda yakin ingin menghapus permanen batch upload ini beserta seluruh datanya?',
-              style: GoogleFonts.inter(color: colors.textSecondary, fontSize: 13.5),
+              style: GoogleFonts.plusJakartaSans(color: colors.textSecondary, fontSize: 13.5),
             ),
             const SizedBox(height: 14),
             Container(
@@ -210,22 +210,22 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
             const SizedBox(height: 14),
             Text(
               'Perhatian: Menghapus batch ini akan otomatis me-rollback (menghapus) seluruh data transaksi/master yang di-import dari database beserta file Excel dan riwayatnya.',
-              style: GoogleFonts.inter(color: const Color(0xFFD9534F), fontSize: 11.5),
+              style: GoogleFonts.plusJakartaSans(color: context.semantic.danger, fontSize: 11.5),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Batal', style: GoogleFonts.inter(color: colors.textSecondary)),
+            child: Text('Batal', style: GoogleFonts.plusJakartaSans(color: colors.textSecondary)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: context.semantic.dangerSolid, foregroundColor: Theme.of(context).colorScheme.onPrimary),
             onPressed: () {
               Navigator.pop(ctx);
               ref.read(bulkUploadProvider.notifier).deleteBatch(batch.id);
             },
-            child: Text('Ya, Hapus Data & Riwayat', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+            child: Text('Ya, Hapus Data & Riwayat', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -241,18 +241,18 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
     switch (status.toUpperCase()) {
       case 'COMPLETED':
       case 'SUCCESS':
-        bg = AppColors.success.withValues(alpha: 0.15);
-        text = const Color(0xFF24968B);
+        bg = context.semantic.success.withValues(alpha: 0.15);
+        text = context.semantic.success;
         icon = LucideIcons.checkCircle2;
         break;
       case 'ROLLED_BACK':
-        bg = AppColors.danger.withValues(alpha: 0.15);
-        text = const Color(0xFFD9534F);
+        bg = context.semantic.danger.withValues(alpha: 0.15);
+        text = context.semantic.danger;
         icon = LucideIcons.rotateCcw;
         break;
       case 'PROCESSING':
-        bg = AppColors.warning.withValues(alpha: 0.15);
-        text = const Color(0xFFF47A60);
+        bg = context.semantic.warning.withValues(alpha: 0.15);
+        text = Theme.of(context).colorScheme.primary;
         icon = LucideIcons.clock;
         break;
       default:
@@ -271,7 +271,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
           const SizedBox(width: 6),
           Text(
             status.toUpperCase(),
-            style: GoogleFonts.inter(color: text, fontWeight: FontWeight.bold, fontSize: 11),
+            style: GoogleFonts.plusJakartaSans(color: text, fontWeight: FontWeight.bold, fontSize: 11),
           ),
         ],
       ),
@@ -304,7 +304,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                   children: [
                     Text(
                       'Bulk Upload & Rollback Center',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: colors.textPrimary,
@@ -313,7 +313,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                     const SizedBox(height: 4),
                     Text(
                       'Unggah data transaksi massal spreadsheet dan manajemen pemulihan batch aman',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
                         color: colors.textSecondary,
                       ),
@@ -335,26 +335,26 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.danger.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+                color: context.semantic.danger.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: context.semantic.danger.withValues(alpha: 0.4)),
               ),
               child: Row(
                 children: [
-                  const Icon(LucideIcons.alertCircle, color: AppColors.danger, size: 20),
+                  Icon(LucideIcons.alertCircle, color: context.semantic.danger, size: 20),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       state.errorMessage!,
-                      style: GoogleFonts.inter(color: const Color(0xFFD9534F), fontSize: 13),
+                      style: GoogleFonts.plusJakartaSans(color: context.semantic.danger, fontSize: 13),
                     ),
                   ),
                   InkWell(
                     onTap: () => notifier.clearError(),
                     borderRadius: BorderRadius.circular(6),
-                    child: const Padding(
+                    child: Padding(
                       padding: EdgeInsets.all(4),
-                      child: Icon(LucideIcons.x, color: Color(0xFFD9534F), size: 16),
+                      child: Icon(LucideIcons.x, color: context.semantic.danger, size: 16),
                     ),
                   ),
                 ],
@@ -366,26 +366,26 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.success.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.success.withValues(alpha: 0.4)),
+                color: context.semantic.success.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: context.semantic.success.withValues(alpha: 0.4)),
               ),
               child: Row(
                 children: [
-                  const Icon(LucideIcons.checkCircle2, color: AppColors.success, size: 20),
+                  Icon(LucideIcons.checkCircle2, color: context.semantic.success, size: 20),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       state.successMessage!,
-                      style: GoogleFonts.inter(color: const Color(0xFF24968B), fontSize: 13),
+                      style: GoogleFonts.plusJakartaSans(color: context.semantic.success, fontSize: 13),
                     ),
                   ),
                   InkWell(
                     onTap: () => notifier.clearSuccess(),
                     borderRadius: BorderRadius.circular(6),
-                    child: const Padding(
+                    child: Padding(
                       padding: EdgeInsets.all(4),
-                      child: Icon(LucideIcons.x, color: Color(0xFF24968B), size: 16),
+                      child: Icon(LucideIcons.x, color: context.semantic.success, size: 16),
                     ),
                   ),
                 ],
@@ -399,7 +399,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: colors.bgCard,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: colors.border, width: 1.2),
               boxShadow: colors.cardShadows,
             ),
@@ -411,7 +411,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                     Expanded(
                       child: Text(
                         '1. Pilih Entitas Data yang Akan Diunggah',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: colors.textPrimary,
@@ -427,12 +427,12 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                             foregroundColor: colors.textPrimary,
                             side: BorderSide(color: colors.borderMuted),
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                           icon: const Icon(LucideIcons.fileSpreadsheet, size: 15),
                           label: Text(
                             'Tarik Template + Data Eksisting',
-                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+                            style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600),
                           ),
                           onPressed: state.isDownloadingTemplate
                               ? null
@@ -440,23 +440,23 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                         ),
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.success,
-                            foregroundColor: Colors.white,
+                            backgroundColor: context.semantic.successSolid,
+                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                           icon: state.isDownloadingTemplate
-                              ? const SizedBox(
+                              ? SizedBox(
                                   width: 14,
                                   height: 14,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary),
                                 )
                               : const Icon(LucideIcons.download, size: 15),
                           label: Text(
                             state.isDownloadingTemplate
                                 ? 'Mengunduh...'
                                 : 'Unduh Template Kosong',
-                            style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600),
+                            style: GoogleFonts.plusJakartaSans(fontSize: 12.5, fontWeight: FontWeight.w600),
                           ),
                           onPressed: state.isDownloadingTemplate ? null : () => notifier.downloadTemplate(),
                         ),
@@ -469,7 +469,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
                     color: colors.bgInput,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: colors.borderMuted),
                   ),
                   child: DropdownButtonHideUnderline(
@@ -479,7 +479,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                           : _entityOptions.keys.first,
                       dropdownColor: colors.bgCard,
                       isExpanded: true,
-                      style: GoogleFonts.inter(color: colors.textPrimary, fontSize: 14),
+                      style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontSize: 14),
                       icon: Icon(LucideIcons.chevronDown, color: colors.textSecondary),
                       items: _entityOptions.entries.map((entry) {
                         return DropdownMenuItem(
@@ -498,21 +498,21 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.06),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+                      border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            const Icon(LucideIcons.shieldCheck, size: 16, color: AppColors.primaryLight),
+                            Icon(LucideIcons.shieldCheck, size: 16, color: Theme.of(context).colorScheme.primary),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 'Aturan Ketat Sell-Out: 1 File Excel = 1 Bulan (Periode) & 1 Distributor',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.plusJakartaSans(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
                                   color: colors.textPrimary,
@@ -524,7 +524,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                         const SizedBox(height: 6),
                         Text(
                           'Sistem memverifikasi bahwa seluruh baris memiliki pengkodean valid (AreaCode, KodeDistributor, KodeCustomer, ITM, JenisBarang), DPP & SalesKg non-nol, serta hanya berasal dari 1 bulan dan 1 distributor.',
-                          style: GoogleFonts.inter(fontSize: 11.5, color: colors.textSecondary),
+                          style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: colors.textSecondary),
                         ),
                         const SizedBox(height: 12),
                         Wrap(
@@ -536,7 +536,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                               child: TextField(
                                 controller: _selloutPeriodCtrl,
                                 maxLength: 6,
-                                style: GoogleFonts.inter(color: colors.textPrimary, fontSize: 13),
+                                style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontSize: 13),
                                 decoration: InputDecoration(
                                   counterText: '',
                                   labelText: 'Periode Bulan (YYYYMM)',
@@ -556,7 +556,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                 initialValue: state.selectedDistributorId,
                                 isExpanded: true,
                                 dropdownColor: colors.bgCard,
-                                style: GoogleFonts.inter(color: colors.textPrimary, fontSize: 13),
+                                style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontSize: 13),
                                 decoration: InputDecoration(
                                   labelText: 'Distributor (Opsional / Kunci Validasi)',
                                   prefixIcon: Icon(LucideIcons.building2, size: 15, color: colors.textMuted),
@@ -602,12 +602,12 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(LucideIcons.bookOpen, size: 16, color: AppColors.primaryLight),
+                          Icon(LucideIcons.bookOpen, size: 16, color: Theme.of(context).colorScheme.primary),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               'Panduan Kolom Excel — ${_formatEntityLabel(state.selectedEntity)}',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.plusJakartaSans(
                                 fontSize: 13.5,
                                 fontWeight: FontWeight.bold,
                                 color: colors.textPrimary,
@@ -616,7 +616,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                           ),
                           Text(
                             'Sheet 1: Data Upload • Sheet 2: Kode Referensi Master',
-                            style: GoogleFonts.inter(fontSize: 11.5, color: colors.textMuted),
+                            style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: colors.textMuted),
                           ),
                         ],
                       ),
@@ -645,14 +645,14 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                         style: GoogleFonts.sourceCodePro(
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold,
-                                          color: AppColors.primaryLight,
+                                          color: Theme.of(context).colorScheme.primary,
                                         ),
                                       ),
                                     ),
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: (isReq ? AppColors.warning : AppColors.info).withValues(alpha: 0.15),
+                                        color: (isReq ? context.semantic.warning : context.semantic.info).withValues(alpha: 0.15),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(
@@ -660,7 +660,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                         style: TextStyle(
                                           fontSize: 9.5,
                                           fontWeight: FontWeight.bold,
-                                          color: isReq ? AppColors.warning : AppColors.info,
+                                          color: isReq ? context.semantic.warning : context.semantic.info,
                                         ),
                                       ),
                                     ),
@@ -669,7 +669,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                 const SizedBox(height: 4),
                                 Text(
                                   col['desc']!,
-                                  style: GoogleFonts.inter(fontSize: 11, color: colors.textSecondary),
+                                  style: GoogleFonts.plusJakartaSans(fontSize: 11, color: colors.textSecondary),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -688,7 +688,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
 
                 Text(
                   '2. Dropzone File Spreadsheet',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: colors.textPrimary,
@@ -699,15 +699,15 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                 // File Dropzone Box
                 InkWell(
                   onTap: _pickFile,
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                   child: Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
                     decoration: BoxDecoration(
                       color: colors.bgSubtle.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: state.selectedFileName != null ? AppColors.primary : colors.borderMuted,
+                        color: state.selectedFileName != null ? Theme.of(context).colorScheme.primary : colors.borderMuted,
                         width: 1.8,
                         style: BorderStyle.solid,
                       ),
@@ -718,15 +718,15 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                         Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.12),
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(LucideIcons.fileSpreadsheet, size: 36, color: AppColors.primaryLight),
+                          child: Icon(LucideIcons.fileSpreadsheet, size: 36, color: Theme.of(context).colorScheme.primary),
                         ),
                         const SizedBox(height: 14),
                         Text(
                           state.selectedFileName ?? 'Klik atau Seret file Excel ke sini',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                             color: state.selectedFileName != null ? colors.textPrimary : colors.textSecondary,
@@ -737,7 +737,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                           state.selectedFileSize != null
                               ? 'Total Ukuran: ${_formatFileSize(state.selectedFileSize!)} • Bisa pilih banyak file sekaligus (.xlsx, .xls, .csv)'
                               : 'Mendukung Multi-File Upload sekaligus (.xlsx, .xls, .csv) • Kapasitas ratusan ribu baris (Max 200MB/file)',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
                             color: colors.textMuted,
                           ),
@@ -753,7 +753,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: colors.bgSubtle,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: colors.border),
                     ),
                     child: Column(
@@ -761,7 +761,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                       children: [
                         Text(
                           'Daftar File yang Akan Diunggah (${state.selectedFiles.length} file):',
-                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: colors.textPrimary),
+                          style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600, color: colors.textPrimary),
                         ),
                         const SizedBox(height: 8),
                         Wrap(
@@ -771,7 +771,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                             final idx = entry.key;
                             final f = entry.value;
                             return Chip(
-                              avatar: const Icon(LucideIcons.fileSpreadsheet, size: 14, color: AppColors.primary),
+                              avatar: Icon(LucideIcons.fileSpreadsheet, size: 14, color: Theme.of(context).colorScheme.primary),
                               label: Text('${f.name} (${_formatFileSize(f.size)})', style: const TextStyle(fontSize: 11.5)),
                               onDeleted: state.isUploading ? null : () => notifier.removeFileAt(idx),
                             );
@@ -790,7 +790,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                       value: state.uploadProgress > 0 && state.uploadProgress < 0.95 ? state.uploadProgress : null,
                       minHeight: 8,
                       backgroundColor: colors.bgSubtle,
-                      color: AppColors.primary,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -799,7 +799,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                         (state.uploadProgress < 0.9
                             ? 'Mengunggah file ke server (${(state.uploadProgress * 100).toStringAsFixed(0)}%)...'
                             : 'Memproses & menyimpan ribuan baris ke database secara bulk (Streaming Engine)...'),
-                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.primaryLight, fontWeight: FontWeight.w500),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w500),
                   ),
                 ],
 
@@ -822,16 +822,16 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                       ),
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
                           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
                         icon: state.isUploading
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary),
                               )
                             : const Icon(LucideIcons.uploadCloud, size: 16),
                         label: Text(state.isUploading ? 'Mengunggah & Validasi...' : 'Upload & Proses Batch'),
@@ -889,7 +889,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
               return Container(
                 decoration: BoxDecoration(
                   color: colors.bgCard,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: colors.border, width: 1.2),
                   boxShadow: colors.cardShadows,
                 ),
@@ -912,7 +912,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                 children: [
                                   Text(
                                     'Riwayat Upload Batch & Audit Log',
-                                    style: GoogleFonts.outfit(
+                                    style: GoogleFonts.plusJakartaSans(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                       color: colors.textPrimary,
@@ -921,7 +921,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                   const SizedBox(width: 10),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(color: colors.bgSubtle, borderRadius: BorderRadius.circular(10)),
+                                    decoration: BoxDecoration(color: colors.bgSubtle, borderRadius: BorderRadius.circular(8)),
                                     child: Text(
                                       '$totalItems / ${state.batches.length} Batch',
                                       style: TextStyle(color: colors.textSecondary, fontSize: 11, fontWeight: FontWeight.w600),
@@ -941,7 +941,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                       initialValue: _historyEntityFilter,
                                       isExpanded: true,
                                       dropdownColor: colors.bgCard,
-                                      style: GoogleFonts.inter(color: colors.textPrimary, fontSize: 12),
+                                      style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontSize: 12),
                                       decoration: InputDecoration(
                                         prefixIcon: Icon(LucideIcons.layers, size: 14, color: colors.textMuted),
                                         prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -979,7 +979,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                       initialValue: _historyStatusFilter,
                                       isExpanded: true,
                                       dropdownColor: colors.bgCard,
-                                      style: GoogleFonts.inter(color: colors.textPrimary, fontSize: 12),
+                                      style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontSize: 12),
                                       decoration: InputDecoration(
                                         prefixIcon: Icon(LucideIcons.filter, size: 14, color: colors.textMuted),
                                         prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -1010,7 +1010,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                       controller: _historyPeriodCtrl,
                                       maxLength: 6,
                                       onChanged: (_) => setState(() => _historyPage = 1),
-                                      style: GoogleFonts.inter(color: colors.textPrimary, fontSize: 12),
+                                      style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontSize: 12),
                                       decoration: InputDecoration(
                                         counterText: '',
                                         hintText: 'Periode (202610)',
@@ -1029,7 +1029,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                     child: TextField(
                                       controller: _historySearchCtrl,
                                       onChanged: (_) => setState(() => _historyPage = 1),
-                                      style: GoogleFonts.inter(color: colors.textPrimary, fontSize: 12),
+                                      style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontSize: 12),
                                       decoration: InputDecoration(
                                         hintText: 'Ketik nama file / distributor...',
                                         prefixIcon: Icon(LucideIcons.search, size: 14, color: colors.textMuted),
@@ -1072,9 +1072,9 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                     Divider(height: 1, color: colors.border),
 
                     if (state.isLoadingHistory)
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.all(40),
-                        child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+                        child: Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary)),
                       )
                     else if (filteredBatches.isEmpty)
                       Padding(
@@ -1087,14 +1087,14 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                               const SizedBox(height: 12),
                               Text(
                                 state.batches.isEmpty ? 'Belum Ada Riwayat Batch Upload' : 'Tidak Ada Batch Sesuai Filter',
-                                style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15),
+                                style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 state.batches.isEmpty
                                     ? 'File transaksi yang Anda upload akan dicatat di sini dengan audit log lengkap.'
                                     : 'Coba ubah filter Entitas, Status, Periode, atau kata kunci pencarian.',
-                                style: GoogleFonts.inter(color: colors.textSecondary, fontSize: 12.5),
+                                style: GoogleFonts.plusJakartaSans(color: colors.textSecondary, fontSize: 12.5),
                               ),
                             ],
                           ),
@@ -1135,7 +1135,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                             batch.originalFilename ?? '-',
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: GoogleFonts.inter(
+                                            style: GoogleFonts.plusJakartaSans(
                                               color: colors.textPrimary,
                                               fontSize: 12.5,
                                               fontWeight: FontWeight.w600,
@@ -1154,7 +1154,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                               ].join(' • '),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
-                                              style: GoogleFonts.inter(color: AppColors.primaryLight, fontSize: 11, fontWeight: FontWeight.w500),
+                                              style: GoogleFonts.plusJakartaSans(color: Theme.of(context).colorScheme.primary, fontSize: 11, fontWeight: FontWeight.w500),
                                             ),
                                           ),
                                       ],
@@ -1173,7 +1173,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                           _formatEntityLabel(batch.entity),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.inter(color: colors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
+                                          style: GoogleFonts.plusJakartaSans(color: colors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
@@ -1199,10 +1199,10 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Text('${batch.successRows} sukses', style: const TextStyle(color: AppColors.success, fontSize: 11)),
+                                          Text('${batch.successRows} sukses', style: TextStyle(color: context.semantic.success, fontSize: 11)),
                                           if (batch.failedRows > 0) ...[
                                             Text(', ', style: TextStyle(color: colors.textMuted, fontSize: 11)),
-                                            Text('${batch.failedRows} gagal', style: const TextStyle(color: AppColors.danger, fontSize: 11, fontWeight: FontWeight.w600)),
+                                            Text('${batch.failedRows} gagal', style: TextStyle(color: context.semantic.danger, fontSize: 11, fontWeight: FontWeight.w600)),
                                           ],
                                         ],
                                       ),
@@ -1217,7 +1217,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       IconButton(
-                                        icon: const Icon(LucideIcons.download, size: 15, color: AppColors.primaryLight),
+                                        icon: Icon(LucideIcons.download, size: 15, color: Theme.of(context).colorScheme.primary),
                                         tooltip: 'Unduh Excel (${batch.originalFilename ?? 'file.xlsx'})',
                                         visualDensity: VisualDensity.compact,
                                         onPressed: () => ref.read(bulkUploadProvider.notifier).downloadBatchFile(
@@ -1228,8 +1228,8 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                       const SizedBox(width: 4),
                                       OutlinedButton.icon(
                                         style: OutlinedButton.styleFrom(
-                                          foregroundColor: AppColors.danger,
-                                          side: BorderSide(color: AppColors.danger.withValues(alpha: 0.45)),
+                                          foregroundColor: context.semantic.danger,
+                                          side: BorderSide(color: context.semantic.danger.withValues(alpha: 0.45)),
                                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                           minimumSize: Size.zero,
                                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1258,13 +1258,13 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                           children: [
                             Text(
                               'Menampilkan ${startIndex + 1}–$endIndex dari $totalItems batch',
-                              style: GoogleFonts.inter(color: colors.textSecondary, fontSize: 12),
+                              style: GoogleFonts.plusJakartaSans(color: colors.textSecondary, fontSize: 12),
                             ),
                             Wrap(
                               spacing: 8,
                               crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
-                                Text('Baris/hal:', style: GoogleFonts.inter(color: colors.textMuted, fontSize: 12)),
+                                Text('Baris/hal:', style: GoogleFonts.plusJakartaSans(color: colors.textMuted, fontSize: 12)),
                                 ...[10, 25, 50].map((size) {
                                   final selected = _historyPerPage == size;
                                   return InkWell(
@@ -1276,13 +1276,13 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: selected ? AppColors.primary : colors.bgSubtle,
+                                        color: selected ? Theme.of(context).colorScheme.primary : colors.bgSubtle,
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Text(
                                         '$size',
                                         style: TextStyle(
-                                          color: selected ? Colors.white : colors.textSecondary,
+                                          color: selected ? Theme.of(context).colorScheme.onPrimary : colors.textSecondary,
                                           fontSize: 11.5,
                                           fontWeight: FontWeight.w600,
                                         ),
@@ -1298,7 +1298,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                 ),
                                 Text(
                                   'Hal $safePage / $totalPages',
-                                  style: GoogleFonts.inter(color: colors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                                  style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600),
                                 ),
                                 IconButton(
                                   icon: const Icon(LucideIcons.chevronRight, size: 16),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/responsive_table.dart';
 import '../../../data/models/auth_user_model.dart';
@@ -90,23 +90,23 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
     String label = CurrencyFormatter.formatPercent(percent);
 
     if (percent < 90) {
-      bg = AppColors.danger.withValues(alpha: 0.15);
-      textColor = const Color(0xFFD9534F);
+      bg = context.semantic.danger.withValues(alpha: 0.15);
+      textColor = context.semantic.danger;
     } else if (percent < 100) {
-      bg = AppColors.warning.withValues(alpha: 0.15);
-      textColor = const Color(0xFFF47A60);
+      bg = context.semantic.warning.withValues(alpha: 0.15);
+      textColor = Theme.of(context).colorScheme.primary;
     } else if (percent < 120) {
-      bg = AppColors.success.withValues(alpha: 0.15);
-      textColor = const Color(0xFF24968B);
+      bg = context.semantic.success.withValues(alpha: 0.15);
+      textColor = context.semantic.success;
     } else {
-      bg = AppColors.primary.withValues(alpha: 0.18);
-      textColor = const Color(0xFFF47A60);
+      bg = Theme.of(context).colorScheme.primary.withValues(alpha: 0.18);
+      textColor = Theme.of(context).colorScheme.primary;
     }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
-      child: Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: textColor)),
+      child: Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w700, color: textColor)),
     );
   }
 
@@ -178,12 +178,12 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                   children: [
                     Text(
                       _getScreenTitle(activeKategori),
-                      style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                      style: GoogleFonts.plusJakartaSans(fontSize: 24, fontWeight: FontWeight.bold, color: colors.textPrimary),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       _getScreenSubtitle(activeKategori),
-                      style: GoogleFonts.inter(fontSize: 13, color: colors.textSecondary),
+                      style: GoogleFonts.plusJakartaSans(fontSize: 13, color: colors.textSecondary),
                     ),
                   ],
                 ),
@@ -197,15 +197,15 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.danger.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+                color: context.semantic.danger.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: context.semantic.danger.withValues(alpha: 0.4)),
               ),
               child: Row(
                 children: [
-                  const Icon(LucideIcons.alertCircle, color: AppColors.danger, size: 20),
+                  Icon(LucideIcons.alertCircle, color: context.semantic.danger, size: 20),
                   const SizedBox(width: 12),
-                  Expanded(child: Text(state.errorMessage!, style: const TextStyle(color: Color(0xFFD9534F), fontSize: 13))),
+                  Expanded(child: Text(state.errorMessage!, style: TextStyle(color: context.semantic.danger, fontSize: 13))),
                 ],
               ),
             ),
@@ -215,15 +215,15 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.success.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.success.withValues(alpha: 0.4)),
+                color: context.semantic.success.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: context.semantic.success.withValues(alpha: 0.4)),
               ),
               child: Row(
                 children: [
-                  const Icon(LucideIcons.checkCircle2, color: AppColors.success, size: 20),
+                  Icon(LucideIcons.checkCircle2, color: context.semantic.success, size: 20),
                   const SizedBox(width: 12),
-                  Expanded(child: Text(state.successMessage!, style: const TextStyle(color: Color(0xFF24968B), fontSize: 13))),
+                  Expanded(child: Text(state.successMessage!, style: TextStyle(color: context.semantic.success, fontSize: 13))),
                 ],
               ),
             ),
@@ -235,7 +235,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
               color: colors.bgCard,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: colors.border, width: 1.2),
               boxShadow: colors.cardShadows,
             ),
@@ -256,7 +256,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                       children: [
                         Text(
                           '1. Posisi Eligible',
-                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: colors.textSecondary),
+                          style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w500, color: colors.textSecondary),
                         ),
                         const SizedBox(height: 6),
                         Container(
@@ -264,7 +264,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           decoration: BoxDecoration(
                             color: colors.bgInput,
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: colors.borderMuted),
                           ),
                           child: DropdownButtonHideUnderline(
@@ -274,7 +274,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                   ? state.selectedPositionId
                                   : null,
                               dropdownColor: colors.bgCard,
-                              style: GoogleFonts.inter(color: colors.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w500),
+                              style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w500),
                               icon: Icon(LucideIcons.chevronDown, size: 16, color: colors.textSecondary),
                               items: [
                                 const DropdownMenuItem<int?>(
@@ -318,7 +318,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                           selectedPosObj != null
                               ? '2. Nama ${selectedPosObj.code}'
                               : '2. Nama Sales Eligible',
-                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: colors.textSecondary),
+                          style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w500, color: colors.textSecondary),
                         ),
                         const SizedBox(height: 6),
                         Container(
@@ -326,7 +326,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           decoration: BoxDecoration(
                             color: colors.bgInput,
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: colors.borderMuted),
                           ),
                           child: DropdownButtonHideUnderline(
@@ -336,7 +336,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                   ? state.selectedUserId
                                   : null,
                               dropdownColor: colors.bgCard,
-                              style: GoogleFonts.inter(color: colors.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w500),
+                              style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w500),
                               icon: Icon(LucideIcons.chevronDown, size: 16, color: colors.textSecondary),
                               items: [
                                 DropdownMenuItem<int?>(
@@ -389,12 +389,12 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('3. Periode (YYYYMM)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: colors.textSecondary)),
+                            Text('3. Periode (YYYYMM)', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w500, color: colors.textSecondary)),
                             const SizedBox(height: 6),
                             SizedBox(
                               width: 215,
                               child: InkWell(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(8),
                                 onTap: () async {
                                   final picked = Set<String>.from(
                                     selectedList.isNotEmpty
@@ -406,10 +406,10 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                     builder: (ctx) => StatefulBuilder(
                                       builder: (ctx, setDialogState) => AlertDialog(
                                         backgroundColor: colors.bgElevated,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                         title: Text(
                                           'Pilih Periode (Bisa > 1 Bulan)',
-                                          style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                                          style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: colors.textPrimary),
                                         ),
                                         content: SizedBox(
                                           width: 320,
@@ -444,7 +444,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                                     return CheckboxListTile(
                                                       dense: true,
                                                       value: isChecked,
-                                                      activeColor: AppColors.primary,
+                                                      activeColor: Theme.of(context).colorScheme.primary,
                                                       title: Text(p, style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600)),
                                                       onChanged: (v) {
                                                         setDialogState(() {
@@ -468,7 +468,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                             child: Text('Batal', style: TextStyle(color: colors.textMuted)),
                                           ),
                                           ElevatedButton(
-                                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                                            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Theme.of(context).colorScheme.onPrimary),
                                             onPressed: () => Navigator.pop(ctx, picked.toList()),
                                             child: const Text('Terapkan'),
                                           ),
@@ -486,8 +486,8 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                                     filled: true,
                                     fillColor: colors.bgInput,
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: colors.borderMuted)),
-                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: colors.borderMuted)),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: colors.borderMuted)),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: colors.borderMuted)),
                                     prefixIcon: Icon(LucideIcons.calendar, size: 15, color: colors.textSecondary),
                                     prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                                     suffixIcon: Icon(LucideIcons.chevronDown, size: 16, color: colors.textSecondary),
@@ -512,7 +512,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                           foregroundColor: colors.textPrimary,
                           side: BorderSide(color: colors.border),
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
                         icon: const Icon(LucideIcons.filter, size: 15),
                         label: const Text('Filter'),
@@ -527,14 +527,14 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                   children: [
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.success,
-                        foregroundColor: Colors.white,
+                        backgroundColor: context.semantic.successSolid,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         elevation: 2,
                       ),
                       icon: state.isExporting
-                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
                           : const Icon(LucideIcons.fileSpreadsheet, size: 16),
                       label: Text(state.isExporting ? 'Mengunduh...' : 'Save to Excel'),
                       onPressed: state.isExporting
@@ -568,28 +568,28 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                         title: 'Tim Sales Industri',
                         value: '${indMeta?.totalPersonil ?? state.industriCards.length} Personil',
                         icon: LucideIcons.users,
-                        color: AppColors.info,
+                        color: context.semantic.info,
                       ),
                       _buildSummaryItem(
                         context,
                         title: 'Total Sell-In (Kg)',
                         value: '${CurrencyFormatter.formatNumber(indMeta?.totalActualSellInKg ?? 0)} / ${CurrencyFormatter.formatNumber(indMeta?.totalTargetSellInKg ?? 0)}',
                         icon: LucideIcons.packageCheck,
-                        color: AppColors.primaryLight,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                       _buildSummaryItem(
                         context,
                         title: 'Realisasi NOO',
                         value: '${CurrencyFormatter.formatNumber(indMeta?.totalActualNoo ?? 0)} NOO (${CurrencyFormatter.formatNumber(indMeta?.totalActualNooKg ?? 0)} Kg)',
                         icon: LucideIcons.store,
-                        color: AppColors.success,
+                        color: context.semantic.success,
                       ),
                       _buildSummaryItem(
                         context,
                         title: 'Total Payout Industri',
                         value: CurrencyFormatter.formatRupiah(indMeta?.totalPayout ?? state.summary.totalReward),
                         icon: LucideIcons.wallet,
-                        color: const Color(0xFF24968B),
+                        color: context.semantic.success,
                       ),
                     ]
                   : (isSurabaya
@@ -599,35 +599,35 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                             title: 'Tim Sales Surabaya',
                             value: '${sbyMeta?.totalPersonil ?? state.surabayaCards.length} Personil',
                             icon: LucideIcons.users,
-                            color: AppColors.info,
+                            color: context.semantic.info,
                           ),
                           _buildSummaryItem(
                             context,
                             title: 'Total Target (Kg)',
                             value: '${CurrencyFormatter.formatNumber(sbyMeta?.totalTargetKg ?? 0)} Kg',
                             icon: LucideIcons.target,
-                            color: AppColors.primaryLight,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                           _buildSummaryItem(
                             context,
                             title: 'Total Penjualan (Kg)',
                             value: '${CurrencyFormatter.formatNumber(sbyMeta?.totalActualKg ?? 0)} Kg',
                             icon: LucideIcons.packageCheck,
-                            color: AppColors.success,
+                            color: context.semantic.success,
                           ),
                           _buildSummaryItem(
                             context,
                             title: 'Total Payout Surabaya',
                             value: CurrencyFormatter.formatRupiah(sbyMeta?.totalPayout ?? state.summary.totalReward),
                             icon: LucideIcons.wallet,
-                            color: const Color(0xFF24968B),
+                            color: context.semantic.success,
                           ),
                         ]
                       : [
-                          _buildSummaryItem(context, title: 'Sales Berhak (Eligible)', value: '${state.summary.totalPersonil} Personil', icon: LucideIcons.users, color: AppColors.info),
-                          _buildSummaryItem(context, title: 'Total Kuota Target', value: '${CurrencyFormatter.formatNumber(state.summary.totalQuota)} Kg', icon: LucideIcons.target, color: AppColors.primaryLight),
-                          _buildSummaryItem(context, title: 'Total Realisasi', value: '${CurrencyFormatter.formatNumber(state.summary.totalRealization)} Kg', icon: LucideIcons.checkCheck, color: AppColors.success),
-                          _buildSummaryItem(context, title: 'Akumulasi Reward Insentif', value: CurrencyFormatter.formatRupiah(state.summary.totalReward), icon: LucideIcons.wallet, color: const Color(0xFF24968B)),
+                          _buildSummaryItem(context, title: 'Sales Berhak (Eligible)', value: '${state.summary.totalPersonil} Personil', icon: LucideIcons.users, color: context.semantic.info),
+                          _buildSummaryItem(context, title: 'Total Kuota Target', value: '${CurrencyFormatter.formatNumber(state.summary.totalQuota)} Kg', icon: LucideIcons.target, color: Theme.of(context).colorScheme.primary),
+                          _buildSummaryItem(context, title: 'Total Realisasi', value: '${CurrencyFormatter.formatNumber(state.summary.totalRealization)} Kg', icon: LucideIcons.checkCheck, color: context.semantic.success),
+                          _buildSummaryItem(context, title: 'Akumulasi Reward Insentif', value: CurrencyFormatter.formatRupiah(state.summary.totalReward), icon: LucideIcons.wallet, color: context.semantic.success),
                         ]);
 
               return LayoutBuilder(
@@ -653,7 +653,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
           Container(
             decoration: BoxDecoration(
               color: colors.bgCard,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: colors.border, width: 1.2),
               boxShadow: colors.cardShadows,
             ),
@@ -683,7 +683,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                           ? 'Audit Insentif Sales Surabaya'
                                           : 'Hasil Perhitungan Insentif Sales')),
                               overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                              style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: colors.textPrimary),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -708,7 +708,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                           ? Container(
                               decoration: BoxDecoration(
                                 color: colors.bgSubtle,
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(8),
                                 border: Border.all(color: colors.borderMuted),
                               ),
                               child: Row(
@@ -720,19 +720,19 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                       decoration: BoxDecoration(
-                                        color: state.isBreakdownView ? AppColors.primary : Colors.transparent,
+                                        color: state.isBreakdownView ? Theme.of(context).colorScheme.primary : Colors.transparent,
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Icon(LucideIcons.layoutGrid, size: 14, color: state.isBreakdownView ? Colors.white : colors.textSecondary),
+                                          Icon(LucideIcons.layoutGrid, size: 14, color: state.isBreakdownView ? Theme.of(context).colorScheme.onPrimary : colors.textSecondary),
                                           const SizedBox(width: 6),
                                           Text(
                                             isIndustri
                                                 ? 'Kartu Audit Industri'
                                                 : (isSurabaya ? 'Kartu Audit Surabaya' : 'Kartu Distributor'),
-                                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: state.isBreakdownView ? Colors.white : colors.textSecondary),
+                                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: state.isBreakdownView ? Theme.of(context).colorScheme.onPrimary : colors.textSecondary),
                                           ),
                                         ],
                                       ),
@@ -744,15 +744,15 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                       decoration: BoxDecoration(
-                                        color: !state.isBreakdownView ? AppColors.primary : Colors.transparent,
+                                        color: !state.isBreakdownView ? Theme.of(context).colorScheme.primary : Colors.transparent,
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Icon(LucideIcons.table, size: 14, color: !state.isBreakdownView ? Colors.white : colors.textSecondary),
+                                          Icon(LucideIcons.table, size: 14, color: !state.isBreakdownView ? Theme.of(context).colorScheme.onPrimary : colors.textSecondary),
                                           const SizedBox(width: 6),
-                                          Text('Tabel Personil', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: !state.isBreakdownView ? Colors.white : colors.textSecondary)),
+                                          Text('Tabel Personil', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: !state.isBreakdownView ? Theme.of(context).colorScheme.onPrimary : colors.textSecondary)),
                                         ],
                                       ),
                                     ),
@@ -779,9 +779,9 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             filled: true,
                             fillColor: colors.bgInput,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: colors.borderMuted)),
-                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: colors.borderMuted)),
-                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.primary)),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: colors.borderMuted)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: colors.borderMuted)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Theme.of(context).colorScheme.primary)),
                           ),
                           onChanged: (val) {
                             setState(() => _cardsPage = 1);
@@ -824,7 +824,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                 Divider(height: 1, color: colors.border),
 
                 if (state.isLoading)
-                  const Padding(padding: EdgeInsets.all(60), child: Center(child: CircularProgressIndicator(color: AppColors.primary)))
+                  Padding(padding: EdgeInsets.all(60), child: Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary)))
                 else if ((activeKategori == 'KONSUMSI' || activeKategori == 'DISTRIBUTOR') && state.isBreakdownView)
                   _buildDistributorCardsView(context, state)
                 else if (activeKategori == 'INDUSTRI' && state.isBreakdownView)
@@ -840,7 +840,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                         children: [
                           Icon(LucideIcons.calculator, size: 48, color: colors.textMuted),
                           const SizedBox(height: 16),
-                          Text('Belum Ada Data Insentif pada Periode Ini', style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: colors.textPrimary)),
+                          Text('Belum Ada Data Insentif pada Periode Ini', style: GoogleFonts.plusJakartaSans(fontSize: 17, fontWeight: FontWeight.bold, color: colors.textPrimary)),
                           const SizedBox(height: 6),
                           Text('Pilih periode lain atau pastikan Master Target & Realisasi sudah tersedia.', style: TextStyle(fontSize: 13, color: colors.textSecondary)),
                         ],
@@ -864,7 +864,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: colors.bgCard,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: colors.border, width: 1.2),
         boxShadow: colors.cardShadows,
       ),
@@ -872,7 +872,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
             child: Icon(icon, color: color, size: 20),
           ),
           const SizedBox(width: 14),
@@ -886,7 +886,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
-                  child: Text(value, maxLines: 1, style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: colors.textPrimary)),
+                  child: Text(value, maxLines: 1, style: GoogleFonts.plusJakartaSans(fontSize: 17, fontWeight: FontWeight.bold, color: colors.textPrimary)),
                 ),
               ],
             ),
@@ -900,14 +900,14 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
     Color bg;
     Color text;
     if (pct < 90) {
-      bg = const Color(0xFFFEE2E2);
-      text = const Color(0xFFDC2626);
+      bg = context.semantic.dangerBg;
+      text = context.semantic.danger;
     } else if (pct < 100) {
-      bg = const Color(0xFFFEF3C7);
-      text = const Color(0xFFD97706);
+      bg = context.semantic.warningBg;
+      text = context.semantic.warning;
     } else {
-      bg = const Color(0xFFDCFCE7);
-      text = const Color(0xFF16A34A);
+      bg = context.semantic.successBg;
+      text = context.semantic.success;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -950,7 +950,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
               const SizedBox(height: 16),
               Text(
                 'Tidak Ada Data Distributor / Depo',
-                style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                style: GoogleFonts.plusJakartaSans(fontSize: 17, fontWeight: FontWeight.bold, color: colors.textPrimary),
               ),
               const SizedBox(height: 6),
               Text(
@@ -1015,7 +1015,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: colors.bgSubtle.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: colors.borderMuted),
       ),
       child: Wrap(
@@ -1111,7 +1111,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
     return Container(
       decoration: BoxDecoration(
         color: colors.bgCard,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: colors.border, width: 1.2),
         boxShadow: colors.cardShadows,
       ),
@@ -1120,7 +1120,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
         children: [
           // Clickable Card Header
           InkWell(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
             onTap: () {
               setState(() {
                 if (isExpanded) {
@@ -1141,10 +1141,10 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEEF2FF),
+                          color: Theme.of(context).colorScheme.primaryContainer,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(LucideIcons.store, size: 16, color: Color(0xFF4F46E5)),
+                        child: Icon(LucideIcons.store, size: 16, color: Theme.of(context).colorScheme.primary),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -1155,23 +1155,23 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                           children: [
                             Text(
                               'Distributor: ${card.distributorName}',
-                              style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.w700, color: colors.textPrimary),
+                              style: GoogleFonts.plusJakartaSans(fontSize: 13.5, fontWeight: FontWeight.w700, color: colors.textPrimary),
                             ),
                             Icon(LucideIcons.arrowRight, size: 14, color: colors.textMuted),
                             Text(
                               'Depo: ${card.depoName}',
-                              style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.w700, color: colors.textPrimary),
+                              style: GoogleFonts.plusJakartaSans(fontSize: 13.5, fontWeight: FontWeight.w700, color: colors.textPrimary),
                             ),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFEEF2FF),
+                                color: Theme.of(context).colorScheme.primaryContainer,
                                 borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFFC7D2FE)),
+                                border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
                               ),
                               child: Text(
                                 'Brand: ${card.brandName}',
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF4F46E5)),
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary),
                               ),
                             ),
                           ],
@@ -1212,15 +1212,15 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                 style: TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w700,
-                                  color: card.sellInAchPct >= 100 ? const Color(0xFF10B981) : colors.textSecondary,
+                                  color: card.sellInAchPct >= 100 ? context.semantic.success : colors.textSecondary,
                                 ),
                               ),
                               TextSpan(
                                 text: '➔ ${CurrencyFormatter.formatRupiah(card.sellInReward)}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF4F46E5),
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ),
                             ],
@@ -1230,14 +1230,14 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFECFDF5),
+                          color: context.semantic.successBg,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFA7F3D0)),
+                          border: Border.all(color: context.semantic.success.withValues(alpha: 0.3)),
                         ),
                         child: Text(
                           'Total: ${CurrencyFormatter.formatRupiah(card.totalDepoReward)}',
-                          style: const TextStyle(
-                            color: Color(0xFF047857),
+                          style: TextStyle(
+                            color: context.semantic.success,
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
                           ),
@@ -1260,7 +1260,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                       widthFactor: (card.sellInAchPct / 100.0).clamp(0.0, 1.0),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: const Color(0xFF10B981),
+                          color: context.semantic.success,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -1296,7 +1296,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                     dataRowMinHeight: 48,
                     dataRowMaxHeight: 56,
                     headingRowColor: WidgetStateProperty.all(colors.bgSubtle),
-                    headingTextStyle: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: colors.textSecondary),
+                    headingTextStyle: GoogleFonts.plusJakartaSans(fontSize: 11.5, fontWeight: FontWeight.bold, color: colors.textSecondary),
                     columns: const [
                       DataColumn(label: SizedBox(width: 32, child: Text('No', textAlign: TextAlign.center))),
                       DataColumn(label: SizedBox(width: 130, child: Text('Nama Area'))),
@@ -1328,7 +1328,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                 children: [
                                   Text(
                                     area.areaName,
-                                    style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w600, color: colors.textPrimary),
+                                    style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600, color: colors.textPrimary),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   if (area.spvName != '-')
@@ -1345,12 +1345,12 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFEEF2FF),
+                                color: Theme.of(context).colorScheme.primaryContainer,
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
                                 area.brandName,
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF4F46E5)),
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary),
                               ),
                             ),
                           ),
@@ -1379,7 +1379,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                 const SizedBox(height: 2),
                                 Text(
                                   CurrencyFormatter.formatRupiah(area.sellOutReward),
-                                  style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFFD97706)),
+                                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: context.semantic.warning),
                                 ),
                               ],
                             ),
@@ -1403,7 +1403,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                 const SizedBox(height: 2),
                                 Text(
                                   CurrencyFormatter.formatRupiah(area.aoReward),
-                                  style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFFD97706)),
+                                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: context.semantic.warning),
                                 ),
                               ],
                             ),
@@ -1417,7 +1417,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
-                                color: area.subtotalAreaReward > 0 ? AppColors.success : colors.textSecondary,
+                                color: area.subtotalAreaReward > 0 ? context.semantic.success : colors.textSecondary,
                               ),
                             ),
                           ),
@@ -1438,7 +1438,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
       minWidth: 1000,
       child: DataTable(
         headingRowColor: WidgetStateProperty.all(colors.bgSubtle),
-        headingTextStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: colors.textSecondary),
+        headingTextStyle: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: colors.textSecondary),
         columns: const [
           DataColumn(label: Text('Sales Personil')),
           DataColumn(label: Text('Posisi / Role')),
@@ -1462,10 +1462,10 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                   children: [
                     CircleAvatar(
                       radius: 14,
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                      backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                       child: Text(
                         item.user?.name.isNotEmpty == true ? item.user!.name[0].toUpperCase() : '?',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1497,8 +1497,8 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: isAo
-                            ? AppColors.warning.withValues(alpha: 0.14)
-                            : AppColors.info.withValues(alpha: 0.14),
+                            ? context.semantic.warning.withValues(alpha: 0.14)
+                            : context.semantic.info.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -1506,7 +1506,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: isAo ? AppColors.warning : AppColors.info,
+                          color: isAo ? context.semantic.warning : context.semantic.info,
                         ),
                       ),
                     ),
@@ -1526,18 +1526,18 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: item.isRateBased ? AppColors.info.withValues(alpha: 0.12) : AppColors.warning.withValues(alpha: 0.12),
+                    color: item.isRateBased ? context.semantic.info.withValues(alpha: 0.12) : context.semantic.warning.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     item.isRateBased ? 'Rate (${CurrencyFormatter.formatRupiah(item.unitRate)}/$unitLabel)' : 'Lump Sum',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: item.isRateBased ? AppColors.info : AppColors.warning),
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: item.isRateBased ? context.semantic.info : context.semantic.warning),
                   ),
                 ),
               ),
               DataCell(Text(CurrencyFormatter.formatPercent(item.headerBobotPercent), style: TextStyle(color: colors.textSecondary))),
               DataCell(
-                Text(CurrencyFormatter.formatRupiah(item.finalReward), style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.w700, fontSize: 13.5)),
+                Text(CurrencyFormatter.formatRupiah(item.finalReward), style: TextStyle(color: context.semantic.success, fontWeight: FontWeight.w700, fontSize: 13.5)),
               ),
             ],
           );
@@ -1573,7 +1573,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
               const SizedBox(height: 16),
               Text(
                 'Belum Ada Rincian Audit Insentif Industri',
-                style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                style: GoogleFonts.plusJakartaSans(fontSize: 17, fontWeight: FontWeight.bold, color: colors.textPrimary),
               ),
               const SizedBox(height: 6),
               Text(
@@ -1628,9 +1628,9 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
     return Container(
       decoration: BoxDecoration(
         color: colors.bgCard,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: card.isEligibleIndustri ? colors.border : AppColors.danger.withValues(alpha: 0.45),
+          color: card.isEligibleIndustri ? colors.border : context.semantic.danger.withValues(alpha: 0.45),
           width: 1.2,
         ),
         boxShadow: colors.cardShadows,
@@ -1639,7 +1639,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           InkWell(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
             onTap: () {
               setState(() {
                 if (isExpanded) {
@@ -1660,9 +1660,9 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                       final totalBadge = Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: AppColors.success.withValues(alpha: 0.12),
+                          color: context.semantic.success.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                          border: Border.all(color: context.semantic.success.withValues(alpha: 0.3)),
                         ),
                         child: Column(
                           crossAxisAlignment: isCompactHeader ? CrossAxisAlignment.start : CrossAxisAlignment.end,
@@ -1671,7 +1671,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                             Text('Grand Total Insentif', style: TextStyle(fontSize: 10, color: colors.textSecondary)),
                             Text(
                               CurrencyFormatter.formatRupiah(card.totalReward),
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.success),
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.semantic.success),
                             ),
                           ],
                         ),
@@ -1682,10 +1682,10 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                         children: [
                           CircleAvatar(
                             radius: 18,
-                            backgroundColor: AppColors.primary.withValues(alpha: 0.14),
+                            backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.14),
                             child: Text(
                               card.userName.isNotEmpty ? card.userName[0].toUpperCase() : '?',
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.primary),
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -1697,7 +1697,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                               children: [
                                 Text(
                                   card.userName,
-                                  style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w700, color: colors.textPrimary),
+                                  style: GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: FontWeight.w700, color: colors.textPrimary),
                                 ),
                                 Text(
                                   '@${card.username}',
@@ -1706,19 +1706,19 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: AppColors.info.withValues(alpha: 0.12),
+                                    color: context.semantic.info.withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
                                     '${card.positionCode} - ${card.positionName}',
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.info),
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: context.semantic.info),
                                   ),
                                 ),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: (card.isEligibleIndustri ? AppColors.success : AppColors.danger).withValues(alpha: 0.12),
+                                    color: (card.isEligibleIndustri ? context.semantic.success : context.semantic.danger).withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
@@ -1729,7 +1729,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                     style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700,
-                                      color: card.isEligibleIndustri ? AppColors.success : AppColors.danger,
+                                      color: card.isEligibleIndustri ? context.semantic.success : context.semantic.danger,
                                     ),
                                   ),
                                 ),
@@ -1785,7 +1785,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                         methodData: card.sellIn,
                         title: 'SELL-IN (Volume Kg)',
                         icon: LucideIcons.packageCheck,
-                        accent: AppColors.info,
+                        accent: context.semantic.info,
                         isNooMethod: false,
                         period: card.period,
                         colors: colors,
@@ -1794,7 +1794,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                         methodData: card.noo,
                         title: 'NOO (New Open Outlet)',
                         icon: LucideIcons.sparkles,
-                        accent: AppColors.primaryLight,
+                        accent: Theme.of(context).colorScheme.primary,
                         isNooMethod: true,
                         period: card.period,
                         colors: colors,
@@ -1824,7 +1824,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                     isExpanded
                         ? 'Klik untuk sembunyikan rincian ${card.customers.length} transaksi customer'
                         : 'Klik kartu untuk audit ${card.customers.length} customer & riwayat status NOO',
-                    style: TextStyle(fontSize: 11.5, color: AppColors.primaryLight, fontWeight: FontWeight.w500),
+                    style: TextStyle(fontSize: 11.5, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -1847,7 +1847,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                   scrollDirection: Axis.horizontal,
                   child: DataTable(
                     headingRowColor: WidgetStateProperty.all(colors.bgSubtle),
-                    headingTextStyle: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: colors.textSecondary),
+                    headingTextStyle: GoogleFonts.plusJakartaSans(fontSize: 11.5, fontWeight: FontWeight.bold, color: colors.textSecondary),
                     dataRowMinHeight: 46,
                     dataRowMaxHeight: double.infinity,
                     columns: const [
@@ -1863,7 +1863,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                     rows: card.customers.map((c) {
                       return DataRow(
                         cells: [
-                          DataCell(Text(c.customerCode, style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.w600, fontSize: 12))),
+                          DataCell(Text(c.customerCode, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600, fontSize: 12))),
                           DataCell(
                             ConstrainedBox(
                               constraints: const BoxConstraints(maxWidth: 220),
@@ -1875,7 +1875,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                               decoration: BoxDecoration(
-                                color: (c.customerType == 'NEW' ? AppColors.success : AppColors.info).withValues(alpha: 0.12),
+                                color: (c.customerType == 'NEW' ? context.semantic.success : context.semantic.info).withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(5),
                               ),
                               child: Text(
@@ -1883,14 +1883,14 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                 style: TextStyle(
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.bold,
-                                  color: c.customerType == 'NEW' ? AppColors.success : AppColors.info,
+                                  color: c.customerType == 'NEW' ? context.semantic.success : context.semantic.info,
                                 ),
                               ),
                             ),
                           ),
                           DataCell(Text('${c.txCount}x', style: TextStyle(color: colors.textSecondary, fontSize: 12))),
                           DataCell(Text('${CurrencyFormatter.formatNumber(c.volumeKg)} Kg', style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 12.5))),
-                          DataCell(Text(CurrencyFormatter.formatRupiah(c.nominal), style: const TextStyle(color: AppColors.success, fontSize: 12))),
+                          DataCell(Text(CurrencyFormatter.formatRupiah(c.nominal), style: TextStyle(color: context.semantic.success, fontSize: 12))),
                           DataCell(
                             Row(
                               mainAxisSize: MainAxisSize.min,
@@ -1898,16 +1898,16 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: (c.isNoo ? AppColors.success : colors.bgSubtle).withValues(alpha: c.isNoo ? 0.15 : 1),
+                                    color: (c.isNoo ? context.semantic.success : colors.bgSubtle).withValues(alpha: c.isNoo ? 0.15 : 1),
                                     borderRadius: BorderRadius.circular(5),
-                                    border: Border.all(color: c.isNoo ? AppColors.success.withValues(alpha: 0.4) : colors.borderMuted),
+                                    border: Border.all(color: c.isNoo ? context.semantic.success.withValues(alpha: 0.4) : colors.borderMuted),
                                   ),
                                   child: Text(
                                     c.isNoo ? 'NOO' : 'Repeat Order',
                                     style: TextStyle(
                                       fontSize: 10.5,
                                       fontWeight: FontWeight.bold,
-                                      color: c.isNoo ? AppColors.success : colors.textSecondary,
+                                      color: c.isNoo ? context.semantic.success : colors.textSecondary,
                                     ),
                                   ),
                                 ),
@@ -1964,7 +1964,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                       child: Text(
                         title,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                        style: GoogleFonts.plusJakartaSans(fontSize: 13.5, fontWeight: FontWeight.bold, color: colors.textPrimary),
                       ),
                     ),
                   ],
@@ -1993,7 +1993,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                         Flexible(
                           child: Text(
                             title,
-                            style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                            style: GoogleFonts.plusJakartaSans(fontSize: 13.5, fontWeight: FontWeight.bold, color: colors.textPrimary),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -2002,7 +2002,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: (methodData.isPassed ? AppColors.success : AppColors.danger).withValues(alpha: 0.14),
+                        color: (methodData.isPassed ? context.semantic.success : context.semantic.danger).withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -2012,7 +2012,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: methodData.isPassed ? AppColors.success : AppColors.danger,
+                          color: methodData.isPassed ? context.semantic.success : context.semantic.danger,
                         ),
                       ),
                     ),
@@ -2066,7 +2066,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: methodData.isPassed ? AppColors.success : AppColors.danger,
+                          color: methodData.isPassed ? context.semantic.success : context.semantic.danger,
                         ),
                       ),
                       if (methodData.auditNotes != null && methodData.auditNotes!.isNotEmpty) ...[
@@ -2118,7 +2118,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
               const SizedBox(height: 16),
               Text(
                 'Belum Ada Rincian Audit Insentif Surabaya',
-                style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                style: GoogleFonts.plusJakartaSans(fontSize: 17, fontWeight: FontWeight.bold, color: colors.textPrimary),
               ),
               const SizedBox(height: 6),
               Text(
@@ -2150,9 +2150,9 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
     return Container(
       decoration: BoxDecoration(
         color: colors.bgCard,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: card.isEligibleSurabaya ? colors.border : AppColors.danger.withValues(alpha: 0.45),
+          color: card.isEligibleSurabaya ? colors.border : context.semantic.danger.withValues(alpha: 0.45),
           width: 1.2,
         ),
         boxShadow: colors.cardShadows,
@@ -2168,9 +2168,9 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                 final totalBadge = Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.success.withValues(alpha: 0.12),
+                    color: context.semantic.success.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                    border: Border.all(color: context.semantic.success.withValues(alpha: 0.3)),
                   ),
                   child: Column(
                     crossAxisAlignment: isCompactHeader ? CrossAxisAlignment.start : CrossAxisAlignment.end,
@@ -2182,7 +2182,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                       ),
                       Text(
                         CurrencyFormatter.formatRupiah(card.totalReward),
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.success),
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.semantic.success),
                       ),
                     ],
                   ),
@@ -2193,10 +2193,10 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                   children: [
                     CircleAvatar(
                       radius: 18,
-                      backgroundColor: (isAsc ? AppColors.warning : AppColors.primary).withValues(alpha: 0.15),
+                      backgroundColor: (isAsc ? context.semantic.warning : Theme.of(context).colorScheme.primary).withValues(alpha: 0.15),
                       child: Text(
                         card.userName.isNotEmpty ? card.userName[0].toUpperCase() : '?',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: isAsc ? AppColors.warning : AppColors.primary),
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: isAsc ? context.semantic.warning : Theme.of(context).colorScheme.primary),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -2208,25 +2208,25 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                         children: [
                           Text(
                             card.userName,
-                            style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w700, color: colors.textPrimary),
+                            style: GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: FontWeight.w700, color: colors.textPrimary),
                           ),
                           Text('@${card.username}', style: TextStyle(fontSize: 12, color: colors.textMuted)),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: (isAsc ? AppColors.warning : AppColors.info).withValues(alpha: 0.14),
+                              color: (isAsc ? context.semantic.warning : context.semantic.info).withValues(alpha: 0.14),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               '${card.positionCode} - ${card.positionName}',
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: isAsc ? AppColors.warning : AppColors.info),
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: isAsc ? context.semantic.warning : context.semantic.info),
                             ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: (card.isEligibleSurabaya ? AppColors.success : AppColors.danger).withValues(alpha: 0.12),
+                              color: (card.isEligibleSurabaya ? context.semantic.success : context.semantic.danger).withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -2235,7 +2235,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color: card.isEligibleSurabaya ? AppColors.success : AppColors.danger,
+                                color: card.isEligibleSurabaya ? context.semantic.success : context.semantic.danger,
                               ),
                             ),
                           ),
@@ -2294,7 +2294,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: colors.bgSubtle.withValues(alpha: 0.55),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: colors.borderMuted),
                 ),
                 child: Column(
@@ -2308,7 +2308,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                       children: [
                         Text(
                           'Breakdown Evaluasi Bawahan (${card.headerName ?? 'Setting ASC'})',
-                          style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                          style: GoogleFonts.plusJakartaSans(fontSize: 13.5, fontWeight: FontWeight.bold, color: colors.textPrimary),
                         ),
                         Text(
                           'Min. Achievement ASC: ${card.minAchievementPct.toStringAsFixed(0)}% • Bobot Header: ${card.headerWeightPct.toStringAsFixed(0)}%',
@@ -2330,7 +2330,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                         scrollDirection: Axis.horizontal,
                         child: DataTable(
                           headingRowColor: WidgetStateProperty.all(colors.bgCard),
-                          headingTextStyle: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: colors.textSecondary),
+                          headingTextStyle: GoogleFonts.plusJakartaSans(fontSize: 11.5, fontWeight: FontWeight.bold, color: colors.textSecondary),
                           dataRowMinHeight: 44,
                           dataRowMaxHeight: double.infinity,
                           columns: const [
@@ -2353,8 +2353,8 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                   DataCell(
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                      decoration: BoxDecoration(color: AppColors.info.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(5)),
-                                      child: Text(sub.positionCode, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.info)),
+                                      decoration: BoxDecoration(color: context.semantic.info.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(5)),
+                                      child: Text(sub.positionCode, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.semantic.info)),
                                     ),
                                   ),
                                   DataCell(Text(CurrencyFormatter.formatNumber(sub.targetKg), style: TextStyle(color: colors.textSecondary, fontSize: 12.5))),
@@ -2364,7 +2364,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                       decoration: BoxDecoration(
-                                        color: (sub.isPassed ? AppColors.success : AppColors.danger).withValues(alpha: 0.14),
+                                        color: (sub.isPassed ? context.semantic.success : context.semantic.danger).withValues(alpha: 0.14),
                                         borderRadius: BorderRadius.circular(5),
                                       ),
                                       child: Text(
@@ -2372,7 +2372,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
-                                          color: sub.isPassed ? AppColors.success : AppColors.danger,
+                                          color: sub.isPassed ? context.semantic.success : context.semantic.danger,
                                         ),
                                       ),
                                     ),
@@ -2386,7 +2386,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 12.5,
-                                        color: sub.contributionReward > 0 ? AppColors.success : colors.textMuted,
+                                        color: sub.contributionReward > 0 ? context.semantic.success : colors.textMuted,
                                       ),
                                     ),
                                   ),
@@ -2394,9 +2394,9 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                               );
                             }),
                             DataRow(
-                              color: WidgetStateProperty.all(AppColors.success.withValues(alpha: 0.08)),
+                              color: WidgetStateProperty.all(context.semantic.success.withValues(alpha: 0.08)),
                               cells: [
-                                DataCell(Text('GRAND TOTAL INSENTIF ASC (${card.userName})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.success))),
+                                DataCell(Text('GRAND TOTAL INSENTIF ASC (${card.userName})', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: context.semantic.success))),
                                 const DataCell(Text('')),
                                 DataCell(Text(CurrencyFormatter.formatNumber(card.targetKg), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colors.textPrimary))),
                                 DataCell(Text(CurrencyFormatter.formatNumber(card.actualKg), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colors.textPrimary))),
@@ -2405,7 +2405,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                                 const DataCell(Text('')),
                                 const DataCell(Text('')),
                                 const DataCell(Text('')),
-                                DataCell(Text(CurrencyFormatter.formatRupiah(card.totalReward), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.success))),
+                                DataCell(Text(CurrencyFormatter.formatRupiah(card.totalReward), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: context.semantic.success))),
                               ],
                             ),
                           ],
@@ -2433,12 +2433,12 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                       children: [
                         Text(
                           'Penjualan Langsung (${card.positionCode})',
-                          style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                          style: GoogleFonts.plusJakartaSans(fontSize: 13.5, fontWeight: FontWeight.bold, color: colors.textPrimary),
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: (card.isPassed ? AppColors.success : AppColors.danger).withValues(alpha: 0.14),
+                            color: (card.isPassed ? context.semantic.success : context.semantic.danger).withValues(alpha: 0.14),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -2448,7 +2448,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: card.isPassed ? AppColors.success : AppColors.danger,
+                              color: card.isPassed ? context.semantic.success : context.semantic.danger,
                             ),
                           ),
                         ),
@@ -2494,7 +2494,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: card.isPassed ? AppColors.success : AppColors.danger,
+                              color: card.isPassed ? context.semantic.success : context.semantic.danger,
                             ),
                           ),
                           if (card.auditNotes != null && card.auditNotes!.isNotEmpty) ...[

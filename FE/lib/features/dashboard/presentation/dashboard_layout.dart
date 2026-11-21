@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 
@@ -118,22 +117,20 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
     }
 
     final routeLower = item.route.toLowerCase();
+    // 1. Prioritaskan exact route match agar setting hak akses per-menu akurat 1-to-1
     for (final perm in menuPermissions) {
       final menuRoute = (perm.menu?.route ?? '').toString().trim().toLowerCase();
-      final menuName = (perm.menu?.name ?? '').toString().trim().toLowerCase();
-      if (menuRoute.isNotEmpty) {
-        if (routeLower == menuRoute) {
-          return perm.canView == true;
-        }
-        // Cocokkan prefix group menu: /master/* -> /master, /incentives/* -> /incentives/calculate
-        if (menuRoute == '/master' && routeLower.startsWith('/master')) {
-          return perm.canView == true;
-        }
-        if (menuRoute.startsWith('/incentives') && routeLower.startsWith('/incentives')) {
-          return perm.canView == true;
-        }
+      if (menuRoute.isNotEmpty && routeLower == menuRoute) {
+        return perm.canView == true;
       }
-      if (menuName.isNotEmpty && item.title.toLowerCase().contains(menuName)) {
+    }
+    // 2. Fallback untuk kompatibilitas route grup lama (/master, /incentives/calculate)
+    for (final perm in menuPermissions) {
+      final menuRoute = (perm.menu?.route ?? '').toString().trim().toLowerCase();
+      if (menuRoute == '/master' && routeLower.startsWith('/master')) {
+        return perm.canView == true;
+      }
+      if (menuRoute == '/incentives/calculate' && routeLower.startsWith('/incentives')) {
         return perm.canView == true;
       }
     }
@@ -147,44 +144,36 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
         String query = '';
         return StatefulBuilder(
           builder: (ctx, setDialogState) {
+            final cs = Theme.of(ctx).colorScheme;
+            final tt = Theme.of(ctx).textTheme;
             final filtered = items
                 .where((i) =>
                     i.title.toLowerCase().contains(query.toLowerCase()) ||
                     i.group.toLowerCase().contains(query.toLowerCase()))
                 .toList();
             return Dialog(
-              backgroundColor: context.colors.bgCard,
+              backgroundColor: cs.surface,
+              surfaceTintColor: Colors.transparent,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(22),
-                side: BorderSide(color: context.colors.border),
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: cs.outlineVariant),
               ),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 440, maxHeight: 420),
+                constraints: const BoxConstraints(maxWidth: 460, maxHeight: 420),
                 child: Padding(
-                  padding: const EdgeInsets.all(18),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       TextField(
                         autofocus: true,
                         onChanged: (v) => setDialogState(() => query = v),
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 14,
-                          color: context.colors.textPrimary,
-                        ),
+                        style: tt.bodyLarge?.copyWith(color: cs.onSurface),
                         decoration: InputDecoration(
                           hintText: 'Ketik nama menu untuk berpindah halaman...',
-                          prefixIcon: const Icon(LucideIcons.search, size: 18),
+                          prefixIcon: const Icon(LucideIcons.search, size: 17),
                           filled: true,
-                          fillColor: context.colors.bgElevated,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(999),
-                            borderSide: BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(999),
-                            borderSide: BorderSide.none,
-                          ),
+                          fillColor: cs.surfaceContainerLow,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -194,24 +183,18 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                           itemBuilder: (_, idx) {
                             final item = filtered[idx];
                             return ListTile(
+                              dense: true,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              leading: Icon(item.icon, size: 18, color: AppColors.primary),
+                              leading: Icon(item.icon, size: 18, color: cs.primary),
                               title: Text(
                                 item.title,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: context.colors.textPrimary,
-                                ),
+                                style: tt.titleSmall,
                               ),
                               trailing: Text(
                                 item.group,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11,
-                                  color: context.colors.textMuted,
-                                ),
+                                style: tt.labelSmall,
                               ),
                               onTap: () {
                                 Navigator.pop(ctx);
@@ -244,154 +227,152 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: context.colors.bgDialog,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: BorderSide(color: context.colors.border),
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(LucideIcons.key, color: AppColors.primary, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Ganti Kata Sandi Saya',
-                style: GoogleFonts.plusJakartaSans(
-                  color: context.colors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                ),
-              ),
-            ],
-          ),
-          content: SizedBox(
-            width: 400,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+        builder: (context, setDialogState) {
+          final cs = Theme.of(context).colorScheme;
+          final tt = Theme.of(context).textTheme;
+          final sem = context.semantic;
+
+          return AlertDialog(
+            backgroundColor: cs.surface,
+            surfaceTintColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: cs.outlineVariant),
+            ),
+            title: Row(
               children: [
-                if (errorText != null) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.danger.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(LucideIcons.alertCircle, color: AppColors.danger, size: 16),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            errorText!,
-                            style: GoogleFonts.plusJakartaSans(color: AppColors.danger, fontSize: 12),
-                          ),
-                        ),
-                      ],
-                    ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: cs.primaryContainer,
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  const SizedBox(height: 14),
-                ],
-                TextField(
-                  controller: currentPassCtrl,
-                  obscureText: obscureCurrent,
-                  style: TextStyle(color: context.colors.textPrimary),
-                  decoration: InputDecoration(
-                    labelText: 'Kata Sandi Saat Ini',
-                    suffixIcon: IconButton(
-                      icon: Icon(obscureCurrent ? LucideIcons.eyeOff : LucideIcons.eye, size: 18),
-                      onPressed: () => setDialogState(() => obscureCurrent = !obscureCurrent),
-                    ),
-                  ),
+                  child: Icon(LucideIcons.key, color: cs.primary, size: 18),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: newPassCtrl,
-                  obscureText: obscureNew,
-                  style: TextStyle(color: context.colors.textPrimary),
-                  decoration: InputDecoration(
-                    labelText: 'Kata Sandi Baru',
-                    hintText: 'Minimal 6 karakter',
-                    suffixIcon: IconButton(
-                      icon: Icon(obscureNew ? LucideIcons.eyeOff : LucideIcons.eye, size: 18),
-                      onPressed: () => setDialogState(() => obscureNew = !obscureNew),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: confirmPassCtrl,
-                  obscureText: obscureConfirm,
-                  style: TextStyle(color: context.colors.textPrimary),
-                  decoration: InputDecoration(
-                    labelText: 'Konfirmasi Kata Sandi Baru',
-                    suffixIcon: IconButton(
-                      icon: Icon(obscureConfirm ? LucideIcons.eyeOff : LucideIcons.eye, size: 18),
-                      onPressed: () => setDialogState(() => obscureConfirm = !obscureConfirm),
-                    ),
-                  ),
+                const SizedBox(width: 12),
+                Text(
+                  'Ganti Kata Sandi Saya',
+                  style: tt.titleLarge,
                 ),
               ],
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text('Batal', style: GoogleFonts.plusJakartaSans(color: context.colors.textMuted)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () async {
-                final curr = currentPassCtrl.text.trim();
-                final nw = newPassCtrl.text.trim();
-                final conf = confirmPassCtrl.text.trim();
-
-                if (curr.isEmpty) {
-                  setDialogState(() => errorText = 'Masukkan kata sandi saat ini');
-                  return;
-                }
-                if (nw.length < 6) {
-                  setDialogState(() => errorText = 'Kata sandi baru minimal 6 karakter');
-                  return;
-                }
-                if (nw != conf) {
-                  setDialogState(() => errorText = 'Konfirmasi kata sandi tidak cocok');
-                  return;
-                }
-
-                final scaffoldMessenger = ScaffoldMessenger.of(context);
-                final nav = Navigator.of(ctx);
-                final msg = await ref.read(authProvider.notifier).changeOwnPassword(curr, nw);
-                final isSuccess = msg?.contains('berhasil') == true;
-                if (!ctx.mounted) return;
-                if (isSuccess) {
-                  nav.pop();
-                  scaffoldMessenger.showSnackBar(
-                    SnackBar(
-                      content: Text(msg ?? 'Kata sandi berhasil diubah'),
-                      backgroundColor: AppColors.success,
+            content: SizedBox(
+              width: 400,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (errorText != null) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: sem.dangerBg,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: sem.danger.withValues(alpha: 0.35)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(LucideIcons.alertCircle, color: sem.danger, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              errorText!,
+                              style: tt.bodySmall?.copyWith(color: sem.danger, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  );
-                } else {
-                  setDialogState(() => errorText = msg ?? 'Gagal memperbarui kata sandi');
-                }
-              },
-              child: Text('Simpan Sandi', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 14),
+                  ],
+                  TextField(
+                    controller: currentPassCtrl,
+                    obscureText: obscureCurrent,
+                    style: tt.bodyLarge?.copyWith(color: cs.onSurface),
+                    decoration: InputDecoration(
+                      labelText: 'Kata Sandi Saat Ini',
+                      suffixIcon: IconButton(
+                        icon: Icon(obscureCurrent ? LucideIcons.eyeOff : LucideIcons.eye, size: 18),
+                        onPressed: () => setDialogState(() => obscureCurrent = !obscureCurrent),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: newPassCtrl,
+                    obscureText: obscureNew,
+                    style: tt.bodyLarge?.copyWith(color: cs.onSurface),
+                    decoration: InputDecoration(
+                      labelText: 'Kata Sandi Baru',
+                      hintText: 'Minimal 6 karakter',
+                      suffixIcon: IconButton(
+                        icon: Icon(obscureNew ? LucideIcons.eyeOff : LucideIcons.eye, size: 18),
+                        onPressed: () => setDialogState(() => obscureNew = !obscureNew),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: confirmPassCtrl,
+                    obscureText: obscureConfirm,
+                    style: tt.bodyLarge?.copyWith(color: cs.onSurface),
+                    decoration: InputDecoration(
+                      labelText: 'Konfirmasi Kata Sandi Baru',
+                      suffixIcon: IconButton(
+                        icon: Icon(obscureConfirm ? LucideIcons.eyeOff : LucideIcons.eye, size: 18),
+                        onPressed: () => setDialogState(() => obscureConfirm = !obscureConfirm),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Batal', style: tt.labelLarge?.copyWith(color: cs.onSurfaceVariant)),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final curr = currentPassCtrl.text.trim();
+                  final nw = newPassCtrl.text.trim();
+                  final conf = confirmPassCtrl.text.trim();
+
+                  if (curr.isEmpty) {
+                    setDialogState(() => errorText = 'Masukkan kata sandi saat ini');
+                    return;
+                  }
+                  if (nw.length < 6) {
+                    setDialogState(() => errorText = 'Kata sandi baru minimal 6 karakter');
+                    return;
+                  }
+                  if (nw != conf) {
+                    setDialogState(() => errorText = 'Konfirmasi kata sandi tidak cocok');
+                    return;
+                  }
+
+                  final scaffoldMessenger = ScaffoldMessenger.of(context);
+                  final nav = Navigator.of(ctx);
+                  final msg = await ref.read(authProvider.notifier).changeOwnPassword(curr, nw);
+                  final isSuccess = msg?.contains('berhasil') == true;
+                  if (!ctx.mounted) return;
+                  if (isSuccess) {
+                    nav.pop();
+                    scaffoldMessenger.showSnackBar(
+                      SnackBar(
+                        content: Text(msg ?? 'Kata sandi berhasil diubah'),
+                        backgroundColor: sem.successSolid,
+                      ),
+                    );
+                  } else {
+                    setDialogState(() => errorText = msg ?? 'Gagal memperbarui kata sandi');
+                  }
+                },
+                child: const Text('Simpan Sandi'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -402,124 +383,130 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: context.colors.bgDialog,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(22),
-          side: BorderSide(color: context.colors.border),
-        ),
-        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-        contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-        title: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.16),
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.5),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                (user?.name.isNotEmpty == true ? user!.name[0] : 'U').toUpperCase(),
-                style: GoogleFonts.plusJakartaSans(
-                  color: AppColors.primaryDark,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        final tt = Theme.of(ctx).textTheme;
+        final sem = ctx.semantic;
+
+        return AlertDialog(
+          backgroundColor: cs.surface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: cs.outlineVariant),
+          ),
+          titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+          contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          title: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  (user?.name.isNotEmpty == true ? user!.name[0] : 'U').toUpperCase(),
+                  style: tt.titleLarge?.copyWith(color: cs.primary),
                 ),
               ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    user?.name ?? 'Pengguna',
-                    style: GoogleFonts.plusJakartaSans(
-                      color: context.colors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user?.name ?? 'Pengguna',
+                      style: tt.titleMedium,
                     ),
-                  ),
-                  Text(
-                    '@${user?.username ?? '-'} • ${user?.role?.displayName ?? 'User'}',
-                    style: GoogleFonts.plusJakartaSans(
-                      color: context.colors.textSecondary,
-                      fontSize: 12.5,
+                    Text(
+                      '@${user?.username ?? '-'} • ${user?.role?.displayName ?? 'User'}',
+                      style: tt.bodySmall,
                     ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 360,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Divider(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: sem.subtleBg,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: cs.outlineVariant),
                   ),
-                ],
-              ),
+                  child: Column(
+                    children: [
+                      _buildProfileRow(ctx, 'Posisi', user?.position?.name ?? 'Tanpa Posisi'),
+                      const SizedBox(height: 8),
+                      _buildProfileRow(ctx, 'Email', user?.email ?? '-'),
+                      const SizedBox(height: 8),
+                      _buildProfileRow(ctx, 'Role Akses', user?.role?.displayName ?? '-'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: cs.primary,
+                    side: BorderSide(color: cs.primary.withValues(alpha: 0.45)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  icon: const Icon(LucideIcons.key, size: 16),
+                  label: const Text('Ganti Kata Sandi Saya'),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _showChangeOwnPasswordDialog();
+                  },
+                ),
+                const SizedBox(height: 10),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: sem.dangerBg,
+                    foregroundColor: sem.danger,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  icon: const Icon(LucideIcons.logOut, size: 16),
+                  label: const Text('Keluar dari Akun (Logout)'),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _showLogoutDialog();
+                  },
+                ),
+              ],
             ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Divider(height: 24),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: context.colors.bgSubtle,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: context.colors.border),
-              ),
-              child: Column(
-                children: [
-                  _buildProfileRow('Posisi', user?.position?.name ?? 'Tanpa Posisi'),
-                  const SizedBox(height: 6),
-                  _buildProfileRow('Email', user?.email ?? '-'),
-                  const SizedBox(height: 6),
-                  _buildProfileRow('Role Akses', user?.role?.displayName ?? '-'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              icon: const Icon(LucideIcons.key, size: 16),
-              label: const Text('Ganti Kata Sandi Saya'),
-              onPressed: () {
-                Navigator.pop(ctx);
-                _showChangeOwnPasswordDialog();
-              },
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.danger.withValues(alpha: 0.12),
-                foregroundColor: AppColors.danger,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              icon: const Icon(LucideIcons.logOut, size: 16),
-              label: const Text('Keluar dari Akun (Logout)'),
-              onPressed: () {
-                Navigator.pop(ctx);
-                _showLogoutDialog();
-              },
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildProfileRow(String label, String value) {
+  Widget _buildProfileRow(BuildContext context, String label, String value) {
+    final tt = Theme.of(context).textTheme;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: GoogleFonts.plusJakartaSans(color: context.colors.textMuted, fontSize: 12)),
-        Text(value, style: GoogleFonts.plusJakartaSans(color: context.colors.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w600)),
+        Text(label, style: tt.bodySmall),
+        const SizedBox(width: 12),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            overflow: TextOverflow.ellipsis,
+            style: tt.labelLarge?.copyWith(fontSize: 12.5),
+          ),
+        ),
       ],
     );
   }
@@ -527,54 +514,56 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
   void _showLogoutDialog() {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: context.colors.bgDialog,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(22),
-          side: BorderSide(color: context.colors.border),
-        ),
-        title: Row(
-          children: [
-            const Icon(LucideIcons.logOut, color: AppColors.danger, size: 20),
-            const SizedBox(width: 10),
-            Text(
-              'Keluar dari Sesi',
-              style: GoogleFonts.plusJakartaSans(
-                color: context.colors.textPrimary,
-                fontWeight: FontWeight.w700,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        final tt = Theme.of(ctx).textTheme;
+        final sem = ctx.semantic;
+
+        return AlertDialog(
+          backgroundColor: cs.surface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: cs.outlineVariant),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: sem.dangerBg,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(LucideIcons.logOut, color: sem.danger, size: 18),
               ),
+              const SizedBox(width: 12),
+              Text('Keluar dari Sesi', style: tt.titleLarge),
+            ],
+          ),
+          content: Text(
+            'Apakah Anda yakin ingin keluar dari aplikasi?',
+            style: tt.bodyMedium,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Batal', style: tt.labelLarge?.copyWith(color: cs.onSurfaceVariant)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: cs.error,
+                foregroundColor: cs.onError,
+              ),
+              onPressed: () {
+                Navigator.pop(ctx);
+                ref.read(authProvider.notifier).logout();
+                context.go('/login');
+              },
+              child: const Text('Keluar'),
             ),
           ],
-        ),
-        content: Text(
-          'Apakah Anda yakin ingin keluar dari aplikasi?',
-          style: GoogleFonts.plusJakartaSans(
-            color: context.colors.textSecondary,
-            fontSize: 13.5,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              'Batal',
-              style: GoogleFonts.plusJakartaSans(color: context.colors.textMuted),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
-            onPressed: () {
-              Navigator.pop(ctx);
-              ref.read(authProvider.notifier).logout();
-              context.go('/login');
-            },
-            child: Text(
-              'Keluar',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -586,6 +575,10 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 1024;
     final showExpandedSidebar = isDesktop && _sidebarExpanded;
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final sem = context.semantic;
+    final isDark = context.isDarkMode;
 
     final visibleNavItems = _allNavItems.where((item) {
       return _isItemAllowed(item, user?.role);
@@ -594,341 +587,316 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
     return Scaffold(
       key: _scaffoldKey,
       drawer: !isDesktop ? _buildMobileDrawer(context, visibleNavItems, currentRoute) : null,
-      backgroundColor: context.colors.bgScaffold,
-      body: Padding(
-        padding: EdgeInsets.all(isDesktop ? 14 : 0),
-        child: Row(
-          children: [
-            // Klaboard Floating Left Sidebar
-            if (isDesktop) ...[
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                width: showExpandedSidebar ? 250 : 78,
-                curve: Curves.easeOutCubic,
-                decoration: BoxDecoration(
-                  color: context.colors.bgSubtle,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Klaboard-style Brand Header
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        showExpandedSidebar ? 24 : 18,
-                        24,
-                        showExpandedSidebar ? 18 : 18,
-                        18,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: showExpandedSidebar
-                            ? MainAxisAlignment.start
-                            : MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 38,
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              LucideIcons.layoutGrid,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                          if (showExpandedSidebar) ...[
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'Sales Insentif',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 19,
-                                  letterSpacing: -0.4,
-                                  color: context.colors.textPrimary,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            IconButton(
-                              icon: Icon(
-                                LucideIcons.panelLeftClose,
-                                size: 17,
-                                color: context.colors.textMuted,
-                              ),
-                              tooltip: 'Ringkas Sidebar',
-                              visualDensity: VisualDensity.compact,
-                              onPressed: () => setState(() => _sidebarExpanded = false),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-
-                    // Grouped Navigation Items
-                    Expanded(
-                      child: ListView(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        children: _buildGroupedSidebarItems(
-                          context,
-                          visibleNavItems,
-                          currentRoute,
-                          showExpandedSidebar,
-                        ),
-                      ),
-                    ),
-
-                    // Bottom Logout / Expand Action
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(0, 6, 0, 18),
-                      child: Column(
-                        children: [
-                          if (!showExpandedSidebar)
-                            IconButton(
-                              icon: Icon(
-                                LucideIcons.panelLeftOpen,
-                                size: 18,
-                                color: context.colors.textMuted,
-                              ),
-                              tooltip: 'Perlebar Sidebar',
-                              onPressed: () => setState(() => _sidebarExpanded = true),
-                            ),
-                          _buildSidebarTile(
-                            context: context,
-                            title: 'Keluar',
-                            icon: LucideIcons.logOut,
-                            isSelected: false,
-                            showExpanded: showExpandedSidebar,
-                            onTap: _showLogoutDialog,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Row(
+        children: [
+          // Clean SaaS Left Sidebar
+          if (isDesktop)
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: showExpandedSidebar ? 248 : 72,
+              curve: Curves.easeOutCubic,
+              decoration: BoxDecoration(
+                color: cs.surface,
+                border: Border(right: BorderSide(color: cs.outlineVariant)),
               ),
-              const SizedBox(width: 14),
-            ],
-
-            // Right Area: Floating Topbar + Floating Content Surface
-            Expanded(
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Klaboard Floating Topbar
+                  // Brand Header
                   Container(
-                    height: 68,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    height: 64,
+                    padding: EdgeInsets.symmetric(horizontal: showExpandedSidebar ? 18 : 14),
                     decoration: BoxDecoration(
-                      color: context.colors.bgSubtle,
-                      borderRadius: BorderRadius.circular(isDesktop ? 22 : 0),
-                      border: isDesktop
-                          ? Border.all(color: context.colors.border.withValues(alpha: 0.7))
-                          : Border(bottom: BorderSide(color: context.colors.border)),
+                      border: Border(bottom: BorderSide(color: cs.outlineVariant)),
                     ),
                     child: Row(
+                      mainAxisAlignment: showExpandedSidebar
+                          ? MainAxisAlignment.start
+                          : MainAxisAlignment.center,
                       children: [
-                        if (!isDesktop) ...[
+                        Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: cs.primary,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            LucideIcons.layoutGrid,
+                            color: cs.onPrimary,
+                            size: 18,
+                          ),
+                        ),
+                        if (showExpandedSidebar) ...[
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Sales Insentif',
+                              style: tt.titleLarge?.copyWith(fontSize: 16.5),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                           IconButton(
-                            icon: Icon(LucideIcons.menu, color: context.colors.textPrimary),
-                            tooltip: 'Buka Menu',
-                            onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                            icon: Icon(
+                              LucideIcons.panelLeftClose,
+                              size: 17,
+                              color: cs.onSurfaceVariant,
+                            ),
+                            tooltip: 'Ringkas Sidebar',
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () => setState(() => _sidebarExpanded = false),
                           ),
-                          const SizedBox(width: 8),
                         ],
-
-                        // Klaboard Search Pill ("Search task [⌘F]")
-                        if (screenWidth >= 560)
-                          InkWell(
-                            onTap: () => _showQuickJumpDialog(visibleNavItems),
-                            borderRadius: BorderRadius.circular(999),
-                            child: Container(
-                              width: screenWidth >= 900 ? 310 : 220,
-                              height: 44,
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              decoration: BoxDecoration(
-                                color: context.colors.bgCard,
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: context.colors.border.withValues(alpha: 0.8)),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    LucideIcons.search,
-                                    size: 17,
-                                    color: context.colors.textPrimary,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      'Cari menu atau fitur...',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 13,
-                                        color: context.colors.textMuted,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: context.colors.bgElevated,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      '⌘F',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        color: context.colors.textSecondary,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-
-                        const Spacer(),
-
-                        // Quick Upload Circle Button
-                        _buildTopCircleButton(
-                          context: context,
-                          icon: LucideIcons.uploadCloud,
-                          tooltip: 'Bulk Upload Data',
-                          onTap: () => context.go('/bulk-upload'),
-                        ),
-                        const SizedBox(width: 10),
-
-                        // Light / Dark Mode Circle Toggle
-                        _buildTopCircleButton(
-                          context: context,
-                          icon: context.isDarkMode ? LucideIcons.sun : LucideIcons.moon,
-                          tooltip: context.isDarkMode ? 'Mode Terang' : 'Mode Gelap',
-                          iconColor: context.isDarkMode ? AppColors.primaryLight : context.colors.textPrimary,
-                          onTap: () => ref.read(themeProvider.notifier).toggleTheme(),
-                        ),
-                        const SizedBox(width: 14),
-
-                        // Klaboard Natural User Profile
-                        InkWell(
-                          onTap: _showProfileDialog,
-                          borderRadius: BorderRadius.circular(999),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary.withValues(alpha: 0.16),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: AppColors.primary.withValues(alpha: 0.35),
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    (user?.name.isNotEmpty == true ? user!.name[0] : 'A').toUpperCase(),
-                                    style: GoogleFonts.plusJakartaSans(
-                                      color: AppColors.primaryDark,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                                if (screenWidth >= 520) ...[
-                                  const SizedBox(width: 10),
-                                  ConstrainedBox(
-                                    constraints: BoxConstraints(maxWidth: screenWidth < 800 ? 110 : 150),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          user?.name ?? 'Administrator',
-                                          overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.plusJakartaSans(
-                                            fontSize: 13.5,
-                                            fontWeight: FontWeight.w700,
-                                            color: context.colors.textPrimary,
-                                          ),
-                                        ),
-                                        Text(
-                                          user?.email ?? (user?.role?.displayName ?? 'admin@salestify.id'),
-                                          overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.plusJakartaSans(
-                                            fontSize: 11.5,
-                                            color: context.colors.textMuted,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),
 
-                  SizedBox(height: isDesktop ? 14 : 0),
-
-                  // Main Content Rounded Island
+                  // Grouped Navigation Items
                   Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: context.colors.bgSubtle,
-                        borderRadius: BorderRadius.circular(isDesktop ? 24 : 0),
-                        border: isDesktop
-                            ? Border.all(color: context.colors.border.withValues(alpha: 0.7))
-                            : null,
+                    child: ListView(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+                      children: _buildGroupedSidebarItems(
+                        context,
+                        visibleNavItems,
+                        currentRoute,
+                        showExpandedSidebar,
                       ),
-                      clipBehavior: isDesktop ? Clip.antiAlias : Clip.none,
-                      child: widget.child,
+                    ),
+                  ),
+
+                  // Bottom Footer Actions
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(10, 10, 10, 14),
+                    decoration: BoxDecoration(
+                      border: Border(top: BorderSide(color: cs.outlineVariant)),
+                    ),
+                    child: Column(
+                      children: [
+                        if (!showExpandedSidebar) ...[
+                          IconButton(
+                            icon: Icon(
+                              LucideIcons.panelLeftOpen,
+                              size: 18,
+                              color: cs.onSurfaceVariant,
+                            ),
+                            tooltip: 'Perlebar Sidebar',
+                            onPressed: () => setState(() => _sidebarExpanded = true),
+                          ),
+                          const SizedBox(height: 4),
+                        ],
+                        _buildSidebarTile(
+                          context: context,
+                          title: 'Keluar',
+                          icon: LucideIcons.logOut,
+                          isSelected: false,
+                          showExpanded: showExpandedSidebar,
+                          isDanger: true,
+                          onTap: _showLogoutDialog,
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+
+          // Right Area: Clean Topbar + Main Canvas
+          Expanded(
+            child: Column(
+              children: [
+                // Top AppBar
+                Container(
+                  height: 64,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  decoration: BoxDecoration(
+                    color: cs.surface,
+                    border: Border(bottom: BorderSide(color: cs.outlineVariant)),
+                  ),
+                  child: Row(
+                    children: [
+                      if (!isDesktop) ...[
+                        IconButton(
+                          icon: Icon(LucideIcons.menu, color: cs.onSurface),
+                          tooltip: 'Buka Menu',
+                          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+
+                      // Quick Search Trigger
+                      if (screenWidth >= 560)
+                        InkWell(
+                          onTap: () => _showQuickJumpDialog(visibleNavItems),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            width: screenWidth >= 900 ? 300 : 210,
+                            height: 38,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: sem.subtleBg,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: cs.outlineVariant),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  LucideIcons.search,
+                                  size: 15,
+                                  color: cs.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 9),
+                                Expanded(
+                                  child: Text(
+                                    'Cari menu atau fitur...',
+                                    style: tt.bodySmall?.copyWith(fontSize: 12.5),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: cs.surface,
+                                    borderRadius: BorderRadius.circular(5),
+                                    border: Border.all(color: cs.outlineVariant),
+                                  ),
+                                  child: Text(
+                                    '⌘F',
+                                    style: tt.labelSmall?.copyWith(fontSize: 10.5),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                      const Spacer(),
+
+                      // Quick Upload Button
+                      _buildTopActionButton(
+                        context: context,
+                        icon: LucideIcons.uploadCloud,
+                        tooltip: 'Bulk Upload Data',
+                        onTap: () => context.go('/bulk-upload'),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // Light / Dark Mode Toggle
+                      _buildTopActionButton(
+                        context: context,
+                        icon: isDark ? LucideIcons.sun : LucideIcons.moon,
+                        tooltip: isDark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap',
+                        iconColor: isDark ? sem.warning : cs.onSurfaceVariant,
+                        onTap: () => ref.read(themeProvider.notifier).toggleTheme(),
+                      ),
+                      const SizedBox(width: 12),
+
+                      Container(
+                        width: 1,
+                        height: 24,
+                        color: cs.outlineVariant,
+                      ),
+                      const SizedBox(width: 12),
+
+                      // User Profile Button
+                      InkWell(
+                        onTap: _showProfileDialog,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: BoxDecoration(
+                                  color: cs.primaryContainer,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: cs.primary.withValues(alpha: 0.25)),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  (user?.name.isNotEmpty == true ? user!.name[0] : 'A').toUpperCase(),
+                                  style: tt.titleSmall?.copyWith(
+                                    color: cs.primary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              if (screenWidth >= 520) ...[
+                                const SizedBox(width: 10),
+                                ConstrainedBox(
+                                  constraints: BoxConstraints(maxWidth: screenWidth < 800 ? 110 : 160),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        user?.name ?? 'Administrator',
+                                        overflow: TextOverflow.ellipsis,
+                                        style: tt.labelLarge?.copyWith(fontSize: 13),
+                                      ),
+                                      Text(
+                                        user?.email ?? (user?.role?.displayName ?? 'admin@salestify.id'),
+                                        overflow: TextOverflow.ellipsis,
+                                        style: tt.bodySmall?.copyWith(fontSize: 11),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Main Content Canvas
+                Expanded(
+                  child: Container(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    child: widget.child,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildTopCircleButton({
+  Widget _buildTopActionButton({
     required BuildContext context,
     required IconData icon,
     required String tooltip,
     required VoidCallback onTap,
     Color? iconColor,
   }) {
+    final cs = Theme.of(context).colorScheme;
+    final sem = context.semantic;
     return Tooltip(
       message: tooltip,
       child: InkWell(
         onTap: onTap,
-        customBorder: const CircleBorder(),
+        borderRadius: BorderRadius.circular(8),
+        hoverColor: sem.hoverBg,
         child: Container(
-          width: 42,
-          height: 42,
+          width: 38,
+          height: 38,
           decoration: BoxDecoration(
-            color: context.colors.bgCard,
-            shape: BoxShape.circle,
-            border: Border.all(color: context.colors.border.withValues(alpha: 0.8)),
+            color: sem.subtleBg,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: cs.outlineVariant),
           ),
           alignment: Alignment.center,
           child: Icon(
             icon,
-            size: 18,
-            color: iconColor ?? context.colors.textPrimary,
+            size: 17,
+            color: iconColor ?? cs.onSurfaceVariant,
           ),
         ),
       ),
@@ -941,25 +909,24 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
     String currentRoute,
     bool showExpanded,
   ) {
+    final tt = Theme.of(context).textTheme;
     final List<Widget> widgets = [];
     String? lastGroup;
 
     for (final item in items) {
       if (item.group != lastGroup) {
         if (lastGroup != null) {
-          widgets.add(const SizedBox(height: 14));
+          widgets.add(const SizedBox(height: 16));
         }
         if (showExpanded) {
           widgets.add(
             Padding(
-              padding: const EdgeInsets.fromLTRB(26, 6, 16, 8),
+              padding: const EdgeInsets.fromLTRB(10, 4, 10, 6),
               child: Text(
                 item.group,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
+                style: tt.labelSmall?.copyWith(
+                  fontSize: 10.5,
                   letterSpacing: 0.8,
-                  color: context.colors.textMuted,
                 ),
               ),
             ),
@@ -986,8 +953,6 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
     return widgets;
   }
 
-  /// Klaboard signature navigation tile:
-  /// Vertical terracotta pill indicator on the left edge + warm orange icon + bold charcoal text
   Widget _buildSidebarTile({
     required BuildContext context,
     required String title,
@@ -995,56 +960,62 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
     required bool isSelected,
     required bool showExpanded,
     required VoidCallback onTap,
+    bool isDanger = false,
   }) {
-    return Padding(
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final sem = context.semantic;
+
+    final Color activeBg = isSelected ? cs.primaryContainer : Colors.transparent;
+    final Color iconColor = isDanger
+        ? sem.danger
+        : (isSelected ? cs.primary : cs.onSurfaceVariant);
+    final Color textColor = isDanger
+        ? sem.danger
+        : (isSelected ? cs.primary : sem.textSecondary);
+
+    final tile = Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
-      child: InkWell(
-        onTap: onTap,
-        hoverColor: context.colors.bgHover.withValues(alpha: 0.6),
-        child: SizedBox(
-          height: 44,
-          child: Row(
-            children: [
-              // Klaboard Left Orange Indicator Pill
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                width: 6,
-                height: isSelected ? 32 : 0,
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.primary : Colors.transparent,
-                  borderRadius: const BorderRadius.horizontal(
-                    right: Radius.circular(6),
-                  ),
-                ),
-              ),
-              SizedBox(width: showExpanded ? 18 : 20),
-              Icon(
-                icon,
-                size: 20,
-                color: isSelected ? AppColors.primary : context.colors.textMuted,
-              ),
-              if (showExpanded) ...[
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 14,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected
-                          ? context.colors.textPrimary
-                          : context.colors.textMuted,
+      child: Material(
+        color: activeBg,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          hoverColor: isSelected ? cs.primaryContainer : sem.hoverBg,
+          child: Container(
+            height: 40,
+            padding: EdgeInsets.symmetric(horizontal: showExpanded ? 12 : 0),
+            alignment: showExpanded ? Alignment.centerLeft : Alignment.center,
+            child: Row(
+              mainAxisAlignment: showExpanded ? MainAxisAlignment.start : MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 18, color: iconColor),
+                if (showExpanded) ...[
+                  const SizedBox(width: 11),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: tt.bodyMedium?.copyWith(
+                        fontSize: 13.5,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                        color: textColor,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                const SizedBox(width: 12),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
     );
+
+    if (!showExpanded) {
+      return Tooltip(message: title, child: tile);
+    }
+    return tile;
   }
 
   Widget _buildMobileDrawer(
@@ -1052,38 +1023,42 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
     List<NavItemData> visibleNavItems,
     String currentRoute,
   ) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
     return Drawer(
-      backgroundColor: context.colors.bgSubtle,
+      backgroundColor: cs.surface,
+      surfaceTintColor: Colors.transparent,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 20, 14, 16),
+            Container(
+              height: 64,
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: cs.outlineVariant)),
+              ),
               child: Row(
                 children: [
                   Container(
-                    width: 36,
-                    height: 36,
+                    width: 34,
+                    height: 34,
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(11),
+                      color: cs.primary,
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(LucideIcons.layoutGrid, color: Colors.white, size: 19),
+                    child: Icon(LucideIcons.layoutGrid, color: cs.onPrimary, size: 18),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'Sales Insentif',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 18,
-                        color: context.colors.textPrimary,
-                      ),
+                      style: tt.titleLarge,
                     ),
                   ),
                   IconButton(
-                    icon: Icon(LucideIcons.x, size: 18, color: context.colors.textMuted),
+                    icon: Icon(LucideIcons.x, size: 18, color: cs.onSurfaceVariant),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -1091,7 +1066,7 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
             ),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
                 children: _buildGroupedSidebarItems(
                   context,
                   visibleNavItems,

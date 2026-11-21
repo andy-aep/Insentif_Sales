@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:collection/collection.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../../../core/widgets/responsive_table.dart';
 import '../../../data/models/auth_user_model.dart';
@@ -85,9 +85,9 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
 
     if (allSalesList.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Belum ada data user sales yang tersedia. Tambahkan user terlebih dahulu di menu Users.'),
-          backgroundColor: AppColors.danger,
+          backgroundColor: context.semantic.dangerSolid,
         ),
       );
       return;
@@ -155,7 +155,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
           return AlertDialog(
             backgroundColor: colors.bgDialog,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               side: BorderSide(color: colors.border),
             ),
             title: Row(
@@ -164,19 +164,19 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: isNsm
-                        ? const Color(0xFFF47A60).withValues(alpha: 0.15)
+                        ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15)
                         : (isLsm
-                            ? const Color(0xFF24968B).withValues(alpha: 0.15)
-                            : (isAsm ? AppColors.primary.withValues(alpha: 0.15) : AppColors.info.withValues(alpha: 0.15))),
-                    borderRadius: BorderRadius.circular(10),
+                            ? context.semantic.success.withValues(alpha: 0.15)
+                            : (isAsm ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15) : context.semantic.info.withValues(alpha: 0.15))),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     isNsm
                         ? LucideIcons.globe
                         : (isLsm ? LucideIcons.shieldCheck : (isAsm ? LucideIcons.crown : LucideIcons.target)),
                     color: isNsm
-                        ? const Color(0xFFF47A60)
-                        : (isLsm ? const Color(0xFF24968B) : (isAsm ? AppColors.primaryLight : AppColors.info)),
+                        ? Theme.of(context).colorScheme.primary
+                        : (isLsm ? context.semantic.success : (isAsm ? Theme.of(context).colorScheme.primary : context.semantic.info)),
                     size: 22,
                   ),
                 ),
@@ -187,11 +187,11 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                     children: [
                       Text(
                         'Assign Penugasan Insentif Konsumsi',
-                        style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 18),
+                        style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 18),
                       ),
                       Text(
                         'Hierarki: NSM (Nasional/Teritorial) ➔ LSM (Region) ➔ ASM (Distributor) ➔ SPV (Area)',
-                        style: GoogleFonts.inter(color: colors.textMuted, fontSize: 12),
+                        style: GoogleFonts.plusJakartaSans(color: colors.textMuted, fontSize: 12),
                       ),
                     ],
                   ),
@@ -215,7 +215,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                       style: TextStyle(color: colors.textPrimary, fontSize: 14),
                       decoration: InputDecoration(
                         prefixIcon: const Icon(LucideIcons.user, size: 18),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                         filled: true,
                         fillColor: colors.bgElevated,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -252,13 +252,13 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF47A60).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFF47A60).withValues(alpha: 0.4)),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4)),
                         ),
                         child: Row(
                           children: [
-                            const Icon(LucideIcons.globe, color: Color(0xFFF47A60), size: 24),
+                            Icon(LucideIcons.globe, color: Theme.of(context).colorScheme.primary, size: 24),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(
@@ -266,12 +266,12 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                                 children: [
                                   Text(
                                     'Posisi NSM (National Sales Manager)',
-                                    style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
+                                    style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     'NSM adalah pimpinan sales di atas LSM. Jika terdapat beberapa NSM, masing-masing dapat membawahi LSM / Wilayah khusus (misal: Indonesia Timur, Barat, Utara, Selatan).',
-                                    style: GoogleFonts.inter(color: colors.textMuted, fontSize: 11.5),
+                                    style: GoogleFonts.plusJakartaSans(color: colors.textMuted, fontSize: 11.5),
                                   ),
                                 ],
                               ),
@@ -289,14 +289,14 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                           Expanded(
                             child: InkWell(
                               onTap: () => setDialogState(() => nsmScope = 'ALL'),
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(8),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                 decoration: BoxDecoration(
-                                  color: nsmScope == 'ALL' ? const Color(0xFFF47A60).withValues(alpha: 0.15) : colors.bgElevated,
-                                  borderRadius: BorderRadius.circular(10),
+                                  color: nsmScope == 'ALL' ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15) : colors.bgElevated,
+                                  borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                    color: nsmScope == 'ALL' ? const Color(0xFFF47A60) : colors.border,
+                                    color: nsmScope == 'ALL' ? Theme.of(context).colorScheme.primary : colors.border,
                                     width: nsmScope == 'ALL' ? 1.8 : 1,
                                   ),
                                 ),
@@ -305,7 +305,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                                     Icon(
                                       nsmScope == 'ALL' ? LucideIcons.checkCircle2 : LucideIcons.circle,
                                       size: 16,
-                                      color: nsmScope == 'ALL' ? const Color(0xFFF47A60) : colors.textMuted,
+                                      color: nsmScope == 'ALL' ? Theme.of(context).colorScheme.primary : colors.textMuted,
                                     ),
                                     const SizedBox(width: 8),
                                     Expanded(
@@ -326,14 +326,14 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                           Expanded(
                             child: InkWell(
                               onTap: () => setDialogState(() => nsmScope = 'SPECIFIC'),
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(8),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                 decoration: BoxDecoration(
-                                  color: nsmScope == 'SPECIFIC' ? const Color(0xFFF47A60).withValues(alpha: 0.15) : colors.bgElevated,
-                                  borderRadius: BorderRadius.circular(10),
+                                  color: nsmScope == 'SPECIFIC' ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15) : colors.bgElevated,
+                                  borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                    color: nsmScope == 'SPECIFIC' ? const Color(0xFFF47A60) : colors.border,
+                                    color: nsmScope == 'SPECIFIC' ? Theme.of(context).colorScheme.primary : colors.border,
                                     width: nsmScope == 'SPECIFIC' ? 1.8 : 1,
                                   ),
                                 ),
@@ -342,7 +342,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                                     Icon(
                                       nsmScope == 'SPECIFIC' ? LucideIcons.checkCircle2 : LucideIcons.circle,
                                       size: 16,
-                                      color: nsmScope == 'SPECIFIC' ? const Color(0xFFF47A60) : colors.textMuted,
+                                      color: nsmScope == 'SPECIFIC' ? Theme.of(context).colorScheme.primary : colors.textMuted,
                                     ),
                                     const SizedBox(width: 8),
                                     Expanded(
@@ -370,9 +370,9 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                           controller: territoryLabelCtrl,
                           style: TextStyle(color: colors.textPrimary, fontSize: 14),
                           decoration: InputDecoration(
-                            prefixIcon: const Icon(LucideIcons.compass, size: 18, color: Color(0xFFF47A60)),
+                            prefixIcon: Icon(LucideIcons.compass, size: 18, color: Theme.of(context).colorScheme.primary),
                             hintText: 'Misal: Indonesia Timur, Indonesia Barat, dll.',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                             filled: true,
                             fillColor: colors.bgElevated,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -392,9 +392,9 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                           ].map((preset) {
                             final isSelected = territoryLabelCtrl.text.trim().toLowerCase() == preset.toLowerCase();
                             return ActionChip(
-                              label: Text(preset, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : colors.textPrimary, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-                              backgroundColor: isSelected ? const Color(0xFFF47A60) : colors.bgElevated,
-                              side: BorderSide(color: isSelected ? const Color(0xFFF47A60) : colors.border),
+                              label: Text(preset, style: TextStyle(fontSize: 11, color: isSelected ? Theme.of(context).colorScheme.onPrimary : colors.textPrimary, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                              backgroundColor: isSelected ? Theme.of(context).colorScheme.primary : colors.bgElevated,
+                              side: BorderSide(color: isSelected ? Theme.of(context).colorScheme.primary : colors.border),
                               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
                               onPressed: () {
                                 setDialogState(() {
@@ -413,7 +413,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                             Text('Pilih LSM yang Dipimpin NSM Ini *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
                             Text(
                               '${selectedSubordinateLsmIds.length} LSM Terpilih',
-                              style: const TextStyle(fontSize: 11, color: Color(0xFF24968B), fontWeight: FontWeight.bold),
+                              style: TextStyle(fontSize: 11, color: context.semantic.success, fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
@@ -422,7 +422,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                           constraints: const BoxConstraints(maxHeight: 220),
                           decoration: BoxDecoration(
                             color: colors.bgElevated,
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: colors.border),
                           ),
                           child: lsmUsers.isEmpty
@@ -447,7 +447,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
 
                                     return CheckboxListTile(
                                       value: isChecked,
-                                      activeColor: const Color(0xFFF47A60),
+                                      activeColor: Theme.of(context).colorScheme.primary,
                                       dense: true,
                                       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
                                       title: Text(
@@ -478,7 +478,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             color: colors.bgElevated,
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: colors.border),
                           ),
                           child: Row(
@@ -486,21 +486,21 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                             children: [
                               Column(
                                 children: [
-                                  Text('${lsmUsers.length}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF24968B))),
+                                  Text('${lsmUsers.length}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: context.semantic.success)),
                                   Text('Seluruh LSM', style: TextStyle(color: colors.textMuted, fontSize: 11)),
                                 ],
                               ),
                               Container(height: 24, width: 1, color: colors.border),
                               Column(
                                 children: [
-                                  Text('${masterState.regions.length}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFFF47A60))),
+                                  Text('${masterState.regions.length}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Theme.of(context).colorScheme.primary)),
                                   Text('Seluruh Region', style: TextStyle(color: colors.textMuted, fontSize: 11)),
                                 ],
                               ),
                               Container(height: 24, width: 1, color: colors.border),
                               Column(
                                 children: [
-                                  Text('${masterState.distributors.length}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFFF47A60))),
+                                  Text('${masterState.distributors.length}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Theme.of(context).colorScheme.primary)),
                                   Text('Seluruh Distributor', style: TextStyle(color: colors.textMuted, fontSize: 11)),
                                 ],
                               ),
@@ -514,13 +514,13 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF24968B).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFF24968B).withValues(alpha: 0.4)),
+                          color: context.semantic.success.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: context.semantic.success.withValues(alpha: 0.4)),
                         ),
                         child: Row(
                           children: [
-                            const Icon(LucideIcons.shieldCheck, color: Color(0xFF24968B), size: 24),
+                            Icon(LucideIcons.shieldCheck, color: context.semantic.success, size: 24),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(
@@ -528,12 +528,12 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                                 children: [
                                   Text(
                                     'Posisi LSM (Line / Local Sales Manager)',
-                                    style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
+                                    style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     'LSM adalah atasan langsung dari para ASM dan bertanggung jawab atas satu Teritorial Region (mencakup seluruh Distributor di region tersebut).',
-                                    style: GoogleFonts.inter(color: colors.textMuted, fontSize: 11.5),
+                                    style: GoogleFonts.plusJakartaSans(color: colors.textMuted, fontSize: 11.5),
                                   ),
                                 ],
                               ),
@@ -553,8 +553,8 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                           isExpanded: true,
                           style: TextStyle(color: colors.textPrimary, fontSize: 14),
                           decoration: InputDecoration(
-                            prefixIcon: const Icon(LucideIcons.globe, size: 18, color: Color(0xFFF47A60)),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            prefixIcon: Icon(LucideIcons.globe, size: 18, color: Theme.of(context).colorScheme.primary),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                             filled: true,
                             fillColor: colors.bgElevated,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -590,8 +590,8 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                         isExpanded: true,
                         style: TextStyle(color: colors.textPrimary, fontSize: 14),
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(LucideIcons.map, size: 18, color: Color(0xFF24968B)),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          prefixIcon: Icon(LucideIcons.map, size: 18, color: context.semantic.success),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           filled: true,
                           fillColor: colors.bgElevated,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -618,7 +618,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: colors.bgElevated,
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: colors.border),
                             ),
                             child: Column(
@@ -626,7 +626,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                               children: [
                                 Row(
                                   children: [
-                                    const Icon(LucideIcons.building2, size: 16, color: Color(0xFF24968B)),
+                                    Icon(LucideIcons.building2, size: 16, color: context.semantic.success),
                                     const SizedBox(width: 8),
                                     Text(
                                       'Distributor di Wilayah ${selectedRegion?.name ?? ''} (${distInRegion.length} Distributor):',
@@ -644,11 +644,11 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                                     children: distInRegion.map((d) => Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF24968B).withValues(alpha: 0.12),
+                                        color: context.semantic.success.withValues(alpha: 0.12),
                                         borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(color: const Color(0xFF24968B).withValues(alpha: 0.3)),
+                                        border: Border.all(color: context.semantic.success.withValues(alpha: 0.3)),
                                       ),
-                                      child: Text('${d.name} (${d.depos.length} Depo)', style: const TextStyle(fontSize: 11, color: Color(0xFF24968B), fontWeight: FontWeight.bold)),
+                                      child: Text('${d.name} (${d.depos.length} Depo)', style: TextStyle(fontSize: 11, color: context.semantic.success, fontWeight: FontWeight.bold)),
                                     )).toList(),
                                   ),
                               ],
@@ -662,18 +662,18 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.3)),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           children: [
-                            const Icon(LucideIcons.crown, color: AppColors.primaryLight, size: 20),
+                            Icon(LucideIcons.crown, color: Theme.of(context).colorScheme.primary, size: 20),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 'Posisi ASM (Area Sales Manager): Berada di bawah LSM, membawahi SPV. ASM memegang penuh Distributor terpilih beserta seluruh Depo & Areanya.',
-                                style: GoogleFonts.inter(color: colors.textPrimary, fontSize: 12, fontWeight: FontWeight.w500),
+                                style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontSize: 12, fontWeight: FontWeight.w500),
                               ),
                             ),
                           ],
@@ -691,8 +691,8 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                           isExpanded: true,
                           style: TextStyle(color: colors.textPrimary, fontSize: 14),
                           decoration: InputDecoration(
-                            prefixIcon: const Icon(LucideIcons.shieldCheck, size: 18, color: Color(0xFF24968B)),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            prefixIcon: Icon(LucideIcons.shieldCheck, size: 18, color: context.semantic.success),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                             filled: true,
                             fillColor: colors.bgElevated,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -723,7 +723,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                         style: TextStyle(color: colors.textPrimary, fontSize: 14),
                         decoration: InputDecoration(
                           prefixIcon: const Icon(LucideIcons.truck, size: 18),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           filled: true,
                           fillColor: colors.bgElevated,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -750,7 +750,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: colors.bgElevated,
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: colors.border),
                           ),
                           child: Column(
@@ -758,7 +758,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                             children: [
                               Row(
                                 children: [
-                                  const Icon(LucideIcons.layers, size: 16, color: AppColors.success),
+                                  Icon(LucideIcons.layers, size: 16, color: context.semantic.success),
                                   const SizedBox(width: 8),
                                   Text(
                                     'Depo & Area Otomatis Tercover (${selectedDistributor!.depos.length} Depo):',
@@ -777,13 +777,13 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                                     return Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: AppColors.success.withValues(alpha: 0.12),
+                                        color: context.semantic.success.withValues(alpha: 0.12),
                                         borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                                        border: Border.all(color: context.semantic.success.withValues(alpha: 0.3)),
                                       ),
                                       child: Text(
                                         '${d.name} (${d.areas.length} Area)',
-                                        style: const TextStyle(color: AppColors.success, fontSize: 11, fontWeight: FontWeight.bold),
+                                        style: TextStyle(color: context.semantic.success, fontSize: 11, fontWeight: FontWeight.bold),
                                       ),
                                     );
                                   }).toList(),
@@ -798,18 +798,18 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppColors.info.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
+                          color: context.semantic.info.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: context.semantic.info.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           children: [
-                            const Icon(LucideIcons.target, color: AppColors.info, size: 20),
+                            Icon(LucideIcons.target, color: context.semantic.info, size: 20),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 'Posisi SPV (Sales Supervisor): Berada di bawah ASM dan mengelola Area operasional spesifik dari Depo distributor tersebut.',
-                                style: GoogleFonts.inter(color: colors.textPrimary, fontSize: 12, fontWeight: FontWeight.w500),
+                                style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontSize: 12, fontWeight: FontWeight.w500),
                               ),
                             ),
                           ],
@@ -826,8 +826,8 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                         isExpanded: true,
                         style: TextStyle(color: colors.textPrimary, fontSize: 14),
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(LucideIcons.shieldCheck, size: 18, color: AppColors.warning),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          prefixIcon: Icon(LucideIcons.shieldCheck, size: 18, color: context.semantic.warning),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           filled: true,
                           fillColor: colors.bgElevated,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -858,7 +858,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                         style: TextStyle(color: colors.textPrimary, fontSize: 14),
                         decoration: InputDecoration(
                           prefixIcon: const Icon(LucideIcons.truck, size: 18),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           filled: true,
                           fillColor: colors.bgElevated,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -892,7 +892,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                         style: TextStyle(color: colors.textPrimary, fontSize: 14),
                         decoration: InputDecoration(
                           prefixIcon: const Icon(LucideIcons.home, size: 18),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           filled: true,
                           fillColor: colors.bgElevated,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -924,8 +924,8 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                         isExpanded: true,
                         style: TextStyle(color: colors.textPrimary, fontSize: 14),
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(LucideIcons.mapPin, size: 18, color: AppColors.info),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          prefixIcon: Icon(LucideIcons.mapPin, size: 18, color: context.semantic.info),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           filled: true,
                           fillColor: colors.bgElevated,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -956,7 +956,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                         style: TextStyle(color: colors.textPrimary, fontSize: 14),
                         decoration: InputDecoration(
                           prefixIcon: const Icon(LucideIcons.truck, size: 18),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           filled: true,
                           fillColor: colors.bgElevated,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -992,7 +992,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                                 style: TextStyle(color: colors.textPrimary, fontSize: 14),
                                 decoration: InputDecoration(
                                   prefixIcon: const Icon(LucideIcons.calendar, size: 18),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                   filled: true,
                                   fillColor: colors.bgElevated,
                                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1014,7 +1014,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                                 decoration: InputDecoration(
                                   hintText: 'Opsional',
                                   hintStyle: TextStyle(color: colors.textMuted, fontSize: 13),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                   filled: true,
                                   fillColor: colors.bgElevated,
                                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1037,48 +1037,48 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isNsm
-                      ? const Color(0xFFF47A60)
+                      ? Theme.of(context).colorScheme.primary
                       : (isLsm
-                          ? const Color(0xFF24968B)
-                          : (isAsm ? AppColors.primary : AppColors.info)),
+                          ? context.semantic.success
+                          : (isAsm ? Theme.of(context).colorScheme.primary : context.semantic.info)),
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                icon: const Icon(LucideIcons.check, size: 16, color: Colors.white),
-                label: const Text('Simpan Assignment', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                icon: Icon(LucideIcons.check, size: 16, color: Theme.of(context).colorScheme.onPrimary),
+                label: Text('Simpan Assignment', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.bold)),
                 onPressed: () async {
                   if (isNsm && nsmScope == 'SPECIFIC' && selectedSubordinateLsmIds.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text('Pilih minimal 1 LSM yang dipimpin oleh NSM Teritorial Khusus!'),
-                        backgroundColor: AppColors.danger,
+                        backgroundColor: context.semantic.dangerSolid,
                       ),
                     );
                     return;
                   }
                   if (isLsm && selectedRegion == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text('Untuk penugasan LSM, wajib memilih Wilayah/Region!'),
-                        backgroundColor: AppColors.danger,
+                        backgroundColor: context.semantic.dangerSolid,
                       ),
                     );
                     return;
                   }
                   if (isAsm && selectedDistributor == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text('Untuk penugasan ASM, wajib memilih Distributor!'),
-                        backgroundColor: AppColors.danger,
+                        backgroundColor: context.semantic.dangerSolid,
                       ),
                     );
                     return;
                   }
                   if (isSpv && (selectedAsm == null || selectedDepo == null || selectedArea == null)) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text('Untuk penugasan SPV, wajib memilih Atasan ASM, Depo, dan Area!'),
-                        backgroundColor: AppColors.danger,
+                        backgroundColor: context.semantic.dangerSolid,
                       ),
                     );
                     return;
@@ -1115,7 +1115,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(success ? 'Penugasan Sales Distributor berhasil disimpan!' : msg),
-                        backgroundColor: success ? AppColors.success : AppColors.danger,
+                        backgroundColor: success ? context.semantic.success : context.semantic.danger,
                       ),
                     );
                   }
@@ -1153,12 +1153,12 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
         builder: (dialogCtx, setDialogState) {
           return AlertDialog(
             backgroundColor: colors.bgDialog,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: colors.border)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.border)),
             title: Row(
               children: [
-                const Icon(LucideIcons.userCheck, color: AppColors.warning, size: 22),
+                Icon(LucideIcons.userCheck, color: context.semantic.warning, size: 22),
                 const SizedBox(width: 10),
-                Text('Penugasan Tim Sales Surabaya', style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold)),
+                Text('Penugasan Tim Sales Surabaya', style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontWeight: FontWeight.bold)),
               ],
             ),
             content: SizedBox(
@@ -1226,7 +1226,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: TextStyle(color: colors.textMuted))),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.warning),
+                style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Theme.of(context).colorScheme.onPrimary),
                 onPressed: () async {
                   await ref.read(salesAssignmentProvider.notifier).saveSurabayaAssignment(
                     coordinatorId: selectedCoordId,
@@ -1236,7 +1236,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                   );
                   if (ctx.mounted) Navigator.pop(ctx);
                 },
-                child: const Text('Simpan Assignment', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                child: const Text('Simpan Assignment'),
               ),
             ],
           );
@@ -1265,19 +1265,19 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                     children: [
                       Text(
                         'Master Sales',
-                        style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+                        style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
                       ),
                       const SizedBox(width: 10),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.15),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.3)),
+                          border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Konsumsi, Surabaya & Industri',
-                          style: TextStyle(color: AppColors.primaryLight, fontSize: 11, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 11, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -1285,7 +1285,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                   const SizedBox(height: 4),
                   Text(
                     'Manajemen penugasan Sales Konsumsi (NSM, LSM, ASM, SPV), Tim Surabaya, & Customer Sales Industri (ASM, SPV, ASC)',
-                    style: GoogleFonts.inter(fontSize: 13, color: context.colors.textMuted),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 13, color: context.colors.textMuted),
                   ),
                 ],
               );
@@ -1293,23 +1293,24 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
               final actionButton = _activeTabIndex == 0
                   ? ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      icon: const Icon(LucideIcons.userPlus, size: 16, color: Colors.white),
-                      label: const Text('Assign Distributor (Konsumsi)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      icon: Icon(LucideIcons.userPlus, size: 16, color: Theme.of(context).colorScheme.onPrimary),
+                      label: Text('Assign Distributor (Konsumsi)', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.bold)),
                       onPressed: _showAssignDistributorDialog,
                     )
                   : (_activeTabIndex == 1
                       ? ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.warning,
+                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
-                          icon: const Icon(LucideIcons.userPlus, size: 16, color: Colors.black),
-                          label: const Text('Assign Koordinator Surabaya', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                          icon: const Icon(LucideIcons.userPlus, size: 16),
+                          label: const Text('Assign Koordinator Surabaya'),
                           onPressed: _showAssignSurabayaDialog,
                         )
                       : Wrap(
@@ -1318,10 +1319,10 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                           children: [
                             OutlinedButton.icon(
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.success,
-                                side: const BorderSide(color: AppColors.success),
+                                foregroundColor: context.semantic.success,
+                                side: BorderSide(color: context.semantic.success),
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
                               icon: const Icon(LucideIcons.building, size: 15),
                               label: const Text('Tambah Customer Industri', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -1329,12 +1330,12 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                             ),
                             ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.success,
+                                backgroundColor: context.semantic.successSolid,
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
-                              icon: const Icon(LucideIcons.userPlus, size: 16, color: Colors.white),
-                              label: const Text('Assign Sales Industri', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              icon: Icon(LucideIcons.userPlus, size: 16, color: Theme.of(context).colorScheme.onPrimary),
+                              label: Text('Assign Sales Industri', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.bold)),
                               onPressed: () => _showAssignIndustriDialog(),
                             ),
                           ],
@@ -1378,7 +1379,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: context.colors.bgCard,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: context.colors.border, width: 1.2),
               boxShadow: context.colors.cardShadows,
             ),
@@ -1391,8 +1392,8 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                   onTap: (val) => setState(() => _activeTabIndex = val),
                   dividerColor: Colors.transparent,
                   indicatorColor: _activeTabIndex == 0
-                      ? AppColors.primaryLight
-                      : (_activeTabIndex == 1 ? AppColors.warning : AppColors.success),
+                      ? Theme.of(context).colorScheme.primary
+                      : (_activeTabIndex == 1 ? context.semantic.warning : context.semantic.success),
                   labelColor: context.colors.textPrimary,
                   unselectedLabelColor: context.colors.textMuted,
                   tabs: [
@@ -1434,18 +1435,18 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      color: AppColors.danger.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.danger.withValues(alpha: 0.35)),
+                      color: context.semantic.danger.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: context.semantic.danger.withValues(alpha: 0.35)),
                     ),
                     child: Row(
                       children: [
-                        const Icon(LucideIcons.alertCircle, size: 18, color: AppColors.danger),
+                        Icon(LucideIcons.alertCircle, size: 18, color: context.semantic.danger),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             assignmentState.errorMessage!,
-                            style: const TextStyle(color: AppColors.danger, fontSize: 12.5),
+                            style: TextStyle(color: context.semantic.danger, fontSize: 12.5),
                           ),
                         ),
                         TextButton(
@@ -1457,11 +1458,11 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                   ),
 
                 if (assignmentState.isLoading)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(bottom: 12),
                     child: ClipRRect(
                       borderRadius: BorderRadius.all(Radius.circular(4)),
-                      child: LinearProgressIndicator(minHeight: 4, color: AppColors.primary),
+                      child: LinearProgressIndicator(minHeight: 4, color: Theme.of(context).colorScheme.primary),
                     ),
                   ),
 
@@ -1476,10 +1477,10 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const SizedBox(
+                          SizedBox(
                             width: 36,
                             height: 36,
-                            child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.primary),
+                            child: CircularProgressIndicator(strokeWidth: 3, color: Theme.of(context).colorScheme.primary),
                           ),
                           const SizedBox(height: 14),
                           Text('Memuat data penugasan sales...', style: TextStyle(color: context.colors.textMuted, fontSize: 13)),
@@ -1592,31 +1593,31 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
               title: 'Total Penugasan Konsumsi',
               value: '${rawList.length}',
               icon: LucideIcons.fileSpreadsheet,
-              color: AppColors.primary,
+              color: Theme.of(context).colorScheme.primary,
             ),
             _buildMiniKpiCard(
               title: 'NSM (Nasional)',
               value: '$nsmCount Baris',
               icon: LucideIcons.globe,
-              color: const Color(0xFFF47A60),
+              color: Theme.of(context).colorScheme.primary,
             ),
             _buildMiniKpiCard(
               title: 'LSM (Region)',
               value: '$lsmCount Baris',
               icon: LucideIcons.shieldCheck,
-              color: const Color(0xFF24968B),
+              color: context.semantic.success,
             ),
             _buildMiniKpiCard(
               title: 'ASM (Distributor)',
               value: '$asmCount Baris',
               icon: LucideIcons.crown,
-              color: AppColors.primaryLight,
+              color: Theme.of(context).colorScheme.primary,
             ),
             _buildMiniKpiCard(
               title: 'SPV (Area)',
               value: '$spvCount Baris',
               icon: LucideIcons.target,
-              color: AppColors.info,
+              color: context.semantic.info,
             ),
           ],
         ),
@@ -1641,7 +1642,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                   isDense: true,
                   filled: true,
                   fillColor: context.colors.bgElevated,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: context.colors.border)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: context.colors.border)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 ),
                 onChanged: (val) => setState(() {
@@ -1655,7 +1656,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
               padding: const EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
                 color: context.colors.bgElevated,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: context.colors.border),
               ),
               child: DropdownButtonHideUnderline(
@@ -1688,7 +1689,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: BoxDecoration(
                   color: context.colors.bgElevated,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: context.colors.border),
                 ),
                 child: DropdownButtonHideUnderline(
@@ -1756,10 +1757,10 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                 final isSpv = pos == 'SPV';
 
                 final Color badgeColor = isNsm
-                    ? const Color(0xFFF47A60)
+                    ? Theme.of(context).colorScheme.primary
                     : (isLsm
-                        ? const Color(0xFF24968B)
-                        : (isAsm ? AppColors.primaryLight : (isSpv ? AppColors.info : AppColors.slate400)));
+                        ? context.semantic.success
+                        : (isAsm ? Theme.of(context).colorScheme.primary : (isSpv ? context.semantic.info : Theme.of(context).colorScheme.onSurfaceVariant)));
 
                 return DataRow(
                   cells: [
@@ -1813,8 +1814,8 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                       isNsm
                           ? Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(color: const Color(0xFFF47A60).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
-                              child: const Text('Direksi / Nasional', style: TextStyle(color: Color(0xFFF47A60), fontSize: 11, fontWeight: FontWeight.bold)),
+                              decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
+                              child: Text('Direksi / Nasional', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 11, fontWeight: FontWeight.bold)),
                             )
                           : (isLsm
                               ? (item.nsm != null
@@ -1826,27 +1827,27 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                                             : '';
                                         return Row(
                                           children: [
-                                            const Icon(LucideIcons.globe, size: 14, color: Color(0xFFF47A60)),
+                                            Icon(LucideIcons.globe, size: 14, color: Theme.of(context).colorScheme.primary),
                                             const SizedBox(width: 6),
                                             Text('NSM: ${item.nsm!.name}$territoryNote', style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.w600)),
                                           ],
                                         );
                                       },
                                     )
-                                  : const Text('Direct (Tanpa NSM)', style: TextStyle(color: AppColors.slate400, fontSize: 11, fontStyle: FontStyle.italic)))
+                                  : Text('Direct (Tanpa NSM)', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11, fontStyle: FontStyle.italic)))
                               : (isAsm
                                   ? (item.lsm != null
                                       ? Row(
                                           children: [
-                                            const Icon(LucideIcons.shieldCheck, size: 14, color: Color(0xFF24968B)),
+                                            Icon(LucideIcons.shieldCheck, size: 14, color: context.semantic.success),
                                             const SizedBox(width: 6),
                                             Text('LSM: ${item.lsm!.name}', style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.w600)),
                                           ],
                                         )
-                                      : const Text('Direct (Tanpa LSM)', style: TextStyle(color: AppColors.slate400, fontSize: 11, fontStyle: FontStyle.italic)))
+                                      : Text('Direct (Tanpa LSM)', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11, fontStyle: FontStyle.italic)))
                                   : Row(
                                       children: [
-                                        const Icon(LucideIcons.shieldCheck, size: 14, color: AppColors.warning),
+                                        Icon(LucideIcons.shieldCheck, size: 14, color: context.semantic.warning),
                                         const SizedBox(width: 6),
                                         Text(item.asm?.name ?? 'ASM Penanggung Jawab', style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.w600)),
                                       ],
@@ -1862,19 +1863,19 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(color: const Color(0xFFF47A60).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
+                                  decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
                                   child: Text(
                                     (item.notes != null && item.notes!.isNotEmpty && item.notes != 'Nasional Penuh')
                                         ? item.notes!
                                         : 'Seluruh Indonesia (Nasional)',
-                                    style: const TextStyle(color: Color(0xFFF47A60), fontSize: 11, fontWeight: FontWeight.bold),
+                                    style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 11, fontWeight: FontWeight.bold),
                                   ),
                                 ),
                                 if (item.subordinateLsms.isNotEmpty) ...[
                                   const SizedBox(height: 3),
                                   Text(
                                     'Membawahi ${item.subordinateLsms.length} LSM: ${item.subordinateLsms.map((s) => s.user?.name ?? 'LSM').join(', ')}',
-                                    style: const TextStyle(color: Color(0xFF24968B), fontSize: 10, fontWeight: FontWeight.w600),
+                                    style: TextStyle(color: context.semantic.success, fontSize: 10, fontWeight: FontWeight.w600),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
@@ -1883,10 +1884,10 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                           : (isLsm
                               ? Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(color: const Color(0xFF24968B).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
+                                  decoration: BoxDecoration(color: context.semantic.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
                                   child: Text(
                                     item.region != null ? '${item.region!.code} - ${item.region!.name}' : 'Semua Region',
-                                    style: const TextStyle(color: Color(0xFF24968B), fontSize: 11, fontWeight: FontWeight.bold),
+                                    style: TextStyle(color: context.semantic.success, fontSize: 11, fontWeight: FontWeight.bold),
                                   ),
                                 )
                               : Text(
@@ -1900,26 +1901,26 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                       isNsm
                           ? Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(color: const Color(0xFFF47A60).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
+                              decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
                               child: Text(
                                 (item.notes != null && item.notes!.isNotEmpty && item.notes != 'Nasional Penuh')
                                     ? 'Distributor Teritorial (${item.subordinateLsms.length} LSM Region)'
                                     : 'Seluruh Distributor Nasional',
-                                style: const TextStyle(color: Color(0xFFF47A60), fontSize: 11, fontWeight: FontWeight.bold),
+                                style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 11, fontWeight: FontWeight.bold),
                               ),
                             )
                           : (isLsm
                               ? Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(color: const Color(0xFF24968B).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
-                                  child: Text('Distributor Region ${item.region?.code ?? ""}', style: const TextStyle(color: Color(0xFF24968B), fontSize: 11, fontWeight: FontWeight.bold)),
+                                  decoration: BoxDecoration(color: context.semantic.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
+                                  child: Text('Distributor Region ${item.region?.code ?? ""}', style: TextStyle(color: context.semantic.success, fontSize: 11, fontWeight: FontWeight.bold)),
                                 )
                               : Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(item.distributor?.name ?? 'Distributor #${item.distributorId}', style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.w600)),
-                                    Text(item.distributor?.code ?? '-', style: const TextStyle(color: AppColors.primaryAccent, fontSize: 11)),
+                                    Text(item.distributor?.code ?? '-', style: TextStyle(color: Theme.of(context).colorScheme.primaryContainer, fontSize: 11)),
                                   ],
                                 )),
                     ),
@@ -1929,14 +1930,14 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                       (isNsm || isLsm)
                           ? Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
-                              child: const Text('Semua Depo Teritorial', style: TextStyle(color: AppColors.success, fontSize: 11, fontWeight: FontWeight.bold)),
+                              decoration: BoxDecoration(color: context.semantic.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
+                              child: Text('Semua Depo Teritorial', style: TextStyle(color: context.semantic.success, fontSize: 11, fontWeight: FontWeight.bold)),
                             )
                           : (isAsm
                               ? Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
-                                  child: const Text('Semua Depo Tercakup', style: TextStyle(color: AppColors.success, fontSize: 11, fontWeight: FontWeight.bold)),
+                                  decoration: BoxDecoration(color: context.semantic.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
+                                  child: Text('Semua Depo Tercakup', style: TextStyle(color: context.semantic.success, fontSize: 11, fontWeight: FontWeight.bold)),
                                 )
                               : Text(item.depo?.name ?? 'Depo #${item.depoId ?? '-'}', style: TextStyle(color: context.colors.textPrimary))),
                     ),
@@ -1944,18 +1945,18 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                     // Area
                     DataCell(
                       (isNsm || isLsm)
-                          ? const Text('Seluruh Area Wilayah', style: TextStyle(color: AppColors.success, fontSize: 12, fontWeight: FontWeight.w500))
+                          ? Text('Seluruh Area Wilayah', style: TextStyle(color: context.semantic.success, fontSize: 12, fontWeight: FontWeight.w500))
                           : (isAsm
-                              ? const Text('Seluruh Area Distributor', style: TextStyle(color: AppColors.success, fontSize: 12, fontWeight: FontWeight.w500))
+                              ? Text('Seluruh Area Distributor', style: TextStyle(color: context.semantic.success, fontSize: 12, fontWeight: FontWeight.w500))
                               : Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: AppColors.info.withValues(alpha: 0.12),
+                                    color: context.semantic.info.withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
                                     item.area?.name ?? 'Area #${item.areaId ?? '-'}',
-                                    style: const TextStyle(color: AppColors.info, fontSize: 11, fontWeight: FontWeight.bold),
+                                    style: TextStyle(color: context.semantic.info, fontSize: 11, fontWeight: FontWeight.bold),
                                   ),
                                 )),
                     ),
@@ -1967,15 +1968,15 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                     DataCell(
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
-                        child: const Text('Aktif', style: TextStyle(color: AppColors.success, fontSize: 11, fontWeight: FontWeight.bold)),
+                        decoration: BoxDecoration(color: context.semantic.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
+                        child: Text('Aktif', style: TextStyle(color: context.semantic.success, fontSize: 11, fontWeight: FontWeight.bold)),
                       ),
                     ),
 
                     // Aksi
                     DataCell(
                       IconButton(
-                        icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
+                        icon: Icon(LucideIcons.trash2, size: 16, color: context.semantic.danger),
                         tooltip: 'Hapus Penugasan',
                         onPressed: () async {
                           final confirmed = await showConfirmDeleteDialog(
@@ -1999,7 +2000,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: context.colors.bgElevated,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(color: context.colors.border),
             ),
             child: Wrap(
@@ -2135,7 +2136,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
               DataCell(
                 Row(
                   children: [
-                    const Icon(LucideIcons.userCheck, size: 16, color: AppColors.warning),
+                    Icon(LucideIcons.userCheck, size: 16, color: context.semantic.warning),
                     const SizedBox(width: 8),
                     Text(item.coordinator?.name ?? 'Koordinator #${item.coordinatorId}', style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
                   ],
@@ -2146,13 +2147,13 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isTO ? AppColors.primary.withValues(alpha: 0.15) : AppColors.success.withValues(alpha: 0.15),
+                    color: isTO ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15) : context.semantic.success.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     item.salesType,
                     style: TextStyle(
-                      color: isTO ? AppColors.primaryLight : AppColors.success,
+                      color: isTO ? Theme.of(context).colorScheme.primary : context.semantic.success,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),
@@ -2163,13 +2164,13 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
               DataCell(
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
-                  child: const Text('Aktif', style: TextStyle(color: AppColors.success, fontSize: 11, fontWeight: FontWeight.bold)),
+                  decoration: BoxDecoration(color: context.semantic.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
+                  child: Text('Aktif', style: TextStyle(color: context.semantic.success, fontSize: 11, fontWeight: FontWeight.bold)),
                 ),
               ),
               DataCell(
                 IconButton(
-                  icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
+                  icon: Icon(LucideIcons.trash2, size: 16, color: context.semantic.danger),
                   tooltip: 'Hapus Assignment',
                   onPressed: () async {
                     final confirmed = await showConfirmDeleteDialog(
@@ -2265,19 +2266,19 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
               title: 'Relasi Sales - Customer',
               value: '${assignments.length}',
               icon: LucideIcons.link,
-              color: AppColors.success,
+              color: context.semantic.success,
             ),
             _buildMiniKpiCard(
               title: 'Master Customer Industri',
               value: '${customers.length} Perusahaan',
               icon: LucideIcons.factory,
-              color: AppColors.primary,
+              color: Theme.of(context).colorScheme.primary,
             ),
             _buildMiniKpiCard(
               title: 'Customer Baru (Potensi NOO)',
               value: '$newCustCount Outlet',
               icon: LucideIcons.sparkles,
-              color: AppColors.warning,
+              color: context.semantic.warning,
             ),
           ],
         ),
@@ -2305,7 +2306,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
 
         Text(
           '1. Penugasan Sales Industri ke Customer (${filteredAssignments.length})',
-          style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+          style: GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
         ),
         const SizedBox(height: 10),
         if (filteredAssignments.isEmpty)
@@ -2345,8 +2346,8 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                     DataCell(
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(6)),
-                        child: Text(posCode, style: const TextStyle(color: AppColors.primaryLight, fontSize: 11, fontWeight: FontWeight.bold)),
+                        decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(6)),
+                        child: Text(posCode, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 11, fontWeight: FontWeight.bold)),
                       ),
                     ),
                     DataCell(
@@ -2363,19 +2364,19 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: (isNewCust ? AppColors.success : AppColors.info).withValues(alpha: 0.14),
+                          color: (isNewCust ? context.semantic.success : context.semantic.info).withValues(alpha: 0.14),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           item.customer?.customerType ?? 'NEW',
-                          style: TextStyle(color: isNewCust ? AppColors.success : AppColors.info, fontSize: 11, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: isNewCust ? context.semantic.success : context.semantic.info, fontSize: 11, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
                     DataCell(Text(item.period != null && item.period!.isNotEmpty ? item.period! : 'Semua Periode', style: TextStyle(color: context.colors.textMuted, fontSize: 12))),
                     DataCell(
                       IconButton(
-                        icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
+                        icon: Icon(LucideIcons.trash2, size: 16, color: context.semantic.danger),
                         tooltip: 'Hapus Penugasan',
                         onPressed: () async {
                           final ok = await showConfirmDeleteDialog(
@@ -2398,7 +2399,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
         const SizedBox(height: 24),
         Text(
           '2. Master Daftar Customer Industri (${filteredCustomers.length})',
-          style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+          style: GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
         ),
         const SizedBox(height: 10),
         if (filteredCustomers.isEmpty)
@@ -2437,29 +2438,29 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: (isNew ? AppColors.success : AppColors.info).withValues(alpha: 0.14),
+                          color: (isNew ? context.semantic.success : context.semantic.info).withValues(alpha: 0.14),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: Text(c.customerType, style: TextStyle(color: isNew ? AppColors.success : AppColors.info, fontSize: 11, fontWeight: FontWeight.bold)),
+                        child: Text(c.customerType, style: TextStyle(color: isNew ? context.semantic.success : context.semantic.info, fontSize: 11, fontWeight: FontWeight.bold)),
                       ),
                     ),
-                    DataCell(Text(picNames.isNotEmpty ? picNames : 'Belum Di-assign', style: TextStyle(color: picNames.isNotEmpty ? context.colors.textPrimary : AppColors.warning, fontSize: 12))),
+                    DataCell(Text(picNames.isNotEmpty ? picNames : 'Belum Di-assign', style: TextStyle(color: picNames.isNotEmpty ? context.colors.textPrimary : context.semantic.warning, fontSize: 12))),
                     DataCell(
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: const Icon(LucideIcons.userPlus, size: 15, color: AppColors.success),
+                            icon: Icon(LucideIcons.userPlus, size: 15, color: context.semantic.success),
                             tooltip: 'Assign Sales ke Customer Ini',
                             onPressed: () => _showAssignIndustriDialog(preselectedCustomer: c),
                           ),
                           IconButton(
-                            icon: const Icon(LucideIcons.pencil, size: 15, color: AppColors.info),
+                            icon: Icon(LucideIcons.pencil, size: 15, color: context.semantic.info),
                             tooltip: 'Edit Customer',
                             onPressed: () => _showIndustriCustomerDialog(customer: c),
                           ),
                           IconButton(
-                            icon: const Icon(LucideIcons.trash2, size: 15, color: AppColors.danger),
+                            icon: Icon(LucideIcons.trash2, size: 15, color: context.semantic.danger),
                             tooltip: 'Hapus Customer',
                             onPressed: () async {
                               final ok = await showConfirmDeleteDialog(
@@ -2497,10 +2498,10 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDState) => AlertDialog(
           backgroundColor: context.colors.bgDialog,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: context.colors.border)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: context.colors.border)),
           title: Row(
             children: [
-              Icon(LucideIcons.factory, color: AppColors.success, size: 20),
+              Icon(LucideIcons.factory, color: context.semantic.success, size: 20),
               const SizedBox(width: 8),
               Text(isEdit ? 'Edit Customer Industri' : 'Tambah Customer Industri', style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
             ],
@@ -2556,7 +2557,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: TextStyle(color: context.colors.textMuted))),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: context.semantic.successSolid, foregroundColor: Theme.of(context).colorScheme.onPrimary),
               onPressed: () async {
                 if (nameCtrl.text.trim().isEmpty) return;
                 Navigator.pop(ctx);
@@ -2603,10 +2604,10 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDState) => AlertDialog(
           backgroundColor: context.colors.bgDialog,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: context.colors.border)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: context.colors.border)),
           title: Row(
             children: [
-              const Icon(LucideIcons.userPlus, color: AppColors.success, size: 20),
+              Icon(LucideIcons.userPlus, color: context.semantic.success, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -2628,10 +2629,10 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                     Container(
                       padding: const EdgeInsets.all(12),
                       margin: const EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(color: AppColors.warning.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(8)),
-                      child: const Text(
+                      decoration: BoxDecoration(color: context.semantic.warning.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(8)),
+                      child: Text(
                         'Belum ada user berposisi ASM/SPV/ASC dengan status Is Eligible Industri = Aktif. Aktifkan di Manajemen User terlebih dahulu.',
-                        style: TextStyle(color: AppColors.warning, fontSize: 12),
+                        style: TextStyle(color: context.semantic.warning, fontSize: 12),
                       ),
                     ),
                   DropdownButtonFormField<int>(
@@ -2692,7 +2693,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                                     : () => ref.read(salesAssignmentProvider.notifier).fetchSapIndustriCustomers(force: true),
                                 icon: saState.isLoadingSapCustomers
                                     ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
-                                    : const Icon(LucideIcons.refreshCw, size: 15, color: AppColors.primary),
+                                    : Icon(LucideIcons.refreshCw, size: 15, color: Theme.of(context).colorScheme.primary),
                               ),
                             ],
                           ),
@@ -2702,13 +2703,13 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               margin: const EdgeInsets.only(bottom: 8),
                               decoration: BoxDecoration(
-                                color: AppColors.success.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: AppColors.success.withValues(alpha: 0.35)),
+                                color: context.semantic.success.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: context.semantic.success.withValues(alpha: 0.35)),
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(LucideIcons.checkCircle2, size: 16, color: AppColors.success),
+                                  Icon(LucideIcons.checkCircle2, size: 16, color: context.semantic.success),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
@@ -2762,7 +2763,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                               padding: const EdgeInsets.only(top: 6),
                               child: Text(
                                 'SAP Error: ${saState.sapCustomersError}',
-                                style: const TextStyle(color: AppColors.danger, fontSize: 11.5),
+                                style: TextStyle(color: context.semantic.danger, fontSize: 11.5),
                               ),
                             ),
                           const SizedBox(height: 6),
@@ -2770,7 +2771,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                             height: 170,
                             decoration: BoxDecoration(
                               color: context.colors.bgSubtle,
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: context.colors.border),
                             ),
                             child: saState.isLoadingSapCustomers && sapList.isEmpty
@@ -2791,7 +2792,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                                           return ListTile(
                                             dense: true,
                                             selected: isSelected,
-                                            selectedTileColor: AppColors.success.withValues(alpha: 0.12),
+                                            selectedTileColor: context.semantic.success.withValues(alpha: 0.12),
                                             title: Text(
                                               c.cardName,
                                               style: TextStyle(
@@ -2807,7 +2808,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                             trailing: isSelected
-                                                ? const Icon(LucideIcons.check, size: 16, color: AppColors.success)
+                                                ? Icon(LucideIcons.check, size: 16, color: context.semantic.success)
                                                 : null,
                                             onTap: () => setDState(() {
                                               selectedSapCustomer = c;
@@ -2862,7 +2863,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: TextStyle(color: context.colors.textMuted))),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: context.semantic.successSolid, foregroundColor: Theme.of(context).colorScheme.onPrimary),
               onPressed: (selectedUserId == null || (selectedCustomerId == null && selectedSapCustomer == null))
                   ? null
                   : () async {

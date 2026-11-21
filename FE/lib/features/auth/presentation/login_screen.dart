@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../providers/auth_provider.dart';
 
@@ -44,29 +43,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final isDark = context.isDarkMode;
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final sem = context.semantic;
 
     return Scaffold(
-      backgroundColor: context.colors.bgScaffold,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
-          // Warm natural background surface
-          Container(color: context.colors.bgScaffold),
-
-          // Floating Theme Toggle in top-right corner
+          // Top-right Theme Toggle
           Positioned(
             top: 24,
             right: 24,
             child: Container(
               decoration: BoxDecoration(
-                color: context.colors.bgCard,
-                shape: BoxShape.circle,
-                border: Border.all(color: context.colors.border),
+                color: cs.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: cs.outlineVariant),
+                boxShadow: context.colors.cardShadows,
               ),
               child: IconButton(
                 icon: Icon(
                   isDark ? LucideIcons.sun : LucideIcons.moon,
-                  color: isDark ? AppColors.primaryLight : context.colors.textPrimary,
-                  size: 19,
+                  color: isDark ? sem.warning : cs.onSurfaceVariant,
+                  size: 18,
                 ),
                 tooltip: isDark ? 'Mode Terang' : 'Mode Gelap',
                 onPressed: () {
@@ -76,39 +76,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
 
-          // Main Center Content
+          // Main Center Card
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Container(
-                constraints: const BoxConstraints(maxWidth: 440),
+                constraints: const BoxConstraints(maxWidth: 420),
                 decoration: BoxDecoration(
-                  color: context.colors.bgCard,
-                  borderRadius: BorderRadius.circular(26),
-                  border: Border.all(color: context.colors.border),
+                  color: cs.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: cs.outlineVariant),
                   boxShadow: context.colors.cardShadows,
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(36),
+                  padding: const EdgeInsets.all(32),
                   child: Form(
                     key: _formKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // App Brand Icon
+                        // Brand Icon
                         Center(
                           child: Container(
-                            width: 56,
-                            height: 56,
+                            width: 48,
+                            height: 48,
                             decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(16),
+                              color: cs.primary,
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               LucideIcons.layoutGrid,
-                              color: Colors.white,
-                              size: 28,
+                              color: cs.onPrimary,
+                              size: 24,
                             ),
                           ),
                         ),
@@ -118,21 +118,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         Text(
                           'Sales Insentif',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 25,
-                            fontWeight: FontWeight.w700,
-                            color: context.colors.textPrimary,
-                            letterSpacing: -0.5,
-                          ),
+                          style: tt.headlineMedium,
                         ),
                         const SizedBox(height: 6),
                         Text(
                           'Masuk untuk mengelola target dan insentif penjualan',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13.5,
-                            color: context.colors.textMuted,
-                          ),
+                          style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                         ),
                         const SizedBox(height: 28),
 
@@ -141,20 +133,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                             decoration: BoxDecoration(
-                              color: AppColors.danger.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+                              color: sem.dangerBg,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: sem.danger.withValues(alpha: 0.35)),
                             ),
                             child: Row(
                               children: [
-                                const Icon(LucideIcons.alertCircle, color: AppColors.danger, size: 18),
+                                Icon(LucideIcons.alertCircle, color: sem.danger, size: 17),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
                                     authState.errorMessage!,
-                                    style: GoogleFonts.inter(
-                                      color: AppColors.danger,
-                                      fontSize: 12.5,
+                                    style: tt.bodySmall?.copyWith(
+                                      color: sem.danger,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -168,21 +159,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         // Username Field
                         Text(
                           'Username atau Email',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: context.colors.textSecondary,
-                          ),
+                          style: tt.labelLarge?.copyWith(color: sem.textSecondary),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         TextFormField(
                           controller: _usernameController,
-                          style: TextStyle(color: context.colors.textPrimary, fontSize: 14),
+                          style: tt.bodyLarge?.copyWith(color: cs.onSurface),
                           decoration: InputDecoration(
-                            prefixIcon: Icon(LucideIcons.user, color: context.colors.textMuted, size: 18),
+                            prefixIcon: Icon(LucideIcons.user, color: cs.onSurfaceVariant, size: 17),
                             hintText: 'Masukkan username / email...',
                             filled: true,
-                            fillColor: context.colors.bgElevated,
+                            fillColor: sem.subtleBg,
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -191,29 +178,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 18),
 
                         // Password Field
                         Text(
                           'Kata Sandi',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: context.colors.textSecondary,
-                          ),
+                          style: tt.labelLarge?.copyWith(color: sem.textSecondary),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         TextFormField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
-                          style: TextStyle(color: context.colors.textPrimary, fontSize: 14),
+                          style: tt.bodyLarge?.copyWith(color: cs.onSurface),
                           decoration: InputDecoration(
-                            prefixIcon: Icon(LucideIcons.lock, color: context.colors.textMuted, size: 18),
+                            prefixIcon: Icon(LucideIcons.lock, color: cs.onSurfaceVariant, size: 17),
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscurePassword ? LucideIcons.eyeOff : LucideIcons.eye,
-                                color: context.colors.textMuted,
-                                size: 18,
+                                color: cs.onSurfaceVariant,
+                                size: 17,
                               ),
                               onPressed: () {
                                 setState(() {
@@ -223,7 +206,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                             hintText: '••••••••',
                             filled: true,
-                            fillColor: context.colors.bgElevated,
+                            fillColor: sem.subtleBg,
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -233,40 +216,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           },
                           onFieldSubmitted: (_) => _handleLogin(),
                         ),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 24),
 
                         // Submit Button
                         SizedBox(
-                          height: 50,
+                          height: 44,
                           child: ElevatedButton(
                             onPressed: authState.isLoading ? null : _handleLogin,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                              shape: const StadiumBorder(),
-                              elevation: 0,
-                            ),
                             child: authState.isLoading
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
+                                ? SizedBox(
+                                    height: 18,
+                                    width: 18,
                                     child: CircularProgressIndicator(
-                                      strokeWidth: 2.2,
-                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                      color: cs.onPrimary,
                                     ),
                                   )
-                                : Row(
+                                : const Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Text(
-                                        'Masuk',
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 15,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      const Icon(LucideIcons.arrowRight, size: 18),
+                                      Text('Masuk'),
+                                      SizedBox(width: 8),
+                                      Icon(LucideIcons.arrowRight, size: 17),
                                     ],
                                   ),
                           ),

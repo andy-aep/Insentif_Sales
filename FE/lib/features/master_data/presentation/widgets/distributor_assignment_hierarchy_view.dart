@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../data/models/auth_user_model.dart';
 import '../../../../data/models/master_model.dart';
 import '../../../users_management/providers/user_management_provider.dart';
@@ -103,7 +103,7 @@ class _DistributorAssignmentHierarchyViewState
           return AlertDialog(
             backgroundColor: colors.bgDialog,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               side: BorderSide(color: colors.border),
             ),
             title: Row(
@@ -111,10 +111,10 @@ class _DistributorAssignmentHierarchyViewState
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(10),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(LucideIcons.users, size: 20, color: AppColors.primaryLight),
+                  child: Icon(LucideIcons.users, size: 20, color: Theme.of(context).colorScheme.primary),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -123,7 +123,7 @@ class _DistributorAssignmentHierarchyViewState
                     children: [
                       Text(
                         'Atur PIC: ${distributor.name}',
-                        style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 17),
+                        style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 17),
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
@@ -152,14 +152,14 @@ class _DistributorAssignmentHierarchyViewState
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
                               decoration: BoxDecoration(
-                                color: !isFullYear ? AppColors.primary.withValues(alpha: 0.14) : colors.bgElevated,
+                                color: !isFullYear ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.14) : colors.bgElevated,
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: !isFullYear ? AppColors.primary : colors.border),
+                                border: Border.all(color: !isFullYear ? Theme.of(context).colorScheme.primary : colors.border),
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(LucideIcons.calendar, size: 14, color: !isFullYear ? AppColors.primary : colors.textMuted),
+                                  Icon(LucideIcons.calendar, size: 14, color: !isFullYear ? Theme.of(context).colorScheme.primary : colors.textMuted),
                                   const SizedBox(width: 6),
                                   Text(
                                     '1 Bulan (YYYYMM)',
@@ -182,14 +182,14 @@ class _DistributorAssignmentHierarchyViewState
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
                               decoration: BoxDecoration(
-                                color: isFullYear ? AppColors.primary.withValues(alpha: 0.14) : colors.bgElevated,
+                                color: isFullYear ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.14) : colors.bgElevated,
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: isFullYear ? AppColors.primary : colors.border),
+                                border: Border.all(color: isFullYear ? Theme.of(context).colorScheme.primary : colors.border),
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(LucideIcons.calendarRange, size: 14, color: isFullYear ? AppColors.primary : colors.textMuted),
+                                  Icon(LucideIcons.calendarRange, size: 14, color: isFullYear ? Theme.of(context).colorScheme.primary : colors.textMuted),
                                   const SizedBox(width: 6),
                                   Text(
                                     'Setahun Penuh (12 Bulan)',
@@ -233,18 +233,18 @@ class _DistributorAssignmentHierarchyViewState
                       decoration: BoxDecoration(
                         color: colors.bgElevated,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+                        border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              const Icon(LucideIcons.crown, size: 16, color: AppColors.primaryLight),
+                              Icon(LucideIcons.crown, size: 16, color: Theme.of(context).colorScheme.primary),
                               const SizedBox(width: 8),
                               Text(
                                 '1. ASM Penanggung Jawab Distributor',
-                                style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13.5),
+                                style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13.5),
                               ),
                             ],
                           ),
@@ -298,12 +298,12 @@ class _DistributorAssignmentHierarchyViewState
                         children: [
                           Row(
                             children: [
-                              const Icon(LucideIcons.mapPin, size: 16, color: AppColors.warning),
+                              Icon(LucideIcons.mapPin, size: 16, color: context.semantic.warning),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   '2. SPV / ASC Penanggung Jawab Area ($totalAreas Area)',
-                                  style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13.5),
+                                  style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13.5),
                                 ),
                               ),
                             ],
@@ -322,7 +322,7 @@ class _DistributorAssignmentHierarchyViewState
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
                                   color: colors.bgCard,
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(8),
                                   border: Border.all(color: colors.border),
                                 ),
                                 child: Column(
@@ -330,7 +330,7 @@ class _DistributorAssignmentHierarchyViewState
                                   children: [
                                     Row(
                                       children: [
-                                        const Icon(LucideIcons.home, size: 14, color: AppColors.primary),
+                                        Icon(LucideIcons.home, size: 14, color: Theme.of(context).colorScheme.primary),
                                         const SizedBox(width: 6),
                                         Text(
                                           'Depo: ${dp.name} (${dp.code})',
@@ -419,13 +419,13 @@ class _DistributorAssignmentHierarchyViewState
               ),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 icon: isSaving
-                    ? const SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
                     : const Icon(LucideIcons.save, size: 16),
                 label: Text(
                   isSaving ? 'Menyimpan...' : (isFullYear ? 'Simpan Pemetaan (12 Bulan)' : 'Simpan Pemetaan'),
@@ -463,7 +463,7 @@ class _DistributorAssignmentHierarchyViewState
                               content: Text(ok
                                   ? (st.successMessage ?? 'Pemetaan PIC berhasil disimpan')
                                   : (st.errorMessage ?? 'Gagal menyimpan pemetaan')),
-                              backgroundColor: ok ? AppColors.success : AppColors.danger,
+                              backgroundColor: ok ? context.semantic.success : context.semantic.danger,
                             ),
                           );
                         }
@@ -559,10 +559,10 @@ class _DistributorAssignmentHierarchyViewState
           spacing: 12,
           runSpacing: 12,
           children: [
-            _kpiTile(context, 'Total Distributor', '${allDistributors.length} Distributor', LucideIcons.building2, AppColors.primary),
-            _kpiTile(context, 'ASM Terpetakan', '$totalDistWithAsm / ${allDistributors.length} Dist', LucideIcons.crown, AppColors.success),
-            _kpiTile(context, 'Area Terpetakan', '$totalAreasMapped / $totalAreasCount Area', LucideIcons.mapPin, AppColors.warning),
-            _kpiTile(context, 'Belum Ada PIC', '${(allDistributors.length - totalDistWithAsm) + (totalAreasCount - totalAreasMapped)} Slot', LucideIcons.alertCircle, AppColors.danger),
+            _kpiTile(context, 'Total Distributor', '${allDistributors.length} Distributor', LucideIcons.building2, Theme.of(context).colorScheme.primary),
+            _kpiTile(context, 'ASM Terpetakan', '$totalDistWithAsm / ${allDistributors.length} Dist', LucideIcons.crown, context.semantic.success),
+            _kpiTile(context, 'Area Terpetakan', '$totalAreasMapped / $totalAreasCount Area', LucideIcons.mapPin, context.semantic.warning),
+            _kpiTile(context, 'Belum Ada PIC', '${(allDistributors.length - totalDistWithAsm) + (totalAreasCount - totalAreasMapped)} Slot', LucideIcons.alertCircle, context.semantic.danger),
           ],
         ),
         const SizedBox(height: 16),
@@ -572,7 +572,7 @@ class _DistributorAssignmentHierarchyViewState
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: colors.bgElevated,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: colors.border),
           ),
           child: Wrap(
@@ -607,7 +607,7 @@ class _DistributorAssignmentHierarchyViewState
                         dropdownColor: colors.bgCard,
                         style: TextStyle(color: colors.textPrimary, fontSize: 12.5),
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(LucideIcons.calendar, size: 14, color: AppColors.primary),
+                          prefixIcon: Icon(LucideIcons.calendar, size: 14, color: Theme.of(context).colorScheme.primary),
                           prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                           filled: true,
                           fillColor: colors.bgCard,
@@ -746,7 +746,7 @@ class _DistributorAssignmentHierarchyViewState
     final selected = _viewMode == mode;
     final colors = context.colors;
     return InkWell(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(8),
       onTap: () => setState(() {
         _viewMode = mode;
         _page = 1;
@@ -754,19 +754,19 @@ class _DistributorAssignmentHierarchyViewState
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? AppColors.primary : colors.bgCard,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: selected ? AppColors.primary : colors.border),
+          color: selected ? Theme.of(context).colorScheme.primary : colors.bgCard,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: selected ? Theme.of(context).colorScheme.primary : colors.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: selected ? Colors.white : colors.textSecondary),
+            Icon(icon, size: 14, color: selected ? Theme.of(context).colorScheme.onPrimary : colors.textSecondary),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                color: selected ? Colors.white : colors.textPrimary,
+                color: selected ? Theme.of(context).colorScheme.onPrimary : colors.textPrimary,
                 fontWeight: FontWeight.w600,
                 fontSize: 12.5,
               ),
@@ -878,9 +878,9 @@ class _DistributorAssignmentHierarchyViewState
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
               color: colors.bgCard,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: allMapped ? colors.border : AppColors.warning.withValues(alpha: 0.45),
+                color: allMapped ? colors.border : context.semantic.warning.withValues(alpha: 0.45),
               ),
               boxShadow: colors.cardShadows,
             ),
@@ -893,10 +893,10 @@ class _DistributorAssignmentHierarchyViewState
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(LucideIcons.building2, size: 18, color: AppColors.primary),
+                  child: Icon(LucideIcons.building2, size: 18, color: Theme.of(context).colorScheme.primary),
                 ),
                 title: Wrap(
                   spacing: 8,
@@ -905,7 +905,7 @@ class _DistributorAssignmentHierarchyViewState
                   children: [
                     Text(
                       dist.name,
-                      style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14.5),
+                      style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14.5),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -917,14 +917,14 @@ class _DistributorAssignmentHierarchyViewState
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                       decoration: BoxDecoration(
                         color: asmAssign != null
-                            ? AppColors.success.withValues(alpha: 0.14)
-                            : AppColors.danger.withValues(alpha: 0.14),
+                            ? context.semantic.success.withValues(alpha: 0.14)
+                            : context.semantic.danger.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         asmAssign != null ? 'ASM: ${asmAssign.user?.name ?? '-'}' : 'Belum Ada ASM',
                         style: TextStyle(
-                          color: asmAssign != null ? AppColors.success : AppColors.danger,
+                          color: asmAssign != null ? context.semantic.success : context.semantic.danger,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
@@ -935,14 +935,14 @@ class _DistributorAssignmentHierarchyViewState
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                       decoration: BoxDecoration(
                         color: mappedAreas == areas.length
-                            ? AppColors.info.withValues(alpha: 0.12)
-                            : AppColors.warning.withValues(alpha: 0.15),
+                            ? context.semantic.info.withValues(alpha: 0.12)
+                            : context.semantic.warning.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         '$mappedAreas / ${areas.length} Area Terpetakan',
                         style: TextStyle(
-                          color: mappedAreas == areas.length ? AppColors.info : AppColors.warning,
+                          color: mappedAreas == areas.length ? context.semantic.info : context.semantic.warning,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
@@ -955,8 +955,8 @@ class _DistributorAssignmentHierarchyViewState
                   children: [
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                        side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+                        foregroundColor: Theme.of(context).colorScheme.primary,
+                        side: BorderSide(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -988,7 +988,7 @@ class _DistributorAssignmentHierarchyViewState
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: colors.bgSubtle,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: colors.border),
                         ),
                         child: Column(
@@ -996,7 +996,7 @@ class _DistributorAssignmentHierarchyViewState
                           children: [
                             Row(
                               children: [
-                                const Icon(LucideIcons.home, size: 14, color: AppColors.primary),
+                                Icon(LucideIcons.home, size: 14, color: Theme.of(context).colorScheme.primary),
                                 const SizedBox(width: 6),
                                 Text(
                                   'Depo: ${dp.name} (${dp.code})',
@@ -1020,7 +1020,7 @@ class _DistributorAssignmentHierarchyViewState
                                       color: colors.bgCard,
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
-                                        color: hasSpv ? colors.border : AppColors.warning.withValues(alpha: 0.6),
+                                        color: hasSpv ? colors.border : context.semantic.warning.withValues(alpha: 0.6),
                                       ),
                                     ),
                                     child: Row(
@@ -1029,7 +1029,7 @@ class _DistributorAssignmentHierarchyViewState
                                         Icon(
                                           LucideIcons.mapPin,
                                           size: 13,
-                                          color: hasSpv ? AppColors.success : AppColors.warning,
+                                          color: hasSpv ? context.semantic.success : context.semantic.warning,
                                         ),
                                         const SizedBox(width: 6),
                                         Text(
@@ -1042,7 +1042,7 @@ class _DistributorAssignmentHierarchyViewState
                                         Text(
                                           hasSpv ? (spvAssign.user?.name ?? '-') : 'Vacant',
                                           style: TextStyle(
-                                            color: hasSpv ? AppColors.primaryLight : AppColors.warning,
+                                            color: hasSpv ? Theme.of(context).colorScheme.primary : context.semantic.warning,
                                             fontWeight: FontWeight.bold,
                                             fontSize: 12,
                                           ),
@@ -1157,7 +1157,7 @@ class _DistributorAssignmentHierarchyViewState
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: colors.bgCard,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: colors.border),
             boxShadow: colors.cardShadows,
           ),
@@ -1168,10 +1168,10 @@ class _DistributorAssignmentHierarchyViewState
                 children: [
                   CircleAvatar(
                     radius: 16,
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.14),
+                    backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.14),
                     child: Text(
                       (user?.name.isNotEmpty == true ? user!.name[0] : '?').toUpperCase(),
-                      style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13),
+                      style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -1181,18 +1181,18 @@ class _DistributorAssignmentHierarchyViewState
                       runSpacing: 4,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Text(user?.name ?? '-', style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14.5)),
+                        Text(user?.name ?? '-', style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14.5)),
                         Text('@${user?.username ?? '-'}', style: TextStyle(color: colors.textMuted, fontSize: 12)),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: (posCode == 'ASM' ? AppColors.primary : AppColors.info).withValues(alpha: 0.14),
+                            color: (posCode == 'ASM' ? Theme.of(context).colorScheme.primary : context.semantic.info).withValues(alpha: 0.14),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             posCode,
                             style: TextStyle(
-                              color: posCode == 'ASM' ? AppColors.primary : AppColors.info,
+                              color: posCode == 'ASM' ? Theme.of(context).colorScheme.primary : context.semantic.info,
                               fontWeight: FontWeight.bold,
                               fontSize: 11,
                             ),

@@ -61,14 +61,19 @@ class DatabaseSeeder extends Seeder
         $posTo = Position::create(['name' => 'Sales Taking Order', 'code' => 'TO', 'is_active' => true]);
         $posCanvasing = Position::create(['name' => 'Sales Canvasing', 'code' => 'CANVAS', 'is_active' => true]);
 
-        // 3. Menus & Permissions
+        // 3. Menus & Permissions (Sinkron 1-to-1 dengan 11 menu sidebar)
         $menus = [
-            ['name' => 'Dashboard', 'route' => '/dashboard', 'icon' => 'dashboard', 'order' => 1],
-            ['name' => 'Master Data', 'route' => '/master', 'icon' => 'database', 'order' => 2],
-            ['name' => 'Setting Insentif', 'route' => '/settings/incentives', 'icon' => 'tune', 'order' => 3],
-            ['name' => 'Bulk Upload & Batch', 'route' => '/bulk-upload', 'icon' => 'cloud_upload', 'order' => 4],
-            ['name' => 'Kalkulasi Insentif', 'route' => '/incentives/calculate', 'icon' => 'calculate', 'order' => 5],
-            ['name' => 'Laporan & Riwayat', 'route' => '/reports/incentives', 'icon' => 'assessment', 'order' => 6],
+            ['name' => 'Dashboard', 'route' => '/dashboard', 'icon' => 'layout_grid', 'order' => 1],
+            ['name' => 'Master Distributor', 'route' => '/master/distributor', 'icon' => 'building2', 'order' => 2],
+            ['name' => 'Master Target Kuota', 'route' => '/master/target', 'icon' => 'target', 'order' => 3],
+            ['name' => 'Realisasi Penjualan', 'route' => '/master/realisasi', 'icon' => 'shopping_bag', 'order' => 4],
+            ['name' => 'Tim & Area Sales', 'route' => '/master/surabaya', 'icon' => 'users', 'order' => 5],
+            ['name' => 'Insentif Distributor', 'route' => '/incentives/distributor', 'icon' => 'coins', 'order' => 6],
+            ['name' => 'Insentif Industri', 'route' => '/incentives/industri', 'icon' => 'factory', 'order' => 7],
+            ['name' => 'Insentif Surabaya', 'route' => '/incentives/surabaya', 'icon' => 'landmark', 'order' => 8],
+            ['name' => 'Skema & Bobot', 'route' => '/settings/incentives', 'icon' => 'sliders', 'order' => 9],
+            ['name' => 'Bulk Upload Data', 'route' => '/bulk-upload', 'icon' => 'upload_cloud', 'order' => 10],
+            ['name' => 'Pengguna & Akses', 'route' => '/users', 'icon' => 'shield', 'order' => 11],
         ];
 
         foreach ($menus as $m) {
@@ -83,18 +88,20 @@ class DatabaseSeeder extends Seeder
                 'can_delete' => true,
             ]);
 
-            // Give admin sales access
-            RoleMenuPermission::create([
-                'role_id' => $adminSalesRole->id,
-                'menu_id' => $menu->id,
-                'can_view' => true,
-                'can_create' => true,
-                'can_update' => true,
-                'can_delete' => false,
-            ]);
+            // Give admin sales access (semua kecuali Pengguna & Akses)
+            if ($m['route'] !== '/users') {
+                RoleMenuPermission::create([
+                    'role_id' => $adminSalesRole->id,
+                    'menu_id' => $menu->id,
+                    'can_view' => true,
+                    'can_create' => true,
+                    'can_update' => true,
+                    'can_delete' => false,
+                ]);
+            }
 
-            // Sales only view dashboard and report
-            if (in_array($m['name'], ['Dashboard', 'Laporan & Riwayat'])) {
+            // Sales only view dashboard
+            if ($m['route'] === '/dashboard') {
                 RoleMenuPermission::create([
                     'role_id' => $salesRole->id,
                     'menu_id' => $menu->id,

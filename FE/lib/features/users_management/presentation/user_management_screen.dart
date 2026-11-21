@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../../../core/widgets/responsive_table.dart';
 import '../../../data/models/auth_user_model.dart';
@@ -97,16 +97,16 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
           return AlertDialog(
             backgroundColor: colors.bgDialog,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               side: BorderSide(color: colors.border),
             ),
             title: Row(
               children: [
-                Icon(user == null ? LucideIcons.userPlus : LucideIcons.userCheck, color: AppColors.primaryLight, size: 22),
+                Icon(user == null ? LucideIcons.userPlus : LucideIcons.userCheck, color: Theme.of(context).colorScheme.primary, size: 22),
                 const SizedBox(width: 10),
                 Text(
                   user == null ? 'Tambah User Baru' : 'Edit Pengguna',
-                  style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold),
+                  style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -125,13 +125,13 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                           padding: const EdgeInsets.all(10),
                           margin: const EdgeInsets.only(bottom: 12),
                           decoration: BoxDecoration(
-                            color: AppColors.danger.withValues(alpha: 0.12),
+                            color: context.semantic.danger.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+                            border: Border.all(color: context.semantic.danger.withValues(alpha: 0.4)),
                           ),
                           child: Text(
                             dialogError!,
-                            style: const TextStyle(color: AppColors.danger, fontSize: 12.5, fontWeight: FontWeight.w500),
+                            style: TextStyle(color: context.semantic.danger, fontSize: 12.5, fontWeight: FontWeight.w500),
                           ),
                         ),
                       TextFormField(
@@ -285,7 +285,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                                               : '${sapList.length} sales SAP tersedia'),
                                       helperStyle: TextStyle(
                                         fontSize: 11,
-                                        color: umState.sapError != null ? AppColors.danger : colors.textMuted,
+                                        color: umState.sapError != null ? context.semantic.danger : colors.textMuted,
                                       ),
                                     ),
                                     items: [
@@ -331,7 +331,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                                           height: 16,
                                           child: CircularProgressIndicator(strokeWidth: 2),
                                         )
-                                      : const Icon(LucideIcons.refreshCw, size: 18, color: AppColors.primary),
+                                      : Icon(LucideIcons.refreshCw, size: 18, color: Theme.of(context).colorScheme.primary),
                                 ),
                               ],
                             ),
@@ -458,28 +458,28 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                     const SizedBox(height: 16),
                     Text(
                       'Eligibility Perhitungan Skema Insentif (Antrean Kalkulasi):',
-                      style: GoogleFonts.inter(color: colors.textSecondary, fontSize: 12.5, fontWeight: FontWeight.w600),
+                      style: GoogleFonts.plusJakartaSans(color: colors.textSecondary, fontSize: 12.5, fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 6),
                     CheckboxListTile(
                       dense: true,
                       title: Text('Eligible Insentif Konsumsi (Distributor)', style: TextStyle(color: colors.textPrimary, fontSize: 12.5)),
                       value: isKonsumsi,
-                      activeColor: AppColors.primary,
+                      activeColor: Theme.of(context).colorScheme.primary,
                       onChanged: (val) => setDialogState(() => isKonsumsi = val ?? false),
                     ),
                     CheckboxListTile(
                       dense: true,
                       title: Text('Eligible Insentif Industri', style: TextStyle(color: colors.textPrimary, fontSize: 12.5)),
                       value: isIndustri,
-                      activeColor: AppColors.success,
+                      activeColor: context.semantic.success,
                       onChanged: (val) => setDialogState(() => isIndustri = val ?? false),
                     ),
                     CheckboxListTile(
                       dense: true,
                       title: Text('Eligible Insentif Sales Surabaya', style: TextStyle(color: colors.textPrimary, fontSize: 12.5)),
                       value: isSurabaya,
-                      activeColor: AppColors.warning,
+                      activeColor: context.semantic.warning,
                       onChanged: (val) => setDialogState(() => isSurabaya = val ?? false),
                     ),
                   ],
@@ -490,10 +490,10 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
             actions: [
               TextButton(
                 onPressed: isSaving ? null : () => Navigator.pop(ctx),
-                child: Text('Batal', style: GoogleFonts.inter(color: colors.textSecondary)),
+                child: Text('Batal', style: GoogleFonts.plusJakartaSans(color: colors.textSecondary)),
               ),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Theme.of(context).colorScheme.onPrimary),
                 onPressed: isSaving
                     ? null
                     : () async {
@@ -530,8 +530,8 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                         }
                       },
                 child: isSaving
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : Text('Simpan Pengguna', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                    ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
+                    : Text('Simpan Pengguna', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
               ),
             ],
           );
@@ -556,7 +556,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
         builder: (context, setDialogState) => AlertDialog(
           backgroundColor: colors.bgDialog,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(12),
             side: BorderSide(color: colors.border),
           ),
           title: Row(
@@ -564,10 +564,10 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.15),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(LucideIcons.key, color: AppColors.primary, size: 20),
+                child: Icon(LucideIcons.key, color: Theme.of(context).colorScheme.primary, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -604,18 +604,18 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: AppColors.danger.withValues(alpha: 0.12),
+                      color: context.semantic.danger.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+                      border: Border.all(color: context.semantic.danger.withValues(alpha: 0.4)),
                     ),
                     child: Row(
                       children: [
-                        const Icon(LucideIcons.alertCircle, color: AppColors.danger, size: 16),
+                        Icon(LucideIcons.alertCircle, color: context.semantic.danger, size: 16),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             errorText!,
-                            style: GoogleFonts.plusJakartaSans(color: AppColors.danger, fontSize: 12),
+                            style: GoogleFonts.plusJakartaSans(color: context.semantic.danger, fontSize: 12),
                           ),
                         ),
                       ],
@@ -660,9 +660,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: () async {
                 final newPass = newPassCtrl.text.trim();
@@ -678,6 +678,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                 }
 
                 final scaffoldMessenger = ScaffoldMessenger.of(context);
+                final sem = context.semantic;
                 final nav = Navigator.of(ctx);
                 nav.pop();
                 final ok = await ref.read(userManagementProvider.notifier).changePassword(user.id, newPass);
@@ -687,7 +688,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                     content: Text(
                       ok ? 'Kata sandi untuk ${user.name} berhasil diperbarui' : 'Gagal memperbarui kata sandi',
                     ),
-                    backgroundColor: ok ? AppColors.success : AppColors.danger,
+                    backgroundColor: ok ? sem.successSolid : sem.dangerSolid,
                   ),
                 );
               },
@@ -710,7 +711,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: colors.bgDialog,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: colors.border)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.border)),
         title: Text('Tambah Posisi Sales', style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -723,7 +724,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: TextStyle(color: colors.textSecondary))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Theme.of(context).colorScheme.onPrimary),
             onPressed: () {
               if (nameCtrl.text.isNotEmpty) {
                 ref.read(userManagementProvider.notifier).savePosition(nameCtrl.text.trim(), codeCtrl.text.trim());
@@ -748,7 +749,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: colors.bgDialog,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: colors.border)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.border)),
         title: Text('Tambah Role Baru', style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -761,7 +762,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: TextStyle(color: colors.textSecondary))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Theme.of(context).colorScheme.onPrimary),
             onPressed: () {
               if (nameCtrl.text.isNotEmpty) {
                 ref.read(userManagementProvider.notifier).saveRole(nameCtrl.text.trim(), displayCtrl.text.trim());
@@ -796,22 +797,22 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                 children: [
                   Text(
                     'Role & Manajemen Hak Akses',
-                    style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.bold, color: colors.textPrimary),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Kelola akun pengguna, penugasan posisi sales lapangan, role sistem, region wilayah, dan hak akses menu aplikasi',
-                    style: GoogleFonts.inter(fontSize: 13, color: colors.textSecondary),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 13, color: colors.textSecondary),
                   ),
                 ],
               );
 
               final addButton = ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 icon: Icon(
                   _activeTabIndex == 1
@@ -846,8 +847,10 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     titleSection,
-                    const SizedBox(height: 14),
-                    Align(alignment: Alignment.centerLeft, child: addButton),
+                    if (_activeTabIndex != 4) ...[
+                      const SizedBox(height: 14),
+                      Align(alignment: Alignment.centerLeft, child: addButton),
+                    ],
                   ],
                 );
               }
@@ -855,7 +858,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
               return Row(
                 children: [
                   Expanded(child: titleSection),
-                  addButton,
+                  if (_activeTabIndex != 4) addButton,
                 ],
               );
             },
@@ -867,7 +870,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: colors.bgCard,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: colors.border, width: 1.2),
               boxShadow: colors.cardShadows,
             ),
@@ -883,7 +886,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                       isScrollable: true,
                       tabAlignment: TabAlignment.start,
                       dividerColor: Colors.transparent,
-                      indicatorColor: AppColors.primary,
+                      indicatorColor: Theme.of(context).colorScheme.primary,
                       labelColor: colors.textPrimary,
                       unselectedLabelColor: colors.textSecondary,
                       onTap: (val) => setState(() => _activeTabIndex = val),
@@ -908,9 +911,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                           contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                           filled: true,
                           fillColor: colors.bgInput,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: colors.borderMuted)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: colors.borderMuted)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.primary)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: colors.borderMuted)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: colors.borderMuted)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Theme.of(context).colorScheme.primary)),
                         ),
                         onChanged: (val) => setState(() => _searchQuery = val.toLowerCase().trim()),
                       ),
@@ -1014,10 +1017,10 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                   children: [
                     CircleAvatar(
                       radius: 14,
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                      backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                       child: Text(
                         (u.name.isNotEmpty ? u.name[0] : 'U').toUpperCase(),
-                        style: const TextStyle(color: AppColors.primaryLight, fontSize: 11, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 11, fontWeight: FontWeight.bold),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -1055,12 +1058,12 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                       ? Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: AppColors.petrol.withValues(alpha: 0.12),
+                            color: context.semantic.secondaryAccent.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             '[${u.sapSalesCode}] ${u.sapSalesName ?? ''}',
-                            style: const TextStyle(color: AppColors.petrol, fontSize: 11.5, fontWeight: FontWeight.w600),
+                            style: TextStyle(color: context.semantic.secondaryAccent, fontSize: 11.5, fontWeight: FontWeight.w600),
                             overflow: TextOverflow.ellipsis,
                           ),
                         )
@@ -1079,11 +1082,11 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                   runSpacing: 4,
                   children: [
                     if (u.isEligibleKonsumsi)
-                      _eligibleChip('Konsumsi', AppColors.primary),
+                      _eligibleChip('Konsumsi', Theme.of(context).colorScheme.primary),
                     if (u.isEligibleIndustri)
-                      _eligibleChip('Industri', AppColors.success),
+                      _eligibleChip('Industri', context.semantic.success),
                     if (u.isEligibleSurabaya)
-                      _eligibleChip('Surabaya', AppColors.warning),
+                      _eligibleChip('Surabaya', context.semantic.warning),
                     if (!u.isEligibleKonsumsi && !u.isEligibleIndustri && !u.isEligibleSurabaya)
                       Text('-', style: TextStyle(color: colors.textMuted)),
                   ],
@@ -1094,7 +1097,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      icon: const Icon(LucideIcons.edit2, size: 15, color: AppColors.primaryLight),
+                      icon: Icon(LucideIcons.edit2, size: 15, color: Theme.of(context).colorScheme.primary),
                       padding: const EdgeInsets.all(6),
                       constraints: const BoxConstraints(),
                       tooltip: 'Edit Data',
@@ -1102,7 +1105,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                     ),
                     const SizedBox(width: 4),
                     IconButton(
-                      icon: const Icon(LucideIcons.key, size: 15, color: AppColors.warning),
+                      icon: Icon(LucideIcons.key, size: 15, color: context.semantic.warning),
                       padding: const EdgeInsets.all(6),
                       constraints: const BoxConstraints(),
                       tooltip: 'Ubah Password',
@@ -1110,7 +1113,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                     ),
                     const SizedBox(width: 4),
                     IconButton(
-                      icon: const Icon(LucideIcons.trash2, size: 15, color: AppColors.danger),
+                      icon: Icon(LucideIcons.trash2, size: 15, color: context.semantic.danger),
                       padding: const EdgeInsets.all(6),
                       constraints: const BoxConstraints(),
                       tooltip: 'Hapus User',
@@ -1152,7 +1155,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryLight, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Theme.of(context).colorScheme.onPrimary),
               icon: const Icon(LucideIcons.plus, size: 15),
               label: const Text('Tambah Role'),
               onPressed: _showAddRoleDialog,
@@ -1171,12 +1174,12 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: colors.bgSubtle,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: colors.border),
               ),
               child: Row(
                 children: [
-                  const Icon(LucideIcons.shield, color: AppColors.primaryLight, size: 18),
+                  Icon(LucideIcons.shield, color: Theme.of(context).colorScheme.primary, size: 18),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -1188,7 +1191,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
+                    icon: Icon(LucideIcons.trash2, size: 16, color: context.semantic.danger),
                     tooltip: 'Hapus Role Akses',
                     onPressed: () async {
                       final confirmed = await showConfirmDeleteDialog(
@@ -1219,7 +1222,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryLight, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Theme.of(context).colorScheme.onPrimary),
               icon: const Icon(LucideIcons.plus, size: 15),
               label: const Text('Tambah Posisi Sales'),
               onPressed: _showAddPositionDialog,
@@ -1238,22 +1241,22 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: colors.bgSubtle,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: colors.border),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(color: AppColors.info.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
-                    child: Text(p.code, style: const TextStyle(color: AppColors.info, fontWeight: FontWeight.bold, fontSize: 11)),
+                    decoration: BoxDecoration(color: context.semantic.info.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
+                    child: Text(p.code, style: TextStyle(color: context.semantic.info, fontWeight: FontWeight.bold, fontSize: 11)),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(p.name, style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13.5)),
                   ),
                   IconButton(
-                    icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
+                    icon: Icon(LucideIcons.trash2, size: 16, color: context.semantic.danger),
                     tooltip: 'Hapus Posisi Sales',
                     onPressed: () async {
                       final confirmed = await showConfirmDeleteDialog(
@@ -1286,12 +1289,12 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: colors.bgDialog,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: colors.border)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.border)),
         title: Row(
           children: [
-            Icon(isEdit ? LucideIcons.edit3 : LucideIcons.mapPin, color: AppColors.primaryLight, size: 20),
+            Icon(isEdit ? LucideIcons.edit3 : LucideIcons.mapPin, color: Theme.of(context).colorScheme.primary, size: 20),
             const SizedBox(width: 10),
-            Text(isEdit ? 'Edit Wilayah Region' : 'Tambah Region Baru', style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold)),
+            Text(isEdit ? 'Edit Wilayah Region' : 'Tambah Region Baru', style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontWeight: FontWeight.bold)),
           ],
         ),
         content: SizedBox(
@@ -1323,7 +1326,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: TextStyle(color: colors.textSecondary))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Theme.of(context).colorScheme.onPrimary),
             onPressed: () async {
               if (codeCtrl.text.trim().isNotEmpty && nameCtrl.text.trim().isNotEmpty) {
                 await ref.read(masterDataProvider.notifier).saveRegion(
@@ -1352,17 +1355,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('Daftar Region Wilayah Distribusi (${regions.length})', style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15)),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryLight, foregroundColor: Colors.white),
-              icon: const Icon(LucideIcons.plus, size: 15),
-              label: const Text('Tambah Region Baru'),
-              onPressed: () => _showRegionFormDialog(),
-            ),
-          ],
+        Text(
+          'Daftar Region Wilayah Distribusi (${regions.length})',
+          style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15),
         ),
         const SizedBox(height: 12),
         if (regions.isEmpty)
@@ -1383,15 +1378,15 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: colors.bgSubtle,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: colors.border),
                 ),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
-                      child: Text(r.code, style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.bold, fontSize: 12)),
+                      decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
+                      child: Text(r.code, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 12)),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -1406,17 +1401,17 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
-                      child: Text('${r.distributorsCount} Distributor', style: const TextStyle(color: AppColors.success, fontSize: 11, fontWeight: FontWeight.bold)),
+                      decoration: BoxDecoration(color: context.semantic.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
+                      child: Text('${r.distributorsCount} Distributor', style: TextStyle(color: context.semantic.success, fontSize: 11, fontWeight: FontWeight.bold)),
                     ),
                     const SizedBox(width: 8),
                     IconButton(
-                      icon: const Icon(LucideIcons.edit2, size: 16, color: AppColors.primaryLight),
+                      icon: Icon(LucideIcons.edit2, size: 16, color: Theme.of(context).colorScheme.primary),
                       tooltip: 'Edit Region',
                       onPressed: () => _showRegionFormDialog(region: r),
                     ),
                     IconButton(
-                      icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
+                      icon: Icon(LucideIcons.trash2, size: 16, color: context.semantic.danger),
                       tooltip: 'Hapus Region',
                       onPressed: () async {
                         final confirmed = await showConfirmDeleteDialog(
@@ -1628,7 +1623,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
               success ? 'Hak akses role "${role.displayName}" berhasil disimpan!' : 'Gagal menyimpan hak akses',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            backgroundColor: success ? AppColors.success : AppColors.danger,
+            backgroundColor: success ? context.semantic.success : context.semantic.danger,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -1697,10 +1692,10 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.15),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(LucideIcons.shieldCheck, size: 20, color: AppColors.primaryLight),
+                    child: Icon(LucideIcons.shieldCheck, size: 20, color: Theme.of(context).colorScheme.primary),
                   ),
                   const SizedBox(width: 12),
                   Column(
@@ -1712,7 +1707,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                         child: DropdownButton<int>(
                           value: selectedRole.id,
                           dropdownColor: colors.bgCard,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(8),
                           items: state.roles.map((r) {
                             return DropdownMenuItem<int>(
                               value: r.id,
@@ -1748,8 +1743,8 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                 children: [
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primaryLight,
-                      side: BorderSide(color: AppColors.primaryLight.withValues(alpha: 0.4)),
+                      foregroundColor: Theme.of(context).colorScheme.primary,
+                      side: BorderSide(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4)),
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     ),
                     icon: const Icon(LucideIcons.checkCheck, size: 14),
@@ -1758,8 +1753,8 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                   ),
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.danger,
-                      side: BorderSide(color: AppColors.danger.withValues(alpha: 0.4)),
+                      foregroundColor: context.semantic.danger,
+                      side: BorderSide(color: context.semantic.danger.withValues(alpha: 0.4)),
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     ),
                     icon: const Icon(LucideIcons.xCircle, size: 14),
@@ -1778,12 +1773,12 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                   ),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryLight,
-                      foregroundColor: Colors.white,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     ),
                     icon: _isSavingPermissions
-                        ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        ? SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
                         : const Icon(LucideIcons.save, size: 15),
                     label: const Text('Simpan Hak Akses', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
                     onPressed: _isSavingPermissions ? null : () => _savePermissions(selectedRole, state.menus),
@@ -1818,13 +1813,13 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)),
           ),
           child: Row(
             children: [
-              const Icon(LucideIcons.info, size: 16, color: AppColors.primaryLight),
+              Icon(LucideIcons.info, size: 16, color: Theme.of(context).colorScheme.primary),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -1868,7 +1863,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                         message: 'Pilih semua Lihat',
                         child: Checkbox(
                           value: allCanView,
-                          activeColor: AppColors.primary,
+                          activeColor: Theme.of(context).colorScheme.primary,
                           onChanged: (v) => _toggleColumn('can_view', v ?? false, filteredMenus),
                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
@@ -1886,7 +1881,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                         message: 'Pilih semua Tambah',
                         child: Checkbox(
                           value: allCanCreate,
-                          activeColor: AppColors.primary,
+                          activeColor: Theme.of(context).colorScheme.primary,
                           onChanged: (v) => _toggleColumn('can_create', v ?? false, filteredMenus),
                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
@@ -1904,7 +1899,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                         message: 'Pilih semua Ubah',
                         child: Checkbox(
                           value: allCanUpdate,
-                          activeColor: AppColors.primary,
+                          activeColor: Theme.of(context).colorScheme.primary,
                           onChanged: (v) => _toggleColumn('can_update', v ?? false, filteredMenus),
                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
@@ -1922,7 +1917,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                         message: 'Pilih semua Hapus',
                         child: Checkbox(
                           value: allCanDelete,
-                          activeColor: AppColors.danger,
+                          activeColor: context.semantic.danger,
                           onChanged: (v) => _toggleColumn('can_delete', v ?? false, filteredMenus),
                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
@@ -1955,20 +1950,20 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                 String badgeText;
 
                 if (isAllRow) {
-                  badgeBg = AppColors.success.withValues(alpha: 0.15);
-                  badgeFg = AppColors.success;
+                  badgeBg = context.semantic.success.withValues(alpha: 0.15);
+                  badgeFg = context.semantic.success;
                   badgeText = 'Akses Penuh';
                 } else if (isNoneRow) {
                   badgeBg = colors.bgSubtle;
                   badgeFg = colors.textMuted;
                   badgeText = 'Tidak Aktif';
                 } else if (isReadOnly) {
-                  badgeBg = AppColors.info.withValues(alpha: 0.15);
-                  badgeFg = AppColors.info;
+                  badgeBg = context.semantic.info.withValues(alpha: 0.15);
+                  badgeFg = context.semantic.info;
                   badgeText = 'Hanya Lihat';
                 } else {
-                  badgeBg = AppColors.warning.withValues(alpha: 0.15);
-                  badgeFg = AppColors.warning;
+                  badgeBg = context.semantic.warning.withValues(alpha: 0.15);
+                  badgeFg = context.semantic.warning;
                   badgeText = 'Kustom';
                 }
 
@@ -1991,7 +1986,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(m.name, style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13), overflow: TextOverflow.ellipsis),
-                                Text(m.route ?? '-', style: const TextStyle(color: AppColors.primaryLight, fontSize: 11), overflow: TextOverflow.ellipsis),
+                                Text(m.route ?? '-', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 11), overflow: TextOverflow.ellipsis),
                               ],
                             ),
                           ),
@@ -2001,28 +1996,28 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                     DataCell(
                       Checkbox(
                         value: canView,
-                        activeColor: AppColors.primary,
+                        activeColor: Theme.of(context).colorScheme.primary,
                         onChanged: (v) => _togglePermission(m.id, 'can_view', v ?? false),
                       ),
                     ),
                     DataCell(
                       Checkbox(
                         value: canCreate,
-                        activeColor: AppColors.primary,
+                        activeColor: Theme.of(context).colorScheme.primary,
                         onChanged: (v) => _togglePermission(m.id, 'can_create', v ?? false),
                       ),
                     ),
                     DataCell(
                       Checkbox(
                         value: canUpdate,
-                        activeColor: AppColors.primary,
+                        activeColor: Theme.of(context).colorScheme.primary,
                         onChanged: (v) => _togglePermission(m.id, 'can_update', v ?? false),
                       ),
                     ),
                     DataCell(
                       Checkbox(
                         value: canDelete,
-                        activeColor: AppColors.danger,
+                        activeColor: context.semantic.danger,
                         onChanged: (v) => _togglePermission(m.id, 'can_delete', v ?? false),
                       ),
                     ),
@@ -2047,7 +2042,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                               isAllRow ? 'Batal Semua' : 'Beri Semua',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: isAllRow ? AppColors.danger : AppColors.primaryLight,
+                                color: isAllRow ? context.semantic.danger : Theme.of(context).colorScheme.primary,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -2067,7 +2062,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: colors.bgSubtle,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(color: colors.border),
           ),
           child: Row(
@@ -2082,9 +2077,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
               ),
               const SizedBox(width: 10),
               ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryLight, foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Theme.of(context).colorScheme.onPrimary),
                 icon: _isSavingPermissions
-                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
                     : const Icon(LucideIcons.check, size: 15),
                 label: Text('Simpan (${selectedRole.displayName})', style: const TextStyle(fontWeight: FontWeight.bold)),
                 onPressed: _isSavingPermissions ? null : () => _savePermissions(selectedRole, state.menus),

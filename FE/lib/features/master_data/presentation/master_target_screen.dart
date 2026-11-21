@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/constants/api_endpoints.dart';
-import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/confirm_delete_dialog.dart';
@@ -120,10 +120,10 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: colors.bgDialog,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: colors.border)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.border)),
         title: Row(
           children: [
-            const Icon(LucideIcons.calendar, size: 20, color: AppColors.primaryLight),
+            Icon(LucideIcons.calendar, size: 20, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 10),
             Text('Ganti Filter Periode', style: TextStyle(color: colors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
           ],
@@ -153,7 +153,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
             child: Text('Batal', style: TextStyle(color: colors.textMuted)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
             onPressed: () {
               final text = ctrl.text.trim();
               if (text.isNotEmpty) {
@@ -161,7 +161,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                 Navigator.pop(ctx);
               }
             },
-            child: const Text('Terapkan', style: TextStyle(color: Colors.white)),
+            child: Text('Terapkan', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
           ),
         ],
       ),
@@ -426,16 +426,16 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
 
           return AlertDialog(
             backgroundColor: colors.bgDialog,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: colors.border)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.border)),
             title: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(isEdit ? LucideIcons.edit3 : LucideIcons.target, color: AppColors.primaryLight, size: 20),
+                  child: Icon(isEdit ? LucideIcons.edit3 : LucideIcons.target, color: Theme.of(context).colorScheme.primary, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -448,7 +448,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                             : (isDistributorBundle
                                 ? 'Input Target Distributor Terpadu'
                                 : 'Input Target ${selectedScheme == 'INDUSTRI' ? 'Industri (B2B)' : 'Sales Surabaya'}'),
-                        style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 18),
+                        style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 18),
                       ),
                       Text(
                         isDistributorBundle
@@ -458,7 +458,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                                 : (isTargetArea
                                     ? 'Target Sell-Out (Kg) & Active Outlet (Toko) tingkat Area untuk SPV/ASC'
                                     : 'Tetapkan kuota penjualan per personil sales')),
-                        style: GoogleFonts.inter(color: colors.textMuted, fontSize: 12),
+                        style: GoogleFonts.plusJakartaSans(color: colors.textMuted, fontSize: 12),
                       ),
                     ],
                   ),
@@ -481,7 +481,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                       isExpanded: true,
                       style: TextStyle(color: colors.textPrimary, fontSize: 13.5),
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                         filled: true,
                         fillColor: colors.bgElevated,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -536,7 +536,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                         decoration: InputDecoration(
                           prefixIcon: const Icon(LucideIcons.building2, size: 17),
                           prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           filled: true,
                           fillColor: colors.bgElevated,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
@@ -588,7 +588,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                                   decoration: InputDecoration(
                                     prefixIcon: const Icon(LucideIcons.home, size: 16),
                                     prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                     filled: true,
                                     fillColor: colors.bgElevated,
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
@@ -627,9 +627,9 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                                   isExpanded: true,
                                   style: TextStyle(color: colors.textPrimary, fontSize: 13),
                                   decoration: InputDecoration(
-                                    prefixIcon: const Icon(LucideIcons.tag, size: 16, color: Color(0xFF24968B)),
+                                    prefixIcon: Icon(LucideIcons.tag, size: 16, color: context.semantic.success),
                                     prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                     filled: true,
                                     fillColor: colors.bgElevated,
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
@@ -661,30 +661,30 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                           decoration: BoxDecoration(
                             color: colors.bgElevated,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.35)),
+                            border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.35)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
-                                  const Icon(LucideIcons.crown, size: 16, color: AppColors.primaryLight),
+                                  Icon(LucideIcons.crown, size: 16, color: Theme.of(context).colorScheme.primary),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       '1. Target Depo — Sell-In (ASM)',
-                                      style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13.5),
+                                      style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13.5),
                                     ),
                                   ),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: AppColors.primary.withValues(alpha: 0.12),
+                                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
                                       detectedAsm != null ? 'ASM: ${detectedAsm.name}' : 'ASM: Otomatis',
-                                      style: const TextStyle(color: AppColors.primaryLight, fontSize: 11, fontWeight: FontWeight.w600),
+                                      style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 11, fontWeight: FontWeight.w600),
                                     ),
                                   ),
                                 ],
@@ -700,7 +700,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                                   prefixIcon: const Icon(LucideIcons.truck, size: 17),
                                   prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                                   suffixText: 'Kg',
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                   filled: true,
                                   fillColor: colors.bgCard,
                                   isDense: true,
@@ -725,12 +725,12 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                             children: [
                               Row(
                                 children: [
-                                  const Icon(LucideIcons.mapPin, size: 16, color: AppColors.warning),
+                                  Icon(LucideIcons.mapPin, size: 16, color: context.semantic.warning),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       '2. Target Area — Sell-Out (Kg) & AO (Toko)',
-                                      style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13.5),
+                                      style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13.5),
                                     ),
                                   ),
                                   if (isLoadingAreas)
@@ -739,12 +739,12 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: AppColors.warning.withValues(alpha: 0.14),
+                                        color: context.semantic.warning.withValues(alpha: 0.14),
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Text(
                                         '${dialogAreas.length} Area',
-                                        style: const TextStyle(color: AppColors.warning, fontSize: 11, fontWeight: FontWeight.bold),
+                                        style: TextStyle(color: context.semantic.warning, fontSize: 11, fontWeight: FontWeight.bold),
                                       ),
                                     ),
                                 ],
@@ -768,7 +768,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
                                       color: colors.bgCard,
-                                      borderRadius: BorderRadius.circular(10),
+                                      borderRadius: BorderRadius.circular(8),
                                       border: Border.all(color: colors.border),
                                     ),
                                     child: Row(
@@ -843,12 +843,12 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
                             color: colors.bgElevated,
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: colors.border),
                           ),
                           child: Row(
                             children: [
-                              const Icon(LucideIcons.crown, size: 18, color: AppColors.primaryLight),
+                              Icon(LucideIcons.crown, size: 18, color: Theme.of(context).colorScheme.primary),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
@@ -871,7 +871,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                           decoration: InputDecoration(
                             prefixIcon: const Icon(LucideIcons.truck, size: 18),
                             suffixText: 'Kg',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                             filled: true,
                             fillColor: colors.bgElevated,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -889,9 +889,9 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                           isExpanded: true,
                           style: TextStyle(color: colors.textPrimary, fontSize: 13.5),
                           decoration: InputDecoration(
-                            prefixIcon: const Icon(LucideIcons.mapPin, size: 17, color: AppColors.warning),
+                            prefixIcon: Icon(LucideIcons.mapPin, size: 17, color: context.semantic.warning),
                             prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                             filled: true,
                             fillColor: colors.bgElevated,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
@@ -911,12 +911,12 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
                             color: colors.bgElevated,
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: colors.border),
                           ),
                           child: Row(
                             children: [
-                              const Icon(LucideIcons.userCheck, size: 18, color: AppColors.warning),
+                              Icon(LucideIcons.userCheck, size: 18, color: context.semantic.warning),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
@@ -946,7 +946,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                                       prefixIcon: const Icon(LucideIcons.scale, size: 17),
                                       prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                                       suffixText: 'Kg',
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                       filled: true,
                                       fillColor: colors.bgElevated,
                                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
@@ -970,7 +970,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                                       prefixIcon: const Icon(LucideIcons.store, size: 17),
                                       prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                                       suffixText: 'Toko',
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                       filled: true,
                                       fillColor: colors.bgElevated,
                                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
@@ -995,7 +995,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                         decoration: InputDecoration(
                           prefixIcon: const Icon(LucideIcons.user, size: 18),
                           prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           filled: true,
                           fillColor: colors.bgElevated,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1020,7 +1020,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                         isExpanded: true,
                         style: TextStyle(color: colors.textPrimary, fontSize: 14),
                         decoration: InputDecoration(
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           filled: true,
                           fillColor: colors.bgElevated,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1051,7 +1051,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                               style: TextStyle(color: colors.textPrimary, fontSize: 14),
                               decoration: InputDecoration(
                                 prefixIcon: const Icon(LucideIcons.scale, size: 18),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                 filled: true,
                                 fillColor: colors.bgElevated,
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1071,7 +1071,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                               style: TextStyle(color: colors.textPrimary, fontSize: 14),
                               decoration: InputDecoration(
                                 prefixIcon: const Icon(LucideIcons.store, size: 18),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                 filled: true,
                                 fillColor: colors.bgElevated,
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1094,17 +1094,17 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                               child: Container(
                                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
                                 decoration: BoxDecoration(
-                                  color: !isFullYearMode ? AppColors.primary.withValues(alpha: 0.15) : colors.bgElevated,
+                                  color: !isFullYearMode ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15) : colors.bgElevated,
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                    color: !isFullYearMode ? AppColors.primary : colors.border,
+                                    color: !isFullYearMode ? Theme.of(context).colorScheme.primary : colors.border,
                                     width: !isFullYearMode ? 1.5 : 1,
                                   ),
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(LucideIcons.calendar, size: 14, color: !isFullYearMode ? AppColors.primaryLight : colors.textMuted),
+                                    Icon(LucideIcons.calendar, size: 14, color: !isFullYearMode ? Theme.of(context).colorScheme.primary : colors.textMuted),
                                     const SizedBox(width: 6),
                                     Text(
                                       'Target 1 Bulan',
@@ -1127,17 +1127,17 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                               child: Container(
                                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
                                 decoration: BoxDecoration(
-                                  color: isFullYearMode ? AppColors.primary.withValues(alpha: 0.15) : colors.bgElevated,
+                                  color: isFullYearMode ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15) : colors.bgElevated,
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                    color: isFullYearMode ? AppColors.primary : colors.border,
+                                    color: isFullYearMode ? Theme.of(context).colorScheme.primary : colors.border,
                                     width: isFullYearMode ? 1.5 : 1,
                                   ),
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(LucideIcons.calendarRange, size: 14, color: isFullYearMode ? AppColors.primaryLight : colors.textMuted),
+                                    Icon(LucideIcons.calendarRange, size: 14, color: isFullYearMode ? Theme.of(context).colorScheme.primary : colors.textMuted),
                                     const SizedBox(width: 6),
                                     Text(
                                       'Setahun (12 Bulan)',
@@ -1164,8 +1164,8 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                           const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(color: AppColors.info.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)),
-                            child: const Text('Otomatis 12 Bulan (Jan - Des)', style: TextStyle(color: AppColors.info, fontSize: 10.5, fontWeight: FontWeight.bold)),
+                            decoration: BoxDecoration(color: context.semantic.info.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)),
+                            child: Text('Otomatis 12 Bulan (Jan - Des)', style: TextStyle(color: context.semantic.info, fontSize: 10.5, fontWeight: FontWeight.bold)),
                           ),
                         ],
                       ),
@@ -1177,7 +1177,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                         decoration: InputDecoration(
                           hintText: 'Contoh: 2026',
                           prefixIcon: const Icon(LucideIcons.calendarRange, size: 18),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           filled: true,
                           fillColor: colors.bgElevated,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1193,7 +1193,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                         decoration: InputDecoration(
                           hintText: 'Contoh: 202610',
                           prefixIcon: const Icon(LucideIcons.calendar, size: 18),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           filled: true,
                           fillColor: colors.bgElevated,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1211,20 +1211,20 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
               ),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 icon: isSubmitting
-                    ? const SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : Icon(isEdit ? LucideIcons.check : LucideIcons.save, size: 16, color: Colors.white),
+                    ? SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
+                    : Icon(isEdit ? LucideIcons.check : LucideIcons.save, size: 16, color: Theme.of(context).colorScheme.onPrimary),
                 label: Text(
                   isSubmitting
                       ? 'Menyimpan...'
                       : (isEdit
                           ? 'Simpan Perubahan'
                           : (isFullYearMode ? 'Simpan Target 1 Tahun (12 Bulan)' : 'Simpan Target')),
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.bold),
                 ),
                 onPressed: isSubmitting
                     ? null
@@ -1236,25 +1236,25 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
 
                         if (isDistributor && selectedDistributorId == null) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Wajib memilih Distributor!'), backgroundColor: AppColors.danger),
+                            SnackBar(content: Text('Wajib memilih Distributor!'), backgroundColor: context.semantic.dangerSolid),
                           );
                           return;
                         }
                         if (isDistributor && selectedDepoId == null) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Wajib memilih Depo!'), backgroundColor: AppColors.danger),
+                            SnackBar(content: Text('Wajib memilih Depo!'), backgroundColor: context.semantic.dangerSolid),
                           );
                           return;
                         }
                         if (isDistributor && selectedBrandId == null) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Wajib memilih Brand!'), backgroundColor: AppColors.danger),
+                            SnackBar(content: Text('Wajib memilih Brand!'), backgroundColor: context.semantic.dangerSolid),
                           );
                           return;
                         }
                         if (isTargetArea && selectedAreaId == null) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Wajib memilih Area!'), backgroundColor: AppColors.danger),
+                            SnackBar(content: Text('Wajib memilih Area!'), backgroundColor: context.semantic.dangerSolid),
                           );
                           return;
                         }
@@ -1275,9 +1275,9 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                           }
                           if (quotaVal <= 0 && areaPayloadList.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
+                              SnackBar(
                                 content: Text('Isi minimal 1 nilai Target Sell-In Depo atau Target Area (Sell-Out / AO)!'),
-                                backgroundColor: AppColors.danger,
+                                backgroundColor: context.semantic.dangerSolid,
                               ),
                             );
                             return;
@@ -1305,7 +1305,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(msg),
-                                backgroundColor: success ? AppColors.success : AppColors.danger,
+                                backgroundColor: success ? context.semantic.success : context.semantic.danger,
                               ),
                             );
                           }
@@ -1360,7 +1360,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                               content: Text(success
                                   ? (isEdit ? 'Target kuota berhasil diperbarui!' : 'Target kuota berhasil disimpan!')
                                   : 'Gagal memproses target kuota'),
-                              backgroundColor: success ? AppColors.success : AppColors.danger,
+                              backgroundColor: success ? context.semantic.success : context.semantic.danger,
                             ),
                           );
                         }
@@ -1445,13 +1445,13 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
 
               final actionButton = ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
                   shape: const StadiumBorder(),
                 ),
-                icon: const Icon(LucideIcons.plus, size: 17, color: Colors.white),
+                icon: Icon(LucideIcons.plus, size: 17, color: Theme.of(context).colorScheme.onPrimary),
                 label: Text(
                   switch (_activeTabIndex) {
                     0 => 'Tambah Target Distributor',
@@ -1459,7 +1459,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                     2 => 'Tambah Target Industri',
                     _ => 'Tambah Target Surabaya',
                   },
-                  style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13.5),
+                  style: GoogleFonts.plusJakartaSans(color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w600, fontSize: 13.5),
                 ),
                 onPressed: _showAddTargetDialog,
               );
@@ -1511,7 +1511,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: context.colors.bgCard,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: context.colors.border, width: 1.2),
               boxShadow: context.colors.cardShadows,
             ),
@@ -1529,7 +1529,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                     }
                   },
                   dividerColor: Colors.transparent,
-                  indicatorColor: AppColors.primaryLight,
+                  indicatorColor: Theme.of(context).colorScheme.primary,
                   labelColor: context.colors.textPrimary,
                   unselectedLabelColor: context.colors.textMuted,
                   tabs: [
@@ -1712,25 +1712,25 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
               title: isAreaTab ? 'Total Target Area (SPV)' : 'Total Target Depo (ASM)',
               value: isAreaTab ? '$unitCount Baris Target Area' : '$unitCount Baris Target Depo',
               icon: isAreaTab ? LucideIcons.mapPin : LucideIcons.building2,
-              color: isAreaTab ? AppColors.warning : AppColors.primary,
+              color: isAreaTab ? context.semantic.warning : Theme.of(context).colorScheme.primary,
             ),
             _buildMiniKpiCard(
               title: isAreaTab ? 'Total Sell-Out Area' : 'Total Sell-Out Depo',
               value: '${CurrencyFormatter.formatNumber(totalSellOut)} Kg',
               icon: LucideIcons.trendingUp,
-              color: const Color(0xFF24968B),
+              color: context.semantic.success,
             ),
             _buildMiniKpiCard(
               title: isAreaTab ? 'Total Sell-In Area' : 'Total Sell-In Depo',
               value: '${CurrencyFormatter.formatNumber(totalSellIn)} Kg',
               icon: LucideIcons.truck,
-              color: AppColors.info,
+              color: context.semantic.info,
             ),
             _buildMiniKpiCard(
               title: isAreaTab ? 'Total Active Outlet (AO) Area' : 'Total Active Outlet (AO) Depo',
               value: '$totalAo Toko',
               icon: LucideIcons.store,
-              color: AppColors.success,
+              color: context.semantic.success,
             ),
           ],
         ),
@@ -1763,7 +1763,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                   suffixIcon: Tooltip(
                     message: 'Input Periode Kustom',
                     child: IconButton(
-                      icon: const Icon(LucideIcons.calendarPlus, size: 15, color: AppColors.primaryLight),
+                      icon: Icon(LucideIcons.calendarPlus, size: 15, color: Theme.of(context).colorScheme.primary),
                       splashRadius: 18,
                       onPressed: _showCustomPeriodDialog,
                     ),
@@ -1964,7 +1964,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                 DataColumn(
                   label: Text(
                     isAreaTab ? 'Besaran Target Area' : 'Besaran Target Depo',
-                    style: TextStyle(color: isAreaTab ? AppColors.warning : AppColors.primaryLight, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: isAreaTab ? context.semantic.warning : Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
                   ),
                 ),
                 DataColumn(
@@ -2050,13 +2050,13 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF24968B).withValues(alpha: 0.12),
+                          color: context.semantic.success.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: const Color(0xFF24968B).withValues(alpha: 0.3)),
+                          border: Border.all(color: context.semantic.success.withValues(alpha: 0.3)),
                         ),
                         child: Text(
                           item.brand?.name ?? (item.brandId != null ? 'Brand #${item.brandId}' : 'Semua Brand'),
-                          style: const TextStyle(color: Color(0xFF24968B), fontSize: 11, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: context.semantic.success, fontSize: 11, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
@@ -2067,16 +2067,16 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: item.targetType == 'SELL_OUT'
-                              ? const Color(0xFF24968B).withValues(alpha: 0.15)
-                              : (item.targetType == 'SELL_IN' ? AppColors.info.withValues(alpha: 0.15) : AppColors.success.withValues(alpha: 0.15)),
+                              ? context.semantic.success.withValues(alpha: 0.15)
+                              : (item.targetType == 'SELL_IN' ? context.semantic.info.withValues(alpha: 0.15) : context.semantic.success.withValues(alpha: 0.15)),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           item.targetType,
                           style: TextStyle(
                             color: item.targetType == 'SELL_OUT'
-                                ? const Color(0xFF24968B)
-                                : (item.targetType == 'SELL_IN' ? AppColors.info : AppColors.success),
+                                ? context.semantic.success
+                                : (item.targetType == 'SELL_IN' ? context.semantic.info : context.semantic.success),
                             fontWeight: FontWeight.bold,
                             fontSize: 11,
                           ),
@@ -2095,7 +2095,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                                 ? '${item.targetOutlet ?? item.targetQuota.toInt()} Toko'
                                 : '${CurrencyFormatter.formatNumber(item.targetQuota)} Kg',
                             style: TextStyle(
-                              color: isAreaTab ? AppColors.warning : AppColors.primaryLight,
+                              color: isAreaTab ? context.semantic.warning : Theme.of(context).colorScheme.primary,
                               fontWeight: FontWeight.bold,
                               fontSize: 13.5,
                             ),
@@ -2113,10 +2113,10 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                               children: [
                                 CircleAvatar(
                                   radius: 12,
-                                  backgroundColor: isAreaTab ? AppColors.warning.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.2),
+                                  backgroundColor: isAreaTab ? context.semantic.warning.withValues(alpha: 0.2) : Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                                   child: Text(
                                     assignedSales.name.isNotEmpty ? assignedSales.name[0].toUpperCase() : 'S',
-                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isAreaTab ? AppColors.warning : AppColors.primaryLight),
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isAreaTab ? context.semantic.warning : Theme.of(context).colorScheme.primary),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -2142,12 +2142,12 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: const Icon(LucideIcons.pencil, size: 15, color: AppColors.primaryLight),
+                            icon: Icon(LucideIcons.pencil, size: 15, color: Theme.of(context).colorScheme.primary),
                             tooltip: 'Edit Target',
                             onPressed: () => _showTargetFormDialog(targetToEdit: item),
                           ),
                           IconButton(
-                            icon: const Icon(LucideIcons.trash2, size: 15, color: AppColors.danger),
+                            icon: Icon(LucideIcons.trash2, size: 15, color: context.semantic.danger),
                             tooltip: 'Hapus Target',
                             onPressed: () async {
                               final confirmed = await showConfirmDeleteDialog(
@@ -2235,7 +2235,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
               IconButton(
                 icon: const Icon(LucideIcons.calendarPlus, size: 18),
                 tooltip: 'Input / Ganti Periode Kustom',
-                color: AppColors.primaryLight,
+                color: Theme.of(context).colorScheme.primary,
                 onPressed: _showCustomPeriodDialog,
               ),
               const SizedBox(width: 12),
@@ -2299,8 +2299,8 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                         children: [
                           CircleAvatar(
                             radius: 13,
-                            backgroundColor: AppColors.primary.withValues(alpha: 0.2),
-                            child: Text((item.user?.name.isNotEmpty == true ? item.user!.name[0] : 'S').toUpperCase(), style: const TextStyle(color: AppColors.primaryLight, fontSize: 11, fontWeight: FontWeight.bold)),
+                            backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                            child: Text((item.user?.name.isNotEmpty == true ? item.user!.name[0] : 'S').toUpperCase(), style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 11, fontWeight: FontWeight.bold)),
                           ),
                           const SizedBox(width: 8),
                           ConstrainedBox(
@@ -2314,12 +2314,12 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                         ],
                       ),
                     ),
-                    DataCell(Text(item.period, style: const TextStyle(color: AppColors.warning, fontWeight: FontWeight.bold))),
+                    DataCell(Text(item.period, style: TextStyle(color: context.semantic.warning, fontWeight: FontWeight.bold))),
                     DataCell(
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
-                        child: Text(item.targetType, style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.bold, fontSize: 11)),
+                        decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
+                        child: Text(item.targetType, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 11)),
                       ),
                     ),
                     DataCell(
@@ -2331,8 +2331,8 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                     DataCell(
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
-                        child: const Text('Approved', style: TextStyle(color: AppColors.success, fontSize: 11, fontWeight: FontWeight.bold)),
+                        decoration: BoxDecoration(color: context.semantic.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
+                        child: Text('Approved', style: TextStyle(color: context.semantic.success, fontSize: 11, fontWeight: FontWeight.bold)),
                       ),
                     ),
                     DataCell(
@@ -2340,12 +2340,12 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: const Icon(LucideIcons.pencil, size: 15, color: AppColors.primaryLight),
+                            icon: Icon(LucideIcons.pencil, size: 15, color: Theme.of(context).colorScheme.primary),
                             tooltip: 'Edit Target',
                             onPressed: () => _showTargetFormDialog(targetToEdit: item),
                           ),
                           IconButton(
-                            icon: const Icon(LucideIcons.trash2, size: 15, color: AppColors.danger),
+                            icon: Icon(LucideIcons.trash2, size: 15, color: context.semantic.danger),
                             tooltip: 'Hapus Target',
                             onPressed: () async {
                               final confirmed = await showConfirmDeleteDialog(
@@ -2382,7 +2382,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: colors.bgElevated,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: colors.border),
       ),
       child: Wrap(

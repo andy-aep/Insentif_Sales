@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/constants/api_endpoints.dart';
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../data/models/master_model.dart';
@@ -181,12 +181,12 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
           return AlertDialog(
             backgroundColor: colors.bgDialog,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               side: BorderSide(color: colors.border),
             ),
             title: Row(
               children: [
-                const Icon(LucideIcons.calendar, size: 19, color: AppColors.primary),
+                Icon(LucideIcons.calendar, size: 19, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -224,7 +224,7 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
                 children: [
                   CheckboxListTile(
                     dense: true,
-                    activeColor: AppColors.primary,
+                    activeColor: Theme.of(context).colorScheme.primary,
                     value: selectAllPeriods,
                     title: Text(
                       'Tampilkan Semua Periode (ALL)',
@@ -258,7 +258,7 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
                         final isChecked = selectAllPeriods || selected.contains(p);
                         return CheckboxListTile(
                           dense: true,
-                          activeColor: AppColors.primary,
+                          activeColor: Theme.of(context).colorScheme.primary,
                           value: isChecked,
                           title: Text(
                             'Periode $p',
@@ -332,9 +332,9 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 onPressed: () {
                   Navigator.pop(ctx);
@@ -385,14 +385,14 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
           spacing: 12,
           runSpacing: 12,
           children: [
-            _kpi(context, 'Distributor', '${s('distributor_count')} Distributor', LucideIcons.building, AppColors.primary),
-            _kpi(context, 'Baris Target', '${s('depo_count')} Depo · ${s('area_count')} Area', LucideIcons.layers, AppColors.warning),
+            _kpi(context, 'Distributor', '${s('distributor_count')} Distributor', LucideIcons.building, Theme.of(context).colorScheme.primary),
+            _kpi(context, 'Baris Target', '${s('depo_count')} Depo · ${s('area_count')} Area', LucideIcons.layers, context.semantic.warning),
             _kpi(context, 'Target Sell-In (Depo)',
                 '${CurrencyFormatter.formatNumber(s('depo_sell_in').toDouble())} Kg',
-                LucideIcons.truck, AppColors.info),
+                LucideIcons.truck, context.semantic.info),
             _kpi(context, 'Target Sell-Out & AO (Area)',
                 '${CurrencyFormatter.formatNumber(s('area_sell_out').toDouble())} Kg · ${CurrencyFormatter.formatNumber(s('total_ao').toDouble())} Toko',
-                LucideIcons.trendingUp, AppColors.success),
+                LucideIcons.trendingUp, context.semantic.success),
           ],
         ),
         const SizedBox(height: 16),
@@ -400,7 +400,7 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: colors.bgCard,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: colors.border),
             boxShadow: colors.cardShadows,
           ),
@@ -419,11 +419,11 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
                   decoration: BoxDecoration(
                     color: colors.bgElevated,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.6)),
+                    border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(LucideIcons.calendar, size: 16, color: AppColors.primary),
+                      Icon(LucideIcons.calendar, size: 16, color: Theme.of(context).colorScheme.primary),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Column(
@@ -525,7 +525,7 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
         if (_error != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: Text(_error!, style: const TextStyle(color: AppColors.danger)),
+            child: Text(_error!, style: TextStyle(color: context.semantic.danger)),
           ),
         if (_loading)
           const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator()))
@@ -556,7 +556,7 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: colors.bgCard,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: colors.border),
         boxShadow: colors.cardShadows,
       ),
@@ -634,7 +634,7 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: colors.bgCard,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: colors.border),
         boxShadow: colors.cardShadows,
       ),
@@ -645,10 +645,10 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
           leading: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(10),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(LucideIcons.building, size: 18, color: AppColors.primary),
+            child: Icon(LucideIcons.building, size: 18, color: Theme.of(context).colorScheme.primary),
           ),
           title: Text(d.name, style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w700, fontSize: 14.5)),
           subtitle: Text('${d.code} · ${d.depos.length} Depo · ${d.depoTargetCount} target depo · ${d.areaTargetCount} target area',
@@ -669,14 +669,14 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
       margin: const EdgeInsets.only(top: 10),
       decoration: BoxDecoration(
         color: colors.bgSubtle,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: colors.border),
       ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           initiallyExpanded: true,
-          leading: const Icon(LucideIcons.building2, size: 18, color: AppColors.primary),
+          leading: Icon(LucideIcons.building2, size: 18, color: Theme.of(context).colorScheme.primary),
           title: Wrap(
             spacing: 10,
             runSpacing: 6,
@@ -692,14 +692,14 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.14),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         periodsInDepo.length == 1
                             ? 'Periode ${periodsInDepo.first}'
                             : '${periodsInDepo.length} Periode (${periodsInDepo.first}–${periodsInDepo.last})',
-                        style: const TextStyle(color: AppColors.primaryLight, fontSize: 11, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 11, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -708,8 +708,8 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
               if (widget.onEditDepoBundle != null)
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+                    foregroundColor: Theme.of(context).colorScheme.primary,
+                    side: BorderSide(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -728,7 +728,7 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
           children: [
             if (allTargets.isEmpty) Text('Tidak ada target.', style: TextStyle(color: colors.textMuted)),
             if (dp.targets.isNotEmpty) ...[
-              _sectionLabel(context, 'Target Depo (ASM — Sell-In)', AppColors.primary),
+              _sectionLabel(context, 'Target Depo (ASM — Sell-In)', Theme.of(context).colorScheme.primary),
               _targetTable(context, dp.targets, isDepo: true),
             ],
             ...dp.areas.map((a) => Padding(
@@ -736,13 +736,13 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      border: Border(left: BorderSide(color: AppColors.warning.withValues(alpha: 0.6), width: 3)),
+                      border: Border(left: BorderSide(color: context.semantic.warning.withValues(alpha: 0.6), width: 3)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(children: [
-                          const Icon(LucideIcons.mapPin, size: 15, color: AppColors.warning),
+                          Icon(LucideIcons.mapPin, size: 15, color: context.semantic.warning),
                           const SizedBox(width: 6),
                           Text('Area: ${a.name}', style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
                           const SizedBox(width: 8),
@@ -790,31 +790,31 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   t.period,
-                  style: const TextStyle(color: AppColors.primaryLight, fontSize: 11.5, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 11.5, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
             DataCell(Text(t.brand?.name ?? '-', style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600))),
-            DataCell(Text(isDepo ? 'SELL_IN' : 'SELL_OUT & AO', style: const TextStyle(color: AppColors.info, fontSize: 11.5, fontWeight: FontWeight.bold))),
+            DataCell(Text(isDepo ? 'SELL_IN' : 'SELL_OUT & AO', style: TextStyle(color: context.semantic.info, fontSize: 11.5, fontWeight: FontWeight.bold))),
             DataCell(Text(
               isAo ? '${t.targetOutlet ?? t.targetQuota.toInt()} Toko' : '${CurrencyFormatter.formatNumber(t.targetQuota)} Kg',
-              style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.bold),
+              style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
             )),
-            if (!isDepo) DataCell(Text(t.targetOutlet != null ? '${t.targetOutlet} Toko' : '-', style: const TextStyle(color: AppColors.warning, fontWeight: FontWeight.bold))),
+            if (!isDepo) DataCell(Text(t.targetOutlet != null ? '${t.targetOutlet} Toko' : '-', style: TextStyle(color: context.semantic.warning, fontWeight: FontWeight.bold))),
             DataCell(Text(t.user?.name ?? '-', style: TextStyle(color: colors.textSecondary))),
             DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
               IconButton(
-                icon: const Icon(LucideIcons.pencil, size: 15, color: AppColors.primaryLight),
+                icon: Icon(LucideIcons.pencil, size: 15, color: Theme.of(context).colorScheme.primary),
                 tooltip: 'Edit Baris Ini',
                 onPressed: () => widget.onEdit(t),
               ),
               IconButton(
-                icon: const Icon(LucideIcons.trash2, size: 15, color: AppColors.danger),
+                icon: Icon(LucideIcons.trash2, size: 15, color: context.semantic.danger),
                 tooltip: 'Hapus Baris Ini',
                 onPressed: () => widget.onDelete(t),
               ),

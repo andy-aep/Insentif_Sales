@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/constants/api_endpoints.dart';
-import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/confirm_delete_dialog.dart';
@@ -240,10 +240,10 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDState) => AlertDialog(
           backgroundColor: context.colors.bgDialog,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: context.colors.border)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: context.colors.border)),
           title: Row(
             children: [
-              const Icon(LucideIcons.download, color: AppColors.primary, size: 20),
+              Icon(LucideIcons.download, color: Theme.of(context).colorScheme.primary, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -303,7 +303,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: TextStyle(color: context.colors.textMuted))),
             ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Theme.of(context).colorScheme.onPrimary),
               icon: const Icon(LucideIcons.download, size: 15),
               label: const Text('Sync SAP Sekarang'),
               onPressed: () async {
@@ -312,7 +312,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                   final p = periodCtrl.text.trim();
                   if (p.length != 6) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Periode wajib 6 digit YYYYMM.'), backgroundColor: AppColors.warning),
+                      SnackBar(content: Text('Periode wajib 6 digit YYYYMM.'), backgroundColor: context.semantic.warningSolid),
                     );
                     return;
                   }
@@ -322,7 +322,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                   final dt = dateToCtrl.text.trim();
                   if (df.isEmpty || dt.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Tanggal Dari & Sampai wajib diisi.'), backgroundColor: AppColors.warning),
+                      SnackBar(content: Text('Tanggal Dari & Sampai wajib diisi.'), backgroundColor: context.semantic.warningSolid),
                     );
                     return;
                   }
@@ -367,7 +367,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Sync Sell-In Distributor SAP selesai: $total baris ($created baru, $updated diperbarui)$unmappedNote'),
-            backgroundColor: AppColors.success,
+            backgroundColor: context.semantic.successSolid,
           ),
         );
       }
@@ -500,7 +500,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
       await DioClient.instance.delete('${ApiEndpoints.sellinIndustris}/$id');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Transaksi Sell-In Industri berhasil dihapus.'), backgroundColor: AppColors.success),
+          SnackBar(content: Text('Transaksi Sell-In Industri berhasil dihapus.'), backgroundColor: context.semantic.successSolid),
         );
       }
       await _fetchIndustriRealisasi();
@@ -508,7 +508,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
       final msg = e.response?.data is Map ? (e.response?.data['message']?.toString() ?? e.message) : e.message;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal menghapus: $msg'), backgroundColor: AppColors.danger),
+          SnackBar(content: Text('Gagal menghapus: $msg'), backgroundColor: context.semantic.dangerSolid),
         );
       }
     }
@@ -519,9 +519,9 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
     if (period.isEmpty || period.length != 6) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Isi filter Periode (6 digit YYYYMM, misal 202604) terlebih dahulu untuk Sync dari SAP.'),
-            backgroundColor: AppColors.warning,
+            backgroundColor: context.semantic.warningSolid,
           ),
         );
       }
@@ -552,7 +552,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Sync SAP $period selesai: $total transaksi ($created baru, $updated diperbarui)$unmappedNote'),
-            backgroundColor: AppColors.success,
+            backgroundColor: context.semantic.successSolid,
           ),
         );
       }
@@ -617,7 +617,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
           return AlertDialog(
             backgroundColor: ctx.colors.bgDialog,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               side: BorderSide(color: ctx.colors.border),
             ),
             title: Row(
@@ -625,16 +625,16 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(10),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(LucideIcons.factory, color: AppColors.primary, size: 20),
+                  child: Icon(LucideIcons.factory, color: Theme.of(context).colorScheme.primary, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Input Realisasi Sell-In Industri',
-                    style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: ctx.colors.textPrimary),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.bold, color: ctx.colors.textPrimary),
                   ),
                 ),
               ],
@@ -653,13 +653,13 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                           margin: const EdgeInsets.only(bottom: 12),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppColors.warning.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
+                            color: context.semantic.warning.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: context.semantic.warning.withValues(alpha: 0.4)),
                           ),
-                          child: const Text(
+                          child: Text(
                             'Belum ada Master Customer Industri. Tambahkan customer terlebih dahulu di menu Tim & Area Sales → Tim & Customer Industri.',
-                            style: TextStyle(fontSize: 12, color: AppColors.warning),
+                            style: TextStyle(fontSize: 12, color: context.semantic.warning),
                           ),
                         ),
                       if (modalError != null)
@@ -667,11 +667,11 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                           margin: const EdgeInsets.only(bottom: 12),
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: AppColors.danger.withValues(alpha: 0.12),
+                            color: context.semantic.danger.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+                            border: Border.all(color: context.semantic.danger.withValues(alpha: 0.4)),
                           ),
-                          child: Text(modalError!, style: const TextStyle(fontSize: 12, color: AppColors.danger)),
+                          child: Text(modalError!, style: TextStyle(fontSize: 12, color: context.semantic.danger)),
                         ),
                       DropdownButtonFormField<int?>(
                         isExpanded: true,
@@ -701,7 +701,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                         const SizedBox(height: 6),
                         Text(
                           'PIC Assignment Aktif: ${assignedSalesNames.join(', ')}',
-                          style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.info, fontWeight: FontWeight.w500),
+                          style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: context.semantic.info, fontWeight: FontWeight.w500),
                         ),
                       ],
                       const SizedBox(height: 14),
@@ -849,9 +849,9 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                 child: const Text('Batal'),
               ),
               ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
                 icon: isSaving
-                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
                     : const Icon(LucideIcons.save, size: 16),
                 label: Text(isSaving ? 'Menyimpan...' : 'Simpan Realisasi'),
                 onPressed: isSaving || customers.isEmpty
@@ -887,9 +887,9 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                               _periodController.text = periodCtrl.text.trim();
                             }
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
+                              SnackBar(
                                 content: Text('Realisasi Sell-In Industri berhasil disimpan.'),
-                                backgroundColor: AppColors.success,
+                                backgroundColor: context.semantic.successSolid,
                               ),
                             );
                           }
@@ -931,7 +931,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Sinkronisasi data $streamName dari SAP ERP berhasil disinkronkan untuk periode ${_periodController.text}.'),
-          backgroundColor: AppColors.success,
+          backgroundColor: context.semantic.successSolid,
         ),
       );
     }
@@ -953,12 +953,12 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                 children: [
                   Text(
                     'Master Data Realisasi Penjualan (Sell-In & Sell-Out)',
-                    style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Monitoring data aktual transaksi penjualan dari SAP ERP, upload file distributor, industri, dan cabang Surabaya',
-                    style: GoogleFonts.inter(fontSize: 13, color: context.colors.textMuted),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 13, color: context.colors.textMuted),
                   ),
                 ],
               );
@@ -977,9 +977,9 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                     onPressed: () => context.go('/bulk-upload'),
                   ),
                   ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                    style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
                     icon: _isSyncing || (_activeTabIndex == 2 && _isLoadingIndustri)
-                        ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        ? SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
                         : const Icon(LucideIcons.refreshCw, size: 16),
                     label: Text(
                       _activeTabIndex == 2
@@ -1020,7 +1020,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: context.colors.bgCard,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: context.colors.border, width: 1.2),
               boxShadow: context.colors.cardShadows,
             ),
@@ -1035,7 +1035,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                       isScrollable: true,
                       onTap: (val) => setState(() => _activeTabIndex = val),
                       dividerColor: Colors.transparent,
-                      indicatorColor: AppColors.primary,
+                      indicatorColor: Theme.of(context).colorScheme.primary,
                       labelColor: context.colors.textPrimary,
                       unselectedLabelColor: context.colors.textMuted,
                       tabs: const [
@@ -1156,11 +1156,11 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
               runSpacing: 10,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                _buildIndustriStatBadge('Transaksi', '$_sellinTotalRows Baris', AppColors.info),
-                _buildIndustriStatBadge('Total Volume', '${CurrencyFormatter.formatNumber(_sellinTotalVol)} Kg', AppColors.primaryLight),
-                _buildIndustriStatBadge('Total DPP', CurrencyFormatter.formatRupiah(_sellinTotalNom), AppColors.success),
+                _buildIndustriStatBadge('Transaksi', '$_sellinTotalRows Baris', context.semantic.info),
+                _buildIndustriStatBadge('Total Volume', '${CurrencyFormatter.formatNumber(_sellinTotalVol)} Kg', Theme.of(context).colorScheme.primary),
+                _buildIndustriStatBadge('Total DPP', CurrencyFormatter.formatRupiah(_sellinTotalNom), context.semantic.success),
                 ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                  style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
                   icon: const Icon(LucideIcons.download, size: 16),
                   label: const Text('Sync dari SAP'),
                   onPressed: _isLoadingSellinDist ? null : _showSyncSellinSapDialog,
@@ -1175,11 +1175,11 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.danger.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+              color: context.semantic.danger.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: context.semantic.danger.withValues(alpha: 0.4)),
             ),
-            child: Text(_sellinDistError!, style: const TextStyle(color: AppColors.danger, fontSize: 13)),
+            child: Text(_sellinDistError!, style: TextStyle(color: context.semantic.danger, fontSize: 13)),
           ),
         if (_isLoadingSellinDist)
           const Padding(
@@ -1247,7 +1247,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(row['period']?.toString() ?? '-', style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.bold, fontSize: 12.5)),
+                          Text(row['period']?.toString() ?? '-', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 12.5)),
                           if (txDate.isNotEmpty)
                             Text(txDate, style: TextStyle(color: colors.textMuted, fontSize: 11)),
                         ],
@@ -1274,7 +1274,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(brandCode.toString(), style: const TextStyle(color: AppColors.info, fontWeight: FontWeight.w700, fontSize: 12)),
+                            Text(brandCode.toString(), style: TextStyle(color: context.semantic.info, fontWeight: FontWeight.w700, fontSize: 12)),
                             Text('$itemCode${itemName.toString().isNotEmpty ? " • $itemName" : ""}', style: TextStyle(color: colors.textSecondary, fontSize: 11), overflow: TextOverflow.ellipsis),
                           ],
                         ),
@@ -1290,7 +1290,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                             Text(
                               (salesUser ?? 'Belum di-assign ASM').toString(),
                               style: TextStyle(
-                                color: salesUser != null ? colors.textPrimary : AppColors.warning,
+                                color: salesUser != null ? colors.textPrimary : context.semantic.warning,
                                 fontSize: 12.5,
                                 fontWeight: salesUser != null ? FontWeight.w600 : FontWeight.w500,
                               ),
@@ -1310,7 +1310,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                       Text(
                         '${CurrencyFormatter.formatNumber(volKg)} Kg',
                         style: TextStyle(
-                          color: volKg < 0 ? AppColors.danger : colors.textPrimary,
+                          color: volKg < 0 ? context.semantic.danger : colors.textPrimary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -1319,7 +1319,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                       Text(
                         CurrencyFormatter.formatRupiah(nom),
                         style: TextStyle(
-                          color: nom < 0 ? AppColors.danger : AppColors.success,
+                          color: nom < 0 ? context.semantic.danger : context.semantic.success,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -1450,12 +1450,12 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
               runSpacing: 10,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                _buildIndustriStatBadge('Transaksi', '${CurrencyFormatter.formatNumber(_selloutTotalRows)} Baris', AppColors.info),
-                _buildIndustriStatBadge('Total SalesKg', '${CurrencyFormatter.formatNumber(_selloutTotalVol)} Kg', AppColors.primaryLight),
-                _buildIndustriStatBadge('Total DPP', CurrencyFormatter.formatRupiah(_selloutTotalNom), AppColors.success),
-                _buildIndustriStatBadge('Active Outlet (AO)', '${CurrencyFormatter.formatNumber(_selloutTotalAo)} Toko', AppColors.warning),
+                _buildIndustriStatBadge('Transaksi', '${CurrencyFormatter.formatNumber(_selloutTotalRows)} Baris', context.semantic.info),
+                _buildIndustriStatBadge('Total SalesKg', '${CurrencyFormatter.formatNumber(_selloutTotalVol)} Kg', Theme.of(context).colorScheme.primary),
+                _buildIndustriStatBadge('Total DPP', CurrencyFormatter.formatRupiah(_selloutTotalNom), context.semantic.success),
+                _buildIndustriStatBadge('Active Outlet (AO)', '${CurrencyFormatter.formatNumber(_selloutTotalAo)} Toko', context.semantic.warning),
                 ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                  style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
                   icon: const Icon(LucideIcons.uploadCloud, size: 16),
                   label: const Text('Upload Excel Sell-Out'),
                   onPressed: () => context.go('/bulk-upload'),
@@ -1470,11 +1470,11 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.danger.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+              color: context.semantic.danger.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: context.semantic.danger.withValues(alpha: 0.4)),
             ),
-            child: Text(_selloutDistError!, style: const TextStyle(color: AppColors.danger, fontSize: 13)),
+            child: Text(_selloutDistError!, style: TextStyle(color: context.semantic.danger, fontSize: 13)),
           ),
         if (_isLoadingSelloutDist)
           const Padding(
@@ -1544,7 +1544,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(row['period']?.toString() ?? '-', style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.bold, fontSize: 12.5)),
+                          Text(row['period']?.toString() ?? '-', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 12.5)),
                           if (txDate.isNotEmpty)
                             Text(txDate, style: TextStyle(color: colors.textMuted, fontSize: 11)),
                         ],
@@ -1567,12 +1567,12 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                                     decoration: BoxDecoration(
-                                      color: AppColors.warning.withValues(alpha: 0.16),
+                                      color: context.semantic.warning.withValues(alpha: 0.16),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
-                                    child: const Text(
+                                    child: Text(
                                       'AREA LUAR (Non-Insentif)',
-                                      style: TextStyle(color: AppColors.warning, fontSize: 10, fontWeight: FontWeight.bold),
+                                      style: TextStyle(color: context.semantic.warning, fontSize: 10, fontWeight: FontWeight.bold),
                                     ),
                                   ),
                                   Text(
@@ -1608,7 +1608,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(brandCode.toString(), style: const TextStyle(color: AppColors.info, fontWeight: FontWeight.w700, fontSize: 12)),
+                            Text(brandCode.toString(), style: TextStyle(color: context.semantic.info, fontWeight: FontWeight.w700, fontSize: 12)),
                             Text(itemName.toString(), style: TextStyle(color: colors.textSecondary, fontSize: 11), overflow: TextOverflow.ellipsis),
                           ],
                         ),
@@ -1618,7 +1618,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                       Text(
                         '${CurrencyFormatter.formatNumber(volKg)} Kg',
                         style: TextStyle(
-                          color: volKg < 0 ? AppColors.danger : colors.textPrimary,
+                          color: volKg < 0 ? context.semantic.danger : colors.textPrimary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -1627,7 +1627,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                       Text(
                         CurrencyFormatter.formatRupiah(dpp),
                         style: TextStyle(
-                          color: dpp < 0 ? AppColors.danger : AppColors.success,
+                          color: dpp < 0 ? context.semantic.danger : context.semantic.success,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -1749,17 +1749,17 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
               runSpacing: 10,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                _buildIndustriStatBadge('Transaksi', '${filtered.length} Baris', AppColors.info),
-                _buildIndustriStatBadge('Total Volume', '${CurrencyFormatter.formatNumber(totalVol)} Kg', AppColors.primaryLight),
-                _buildIndustriStatBadge('Total Nilai', CurrencyFormatter.formatRupiah(totalNom), AppColors.success),
-                _buildIndustriStatBadge('Tandai NOO Manual', '$nooCount', AppColors.warning),
+                _buildIndustriStatBadge('Transaksi', '${filtered.length} Baris', context.semantic.info),
+                _buildIndustriStatBadge('Total Volume', '${CurrencyFormatter.formatNumber(totalVol)} Kg', Theme.of(context).colorScheme.primary),
+                _buildIndustriStatBadge('Total Nilai', CurrencyFormatter.formatRupiah(totalNom), context.semantic.success),
+                _buildIndustriStatBadge('Tandai NOO Manual', '$nooCount', context.semantic.warning),
                 OutlinedButton.icon(
                   icon: const Icon(LucideIcons.download, size: 16),
                   label: const Text('Sync dari SAP'),
                   onPressed: _isLoadingIndustri ? null : _syncIndustriFromSap,
                 ),
                 ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                  style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
                   icon: const Icon(LucideIcons.plus, size: 16),
                   label: const Text('Input Realisasi Industri'),
                   onPressed: _showAddIndustriModal,
@@ -1774,16 +1774,16 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.danger.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+              color: context.semantic.danger.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: context.semantic.danger.withValues(alpha: 0.4)),
             ),
-            child: Text(_industriError!, style: const TextStyle(color: AppColors.danger, fontSize: 13)),
+            child: Text(_industriError!, style: TextStyle(color: context.semantic.danger, fontSize: 13)),
           ),
         if (_isLoadingIndustri)
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(vertical: 48),
-            child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+            child: Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary)),
           )
         else if (filtered.isEmpty)
           Padding(
@@ -1796,7 +1796,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                   const SizedBox(height: 12),
                   Text(
                     'Belum ada transaksi Sell-In Industri${_periodController.text.trim().isNotEmpty ? ' periode ${_periodController.text.trim()}' : ''}.',
-                    style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: colors.textPrimary),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: FontWeight.w600, color: colors.textPrimary),
                   ),
                   const SizedBox(height: 6),
                   Text(
@@ -1840,15 +1840,15 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                 final bool? isNoo = rawNoo == null ? null : (rawNoo == true || rawNoo == 1 || rawNoo == '1');
 
                 final Color nooColor = isNoo == true
-                    ? AppColors.success
-                    : (isNoo == false ? AppColors.info : AppColors.warning);
+                    ? context.semantic.success
+                    : (isNoo == false ? context.semantic.info : context.semantic.warning);
                 final String nooLabel = isNoo == true
                     ? 'NOO (Ya)'
                     : (isNoo == false ? 'Repeat (Tidak)' : 'Auto (Sistem)');
 
                 return DataRow(
                   cells: [
-                    DataCell(Text(period, style: const TextStyle(color: AppColors.warning, fontWeight: FontWeight.bold))),
+                    DataCell(Text(period, style: TextStyle(color: context.semantic.warning, fontWeight: FontWeight.bold))),
                     DataCell(Text(sapNo, style: TextStyle(color: colors.textSecondary, fontSize: 12))),
                     DataCell(
                       ConstrainedBox(
@@ -1865,13 +1865,13 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(custCode, style: const TextStyle(color: AppColors.primaryLight, fontSize: 11, fontWeight: FontWeight.w600)),
+                                Text(custCode, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 11, fontWeight: FontWeight.w600)),
                                 if (custType.isNotEmpty) ...[
                                   const SizedBox(width: 6),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                                     decoration: BoxDecoration(
-                                      color: (custType == 'NEW' ? AppColors.success : AppColors.info).withValues(alpha: 0.14),
+                                      color: (custType == 'NEW' ? context.semantic.success : context.semantic.info).withValues(alpha: 0.14),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
@@ -1879,7 +1879,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                                       style: TextStyle(
                                         fontSize: 9.5,
                                         fontWeight: FontWeight.bold,
-                                        color: custType == 'NEW' ? AppColors.success : AppColors.info,
+                                        color: custType == 'NEW' ? context.semantic.success : context.semantic.info,
                                       ),
                                     ),
                                   ),
@@ -1901,7 +1901,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                       ),
                     ),
                     DataCell(Text('${CurrencyFormatter.formatNumber(volKg)} Kg', style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold))),
-                    DataCell(Text(CurrencyFormatter.formatRupiah(nom), style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.w600))),
+                    DataCell(Text(CurrencyFormatter.formatRupiah(nom), style: TextStyle(color: context.semantic.success, fontWeight: FontWeight.w600))),
                     DataCell(
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -1911,7 +1911,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                     ),
                     DataCell(
                       IconButton(
-                        icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
+                        icon: Icon(LucideIcons.trash2, size: 16, color: context.semantic.danger),
                         tooltip: 'Hapus Transaksi',
                         onPressed: () => _deleteIndustriRealisasi(row),
                       ),
@@ -1972,8 +1972,8 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
         rows: filtered.map((row) {
           return DataRow(
             cells: [
-              DataCell(Text(row.period, style: const TextStyle(color: AppColors.warning, fontWeight: FontWeight.bold))),
-              DataCell(Text(row.customerCode ?? '-', style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.w600))),
+              DataCell(Text(row.period, style: TextStyle(color: context.semantic.warning, fontWeight: FontWeight.bold))),
+              DataCell(Text(row.customerCode ?? '-', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600))),
               DataCell(
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 220),
@@ -1985,16 +1985,16 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                 ),
               ),
               DataCell(Text(CurrencyFormatter.formatNumber(row.volume), style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.bold))),
-              DataCell(Text(CurrencyFormatter.formatRupiah(row.amount), style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.w600))),
+              DataCell(Text(CurrencyFormatter.formatRupiah(row.amount), style: TextStyle(color: context.semantic.success, fontWeight: FontWeight.w600))),
               if (isOutlet)
-                DataCell(Text('${row.activeOutlet ?? 0} Toko', style: const TextStyle(color: AppColors.info))),
+                DataCell(Text('${row.activeOutlet ?? 0} Toko', style: TextStyle(color: context.semantic.info))),
               if (isNoo)
-                DataCell(Text('${row.newOpenOutlet ?? 0} NOO', style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.bold))),
+                DataCell(Text('${row.newOpenOutlet ?? 0} NOO', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold))),
               DataCell(
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
-                  child: const Text('SAP Synced', style: TextStyle(color: AppColors.success, fontSize: 11, fontWeight: FontWeight.bold)),
+                  decoration: BoxDecoration(color: context.semantic.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
+                  child: Text('SAP Synced', style: TextStyle(color: context.semantic.success, fontSize: 11, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],

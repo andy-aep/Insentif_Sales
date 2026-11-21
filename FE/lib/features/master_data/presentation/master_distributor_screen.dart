@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/constants/api_endpoints.dart';
-import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../../../core/widgets/responsive_table.dart';
@@ -146,7 +146,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
         builder: (dialogCtx, setDialogState) {
           return Dialog(
             backgroundColor: colors.bgDialog,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: colors.border)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.border)),
             insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 860, maxHeight: 860),
@@ -157,22 +157,22 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                   // Top Banner
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF47A60),
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
                     ),
                     child: Row(
                       children: [
-                        const Icon(LucideIcons.building2, color: Colors.white, size: 20),
+                        Icon(LucideIcons.building2, color: Theme.of(context).colorScheme.onPrimary, size: 20),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             isEdit ? 'Edit Master Distributor & Jaringan' : 'Tambah Master Distributor, Depo & Area Terintegrasi',
-                            style: GoogleFonts.outfit(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                            style: GoogleFonts.plusJakartaSans(color: Theme.of(context).colorScheme.onPrimary, fontSize: 17, fontWeight: FontWeight.bold),
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(LucideIcons.x, color: Colors.white, size: 20),
+                          icon: Icon(LucideIcons.x, color: Theme.of(context).colorScheme.onPrimary, size: 20),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           onPressed: () => Navigator.pop(ctx),
@@ -201,11 +201,11 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                               children: [
                                 Row(
                                   children: [
-                                    const Icon(LucideIcons.building, size: 16, color: Color(0xFFF47A60)),
+                                    Icon(LucideIcons.building, size: 16, color: Theme.of(context).colorScheme.primary),
                                     const SizedBox(width: 8),
                                     Text(
                                       'Identitas Distributor Utama',
-                                      style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                                      style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: colors.textPrimary),
                                     ),
                                   ],
                                 ),
@@ -276,7 +276,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                                 children: [
                                   Text(
                                     'Jaringan Depo Logistik & Area Penjualan',
-                                    style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                                    style: GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: FontWeight.bold, color: colors.textPrimary),
                                   ),
                                   Text(
                                     'Setiap distributor dapat memiliki beberapa depo, dan setiap depo mencakup beberapa area.',
@@ -286,8 +286,8 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                               ),
                               ElevatedButton.icon(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFF47A60),
-                                  foregroundColor: Colors.white,
+                                  backgroundColor: Theme.of(context).colorScheme.primary,
+                                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                 ),
@@ -334,7 +334,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                                 decoration: BoxDecoration(
                                   color: colors.bgCard,
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
+                                  border: Border.all(color: Theme.of(context).colorScheme.outline, width: 1.2),
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -345,24 +345,24 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFFE0F2FE),
+                                            color: context.semantic.infoBg,
                                             borderRadius: BorderRadius.circular(6),
                                           ),
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              const Icon(LucideIcons.warehouse, size: 13, color: Color(0xFF0369A1)),
+                                              Icon(LucideIcons.warehouse, size: 13, color: context.semantic.info),
                                               const SizedBox(width: 5),
                                               Text(
                                                 'Depo #${dIdx + 1}',
-                                                style: const TextStyle(color: Color(0xFF0369A1), fontWeight: FontWeight.bold, fontSize: 12),
+                                                style: TextStyle(color: context.semantic.info, fontWeight: FontWeight.bold, fontSize: 12),
                                               ),
                                             ],
                                           ),
                                         ),
                                         const Spacer(),
                                         IconButton(
-                                          icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
+                                          icon: Icon(LucideIcons.trash2, size: 16, color: context.semantic.danger),
                                           tooltip: 'Hapus Depo Ini',
                                           padding: EdgeInsets.zero,
                                           constraints: const BoxConstraints(),
@@ -404,7 +404,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                                       padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
                                         color: colors.bgElevated,
-                                        borderRadius: BorderRadius.circular(10),
+                                        borderRadius: BorderRadius.circular(8),
                                         border: Border.all(color: colors.border),
                                       ),
                                       child: Column(
@@ -415,7 +415,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                                             children: [
                                               Row(
                                                 children: [
-                                                  const Icon(LucideIcons.mapPin, size: 13, color: Color(0xFF24968B)),
+                                                  Icon(LucideIcons.mapPin, size: 13, color: context.semantic.success),
                                                   const SizedBox(width: 6),
                                                   Text(
                                                     'Area Tercover (${depo.areas.length} Area)',
@@ -425,7 +425,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                                               ),
                                               TextButton.icon(
                                                 style: TextButton.styleFrom(
-                                                  foregroundColor: const Color(0xFF24968B),
+                                                  foregroundColor: context.semantic.success,
                                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                                   minimumSize: Size.zero,
                                                 ),
@@ -483,7 +483,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                                                     ),
                                                     const SizedBox(width: 6),
                                                     IconButton(
-                                                      icon: const Icon(LucideIcons.x, size: 14, color: AppColors.danger),
+                                                      icon: Icon(LucideIcons.x, size: 14, color: context.semantic.danger),
                                                       tooltip: 'Hapus Area',
                                                       padding: const EdgeInsets.all(6),
                                                       constraints: const BoxConstraints(),
@@ -514,7 +514,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                     decoration: BoxDecoration(
                       color: colors.bgElevated,
-                      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
                       border: Border(top: BorderSide(color: colors.border)),
                     ),
                     child: Row(
@@ -527,9 +527,9 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                         const SizedBox(width: 12),
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFF47A60),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
                           ),
                           icon: const Icon(LucideIcons.check, size: 16),
@@ -620,7 +620,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
       context: context,
       builder: (ctx) => Dialog(
         backgroundColor: colors.bgDialog,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: colors.border)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.border)),
         insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 680, maxHeight: 720),
@@ -630,22 +630,22 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF47A60),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(LucideIcons.building2, color: Colors.white, size: 20),
+                    Icon(LucideIcons.building2, color: Theme.of(context).colorScheme.onPrimary, size: 20),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         'Struktur Hirarki: ${currentDist.name}',
-                        style: GoogleFonts.outfit(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                        style: GoogleFonts.plusJakartaSans(color: Theme.of(context).colorScheme.onPrimary, fontSize: 17, fontWeight: FontWeight.bold),
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(LucideIcons.x, color: Colors.white, size: 20),
+                      icon: Icon(LucideIcons.x, color: Theme.of(context).colorScheme.onPrimary, size: 20),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                       onPressed: () => Navigator.pop(ctx),
@@ -664,7 +664,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color: colors.bgElevated,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: colors.border),
                         ),
                         child: Row(
@@ -672,17 +672,17 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF47A60).withValues(alpha: 0.15),
+                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(6),
                               ),
-                              child: Text(currentDist.code, style: const TextStyle(color: Color(0xFFF47A60), fontWeight: FontWeight.bold, fontSize: 13)),
+                              child: Text(currentDist.code, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 13)),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(currentDist.name, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: colors.textPrimary)),
+                                  Text(currentDist.name, style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: colors.textPrimary)),
                                   const SizedBox(height: 2),
                                   Text(
                                     'Region: ${currentDist.region != null ? "${currentDist.region!.code} - ${currentDist.region!.name}" : "Nasional / Tanpa Region"} • Total: ${currentDist.depos.length} Depo Logistik Terdaftar',
@@ -696,14 +696,14 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                       ),
                       const SizedBox(height: 18),
 
-                      Text('Daftar Jaringan Depo & Area:', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: colors.textPrimary)),
+                      Text('Daftar Jaringan Depo & Area:', style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: colors.textPrimary)),
                       const SizedBox(height: 10),
 
                       if (currentDist.depos.isEmpty)
                         Container(
                           padding: const EdgeInsets.all(20),
                           alignment: Alignment.center,
-                          decoration: BoxDecoration(color: colors.bgElevated, borderRadius: BorderRadius.circular(10)),
+                          decoration: BoxDecoration(color: colors.bgElevated, borderRadius: BorderRadius.circular(8)),
                           child: Text('Belum ada depo di distributor ini.', style: TextStyle(color: colors.textMuted)),
                         )
                       else
@@ -713,7 +713,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
                               color: colors.bgCard,
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: colors.border),
                             ),
                             child: Column(
@@ -721,7 +721,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                               children: [
                                 Row(
                                   children: [
-                                    const Icon(LucideIcons.warehouse, size: 15, color: Color(0xFF316879)),
+                                    Icon(LucideIcons.warehouse, size: 15, color: context.semantic.secondaryAccent),
                                     const SizedBox(width: 8),
                                     Text(
                                       '${depo.name} (${depo.code})',
@@ -730,8 +730,8 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                                     const Spacer(),
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(color: const Color(0xFFDDF9F6), borderRadius: BorderRadius.circular(6)),
-                                      child: Text('${depo.areas.length} Area', style: const TextStyle(color: Color(0xFF24968B), fontWeight: FontWeight.bold, fontSize: 11)),
+                                      decoration: BoxDecoration(color: context.semantic.successBg, borderRadius: BorderRadius.circular(6)),
+                                      child: Text('${depo.areas.length} Area', style: TextStyle(color: context.semantic.success, fontWeight: FontWeight.bold, fontSize: 11)),
                                     ),
                                   ],
                                 ),
@@ -764,10 +764,10 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                decoration: BoxDecoration(color: colors.bgElevated, borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16))),
+                decoration: BoxDecoration(color: colors.bgElevated, borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12))),
                 alignment: Alignment.centerRight,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF47A60), foregroundColor: Colors.white),
+                  style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Theme.of(context).colorScheme.onPrimary),
                   child: const Text('Tutup'),
                   onPressed: () => Navigator.pop(ctx),
                 ),
@@ -802,15 +802,15 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
         builder: (dialogCtx, setDialogState) {
           return AlertDialog(
             backgroundColor: colors.bgDialog,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: colors.border)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.border)),
             title: Row(
               children: [
-                const Icon(LucideIcons.warehouse, color: Color(0xFF316879), size: 20),
+                Icon(LucideIcons.warehouse, color: context.semantic.secondaryAccent, size: 20),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     isEdit ? 'Edit Depo: ${depo.name}' : 'Tambah Depo Logistik Baru',
-                    style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
+                    style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
               ],
@@ -912,7 +912,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                             ),
                             const SizedBox(width: 6),
                             IconButton(
-                              icon: const Icon(LucideIcons.x, size: 14, color: AppColors.danger),
+                              icon: Icon(LucideIcons.x, size: 14, color: context.semantic.danger),
                               padding: const EdgeInsets.all(6),
                               constraints: const BoxConstraints(),
                               onPressed: () {
@@ -932,7 +932,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: TextStyle(color: colors.textMuted))),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF316879), foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(backgroundColor: context.semantic.infoSolid, foregroundColor: Theme.of(context).colorScheme.onPrimary),
                 onPressed: () async {
                   if (selectedDistId == null || codeCtrl.text.trim().isEmpty || nameCtrl.text.trim().isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -990,15 +990,15 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
         builder: (dialogCtx, setDialogState) {
           return AlertDialog(
             backgroundColor: colors.bgDialog,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: colors.border)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.border)),
             title: Row(
               children: [
-                const Icon(LucideIcons.mapPin, color: Color(0xFF24968B), size: 20),
+                Icon(LucideIcons.mapPin, color: context.semantic.success, size: 20),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     isEdit ? 'Edit Area Operasional: ${area.name}' : 'Tambah Area Operasional Baru',
-                    style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
+                    style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
               ],
@@ -1043,7 +1043,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: TextStyle(color: colors.textMuted))),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF24968B), foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(backgroundColor: context.semantic.successSolid, foregroundColor: Theme.of(context).colorScheme.onPrimary),
                 onPressed: () async {
                   if (selectedDepoId == null || nameCtrl.text.trim().isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -1087,15 +1087,15 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: colors.bgDialog,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: colors.border)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.border)),
         title: Row(
           children: [
-            const Icon(LucideIcons.tag, color: Color(0xFFF47A60), size: 20),
+            Icon(LucideIcons.tag, color: Theme.of(context).colorScheme.primary, size: 20),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 isEdit ? 'Edit Brand: ${brand.name}' : 'Tambah Brand Baru',
-                style: GoogleFonts.outfit(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
+                style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
               ),
             ),
           ],
@@ -1136,7 +1136,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: TextStyle(color: colors.textMuted))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF47A60), foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Theme.of(context).colorScheme.onPrimary),
             onPressed: () async {
               if (codeCtrl.text.trim().isEmpty || nameCtrl.text.trim().isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -1165,7 +1165,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(ok ? 'Brand & mapping item SAP berhasil disimpan' : (err ?? 'Gagal menyimpan brand')),
-                    backgroundColor: ok ? AppColors.success : AppColors.danger,
+                    backgroundColor: ok ? context.semantic.success : context.semantic.danger,
                   ),
                 );
               }
@@ -1183,29 +1183,29 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
 
     String addBtnLabel = 'Tambah Distributor';
     IconData addBtnIcon = LucideIcons.building2;
-    Color addBtnColor = const Color(0xFFF47A60);
+    Color addBtnColor = Theme.of(context).colorScheme.primary;
 
     switch (_activeTabIndex) {
       case 1:
         addBtnLabel = 'Tambah Depo';
         addBtnIcon = LucideIcons.warehouse;
-        addBtnColor = const Color(0xFF316879);
+        addBtnColor = context.semantic.secondaryAccent;
         break;
       case 2:
         addBtnLabel = 'Tambah Area';
         addBtnIcon = LucideIcons.mapPin;
-        addBtnColor = const Color(0xFF24968B);
+        addBtnColor = context.semantic.success;
         break;
       case 3:
         addBtnLabel = 'Tambah Brand';
         addBtnIcon = LucideIcons.tag;
-        addBtnColor = const Color(0xFFF47A60);
+        addBtnColor = Theme.of(context).colorScheme.primary;
         break;
       case 0:
       default:
         addBtnLabel = 'Tambah Distributor';
         addBtnIcon = LucideIcons.building2;
-        addBtnColor = const Color(0xFFF47A60);
+        addBtnColor = Theme.of(context).colorScheme.primary;
         break;
     }
 
@@ -1223,12 +1223,12 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                 children: [
                   Text(
                     'Master Distributor, Depo & Area',
-                    style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Kelola relasi berjenjang Distributor ➔ Depo Logistik ➔ Area Sales Operasional & Brand',
-                    style: GoogleFonts.inter(fontSize: 13, color: context.colors.textMuted),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 13, color: context.colors.textMuted),
                   ),
                 ],
               );
@@ -1238,13 +1238,13 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                   foregroundColor: context.colors.textPrimary,
                   side: BorderSide(color: context.colors.border),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 icon: state.isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 14,
                         height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.primary),
                       )
                     : const Icon(LucideIcons.refreshCw, size: 14),
                 label: Text(state.isLoading ? 'Memuat...' : 'Segarkan', style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -1256,7 +1256,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                   foregroundColor: context.colors.textPrimary,
                   side: BorderSide(color: context.colors.border),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 icon: const Icon(LucideIcons.download, size: 14),
                 label: const Text('Tarik Excel Template', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -1271,9 +1271,9 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
               final addButton = ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: addBtnColor,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 icon: Icon(addBtnIcon, size: 16),
                 label: Text(addBtnLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -1317,7 +1317,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: context.colors.bgCard,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: context.colors.border, width: 1.2),
               boxShadow: context.colors.cardShadows,
             ),
@@ -1325,14 +1325,14 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (state.isLoading)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(bottom: 12),
                     child: ClipRRect(
                       borderRadius: BorderRadius.all(Radius.circular(4)),
                       child: LinearProgressIndicator(
                         minHeight: 4,
                         backgroundColor: Colors.transparent,
-                        color: AppColors.primary,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                   ),
@@ -1370,9 +1370,9 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                           contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                           filled: true,
                           fillColor: context.colors.bgElevated,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: context.colors.borderMuted)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: context.colors.borderMuted)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: addBtnColor)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: context.colors.borderMuted)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: context.colors.borderMuted)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: addBtnColor)),
                         ),
                         onChanged: (val) => setState(() => _searchQuery = val.toLowerCase().trim()),
                       ),
@@ -1420,20 +1420,20 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(
+              SizedBox(
                 width: 40,
                 height: 40,
-                child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.primary),
+                child: CircularProgressIndicator(strokeWidth: 3, color: Theme.of(context).colorScheme.primary),
               ),
               const SizedBox(height: 18),
               Text(
                 'Memuat Data Master...',
-                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+                style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
               ),
               const SizedBox(height: 6),
               Text(
                 'Sedang menyinkronkan data distributor, depo, area, dan brand dari server',
-                style: GoogleFonts.inter(fontSize: 12.5, color: context.colors.textMuted),
+                style: GoogleFonts.plusJakartaSans(fontSize: 12.5, color: context.colors.textMuted),
               ),
             ],
           ),
@@ -1514,10 +1514,10 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF47A60).withValues(alpha: 0.12),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Text(d.code, style: const TextStyle(color: Color(0xFFF47A60), fontWeight: FontWeight.bold)),
+                      child: Text(d.code, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
                     ),
                   ),
                   DataCell(
@@ -1557,16 +1557,16 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: d.region != null ? const Color(0xFF24968B).withValues(alpha: 0.12) : context.colors.bgElevated,
+                        color: d.region != null ? context.semantic.success.withValues(alpha: 0.12) : context.colors.bgElevated,
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
-                          color: d.region != null ? const Color(0xFF24968B).withValues(alpha: 0.3) : context.colors.border,
+                          color: d.region != null ? context.semantic.success.withValues(alpha: 0.3) : context.colors.border,
                         ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(LucideIcons.globe, size: 12, color: d.region != null ? const Color(0xFF24968B) : context.colors.textMuted),
+                          Icon(LucideIcons.globe, size: 12, color: d.region != null ? context.semantic.success : context.colors.textMuted),
                           const SizedBox(width: 5),
                           ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 160),
@@ -1575,7 +1575,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: d.region != null ? const Color(0xFF24968B) : context.colors.textMuted,
+                                color: d.region != null ? context.semantic.success : context.colors.textMuted,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 11.5,
                               ),
@@ -1599,15 +1599,15 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFE0F2FE),
+                                  color: context.semantic.infoBg,
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(LucideIcons.warehouse, size: 12, color: Color(0xFF316879)),
+                                    Icon(LucideIcons.warehouse, size: 12, color: context.semantic.secondaryAccent),
                                     const SizedBox(width: 5),
-                                    Text('$totalDepos Depo', style: const TextStyle(color: Color(0xFF316879), fontWeight: FontWeight.bold, fontSize: 11.5)),
+                                    Text('$totalDepos Depo', style: TextStyle(color: context.semantic.secondaryAccent, fontWeight: FontWeight.bold, fontSize: 11.5)),
                                   ],
                                 ),
                               ),
@@ -1615,20 +1615,20 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFDDF9F6),
+                                  color: context.semantic.successBg,
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(LucideIcons.mapPin, size: 12, color: Color(0xFF24968B)),
+                                    Icon(LucideIcons.mapPin, size: 12, color: context.semantic.success),
                                     const SizedBox(width: 5),
-                                    Text('$totalAreas Area', style: const TextStyle(color: Color(0xFF24968B), fontWeight: FontWeight.bold, fontSize: 11.5)),
+                                    Text('$totalAreas Area', style: TextStyle(color: context.semantic.success, fontWeight: FontWeight.bold, fontSize: 11.5)),
                                   ],
                                 ),
                               ),
                               const SizedBox(width: 4),
-                              const Icon(LucideIcons.chevronRight, size: 14, color: AppColors.slate400),
+                              Icon(LucideIcons.chevronRight, size: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
                             ],
                           ),
                         ),
@@ -1640,7 +1640,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(LucideIcons.eye, size: 16, color: Color(0xFFF47A60)),
+                          icon: Icon(LucideIcons.eye, size: 16, color: Theme.of(context).colorScheme.primary),
                           padding: const EdgeInsets.all(6),
                           constraints: const BoxConstraints(),
                           tooltip: 'Lihat Hirarki Depo & Area',
@@ -1648,7 +1648,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                         ),
                         const SizedBox(width: 4),
                         IconButton(
-                          icon: const Icon(LucideIcons.pencil, size: 16, color: Color(0xFF316879)),
+                          icon: Icon(LucideIcons.pencil, size: 16, color: context.semantic.secondaryAccent),
                           padding: const EdgeInsets.all(6),
                           constraints: const BoxConstraints(),
                           tooltip: 'Edit Distributor & Jaringan',
@@ -1656,7 +1656,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                         ),
                         const SizedBox(width: 4),
                         IconButton(
-                          icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
+                          icon: Icon(LucideIcons.trash2, size: 16, color: context.semantic.danger),
                           padding: const EdgeInsets.all(6),
                           constraints: const BoxConstraints(),
                           tooltip: 'Hapus Distributor',
@@ -1677,7 +1677,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                                   content: Text(ok
                                       ? (st.successMessage ?? 'Distributor berhasil dihapus')
                                       : (st.errorMessage ?? 'Gagal menghapus distributor')),
-                                  backgroundColor: ok ? AppColors.success : AppColors.danger,
+                                  backgroundColor: ok ? context.semantic.success : context.semantic.danger,
                                 ),
                               );
                             }
@@ -1755,10 +1755,10 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF316879).withValues(alpha: 0.12),
+                        color: context.semantic.secondaryAccent.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Text(depo.code, style: const TextStyle(color: Color(0xFF316879), fontWeight: FontWeight.bold)),
+                      child: Text(depo.code, style: TextStyle(color: context.semantic.secondaryAccent, fontWeight: FontWeight.bold)),
                     ),
                   ),
                   DataCell(
@@ -1779,13 +1779,13 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF47A60).withValues(alpha: 0.08),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(LucideIcons.building2, size: 12, color: Color(0xFFF47A60)),
+                          Icon(LucideIcons.building2, size: 12, color: Theme.of(context).colorScheme.primary),
                           const SizedBox(width: 5),
                           ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 160),
@@ -1793,7 +1793,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                               distName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Color(0xFFF47A60), fontWeight: FontWeight.w500, fontSize: 12),
+                              style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w500, fontSize: 12),
                             ),
                           ),
                         ],
@@ -1812,10 +1812,10 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                                   margin: const EdgeInsets.only(right: 4),
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFDDF9F6),
+                                    color: context.semantic.successBg,
                                     borderRadius: BorderRadius.circular(4),
                                   ),
-                                  child: Text(a.name, style: const TextStyle(color: Color(0xFF24968B), fontSize: 11, fontWeight: FontWeight.w500)),
+                                  child: Text(a.name, style: TextStyle(color: context.semantic.success, fontSize: 11, fontWeight: FontWeight.w500)),
                                 );
                               }).toList()
                                 ..addAll(depo.areas.length > 3
@@ -1838,7 +1838,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(LucideIcons.pencil, size: 16, color: Color(0xFF316879)),
+                          icon: Icon(LucideIcons.pencil, size: 16, color: context.semantic.secondaryAccent),
                           padding: const EdgeInsets.all(6),
                           constraints: const BoxConstraints(),
                           tooltip: 'Edit Depo & Area',
@@ -1846,7 +1846,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                         ),
                         const SizedBox(width: 4),
                         IconButton(
-                          icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
+                          icon: Icon(LucideIcons.trash2, size: 16, color: context.semantic.danger),
                           padding: const EdgeInsets.all(6),
                           constraints: const BoxConstraints(),
                           tooltip: 'Hapus Depo',
@@ -1934,10 +1934,10 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF24968B).withValues(alpha: 0.12),
+                        color: context.semantic.success.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Text(area.code, style: const TextStyle(color: Color(0xFF24968B), fontWeight: FontWeight.bold)),
+                      child: Text(area.code, style: TextStyle(color: context.semantic.success, fontWeight: FontWeight.bold)),
                     ),
                   ),
                   DataCell(
@@ -1958,13 +1958,13 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF316879).withValues(alpha: 0.08),
+                        color: context.semantic.secondaryAccent.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(LucideIcons.warehouse, size: 12, color: Color(0xFF316879)),
+                          Icon(LucideIcons.warehouse, size: 12, color: context.semantic.secondaryAccent),
                           const SizedBox(width: 5),
                           ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 150),
@@ -1972,7 +1972,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                               depoName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Color(0xFF316879), fontWeight: FontWeight.w500, fontSize: 12),
+                              style: TextStyle(color: context.semantic.secondaryAccent, fontWeight: FontWeight.w500, fontSize: 12),
                             ),
                           ),
                         ],
@@ -1983,13 +1983,13 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF47A60).withValues(alpha: 0.08),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(LucideIcons.building2, size: 12, color: Color(0xFFF47A60)),
+                          Icon(LucideIcons.building2, size: 12, color: Theme.of(context).colorScheme.primary),
                           const SizedBox(width: 5),
                           ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 160),
@@ -1997,7 +1997,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                               distName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Color(0xFFF47A60), fontWeight: FontWeight.w500, fontSize: 12),
+                              style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w500, fontSize: 12),
                             ),
                           ),
                         ],
@@ -2009,7 +2009,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(LucideIcons.pencil, size: 16, color: Color(0xFF24968B)),
+                          icon: Icon(LucideIcons.pencil, size: 16, color: context.semantic.success),
                           padding: const EdgeInsets.all(6),
                           constraints: const BoxConstraints(),
                           tooltip: 'Edit Area',
@@ -2017,7 +2017,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                         ),
                         const SizedBox(width: 4),
                         IconButton(
-                          icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
+                          icon: Icon(LucideIcons.trash2, size: 16, color: context.semantic.danger),
                           padding: const EdgeInsets.all(6),
                           constraints: const BoxConstraints(),
                           tooltip: 'Hapus Area',
@@ -2101,10 +2101,10 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF47A60).withValues(alpha: 0.12),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Text(brand.code, style: const TextStyle(color: Color(0xFFD97706), fontWeight: FontWeight.bold)),
+                      child: Text(brand.code, style: TextStyle(color: context.semantic.warning, fontWeight: FontWeight.bold)),
                     ),
                   ),
                   DataCell(
@@ -2132,7 +2132,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                                 '${brand.itemCodes.length} Item: ${brand.itemCodes.take(5).join(', ')}${brand.itemCodes.length > 5 ? ', ...' : ''}',
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(color: AppColors.petrol, fontSize: 12, fontWeight: FontWeight.w500),
+                                style: TextStyle(color: context.semantic.secondaryAccent, fontSize: 12, fontWeight: FontWeight.w500),
                               ),
                             ),
                     ),
@@ -2142,7 +2142,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(LucideIcons.pencil, size: 16, color: Color(0xFFF47A60)),
+                          icon: Icon(LucideIcons.pencil, size: 16, color: Theme.of(context).colorScheme.primary),
                           padding: const EdgeInsets.all(6),
                           constraints: const BoxConstraints(),
                           tooltip: 'Edit Brand',
@@ -2150,7 +2150,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                         ),
                         const SizedBox(width: 4),
                         IconButton(
-                          icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
+                          icon: Icon(LucideIcons.trash2, size: 16, color: context.semantic.danger),
                           padding: const EdgeInsets.all(6),
                           constraints: const BoxConstraints(),
                           tooltip: 'Hapus Brand',
