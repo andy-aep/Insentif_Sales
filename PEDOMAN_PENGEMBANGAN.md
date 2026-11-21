@@ -85,52 +85,105 @@ Terdapat 3 tab utama:
 
 ---
 
-## 4. Integrasi Dashboard Real-Data (Admin vs Sales)
+## 4. Integrasi Dashboard Real-Data (Eksekutif vs Sales Lapangan)
 
-Dashboard dirancang adaptif berdasarkan peran pengguna via endpoint `GET /api/dashboard/summary?period=YYYYMM`:
+Dashboard dirancang adaptif berdasarkan peran pengguna via endpoint `GET /api/dashboard/summary?period=YYYYMM,YYYYMM` (mendukung Multi-Periode dipisah koma):
 
-### A. Tampilan Administrator (`mode = ADMIN`)
-- **KPI Global**: Total Kuota Sell-In Depo (Kg), Total Kuota Sell-Out Area (Kg), Total Target Toko Ritel (AO), Total Estimasi Budget Insentif, Total Distributor (50), dan Total Sales (21).
-- **Sales Leaderboard**: Top 10 personil sales (ASM/SPV) dengan target kuota terbesar, jumlah depo/area penugasan, dan capaian reward.
-- **Top Distributor Breakdown**: Rangkuman 8 distributor terbesar beserta jumlah depo dan alokasi target.
-- **Grafik Tren Bulanan**: Komparasi alokasi kuota Sell-In vs Sell-Out lintas periode aktif.
+### A. Tampilan Eksekutif (`mode = ADMIN`)
+- **Hak Akses**: `Administrator`, `Admin Sales`, role mengandung `Direksi`/`Director`/`Manager`/`Management`, posisi `NSM` (Nasional), dan posisi `LSM` (otomatis terfilter sesuai Region penugasan).
+- **Sticky Multi-Periode Header**: Header, pemilih Multi-Periode, dan tombol refresh menempel di bagian atas agar mudah dijangkau saat halaman di-scroll.
+- **KPI Utama & Executive Health Strip**:
+  - 4 KPI Utama: Target & Realisasi Sell-In (`Kg`), Sell-Out (`Kg`), Active Outlet (`Toko`), dan Estimasi Budget Insentif (`Rp`).
+  - Executive Health Strip: `Sell-Through Ratio (Sell-Out ÷ Sell-In %)`, `Total Omzet DPP`, dan `Rasio Budget Insentif / Omzet (%)`.
+- **Sales Leaderboard & Top Distributor Sell-In**:
+  - Leaderboard Top 15 personil sales (ASM/SPV) dengan rincian Sell-In, Sell-Out, dan AO (`Toko`).
+  - Top Distributor menampilkan `Real / Target Kg` Sell-In, progress bar, badge `%` berwarna, serta toggle **`Top Pencapaian`** vs **`Perlu Perhatian (<80%)`**.
+- **Analitik Region, Brand & Tren 6 Periode**:
+  - **Performa per Region**: Sell-In, Sell-Out, AO (`Toko`), dan `Sell-Through %` per wilayah.
+  - **Performa & Kontribusi Brand**: Pencapaian Sell-In/Sell-Out + `% Share` kontribusi per brand.
+  - **Grafik Tren 6 Periode**: Komparasi `Target vs Realisasi` per bulan dengan toggle **`Sell-In`** / **`Sell-Out`**.
 
-### B. Tampilan Sales Personil (`mode = SALES`)
-- **KPI Personal**:
-  - **ASM**: Target Sell-In Depo (Kg), Realisasi Sell-In, Capaian (%), dan jumlah Depo kerja.
-  - **SPV**: Target Sell-Out Area (Kg), Target Active Outlet (Toko), Realisasi, Capaian (%), dan jumlah Area kerja.
-  - **Estimasi Insentif**: Grade pencapaian dan nominal reward yang berhak diterima pada periode terpilih.
-- **Rincian Wilayah Penugasan**: Daftar Depo/Area yang ditugaskan kepada sales tersebut, lengkap dengan rincian target per brand produk (expandable).
-- **Selector Periode**: Dropdown pemilih periode aktif (misal `202612`, `202611`, `202610`) untuk melihat riwayat atau target masa depan.
+### B. Tampilan Sales Lapangan (`mode = SALES`)
+- Khusus personil lapangan (`ASM`, `SPV`, `ASC`, `TO`, `CANVAS`, `SM`) sesuai skema (`KONSUMSI`, `INDUSTRI`, `SURABAYA`):
+  - **ASM**: Target & Realisasi Sell-In Depo (`Kg`), capaian `%`, dan jumlah Depo kerja.
+  - **SPV**: Target & Realisasi Sell-Out Area (`Kg`), Target & Aktual Active Outlet (`Toko`), dan jumlah Area kerja.
+  - **Estimasi Insentif**: Grade pencapaian, nominal reward, dan rincian wilayah penugasan per brand (expandable).
 
 ---
 
-## 5. Fitur Tarik Data Eksisting ke Template Excel & Input Manual
+## 5. Fitur Tarik Data Eksisting ke Template Excel, Input Manual & Penugasan Sales
 
-### A. Penambahan Data Manual (Tanpa Upload)
-- **Master Distributor**: Tombol `+ Tambah Distributor`, `+ Tambah Depo`, dan `+ Tambah Area` pada masing-masing tab layar `Master Distributor`.
-- **Master Target**: Tombol `+ Tambah Target Distributor` pada layar `Master Target Kuota` untuk membuat kuota per Depo/Area per Brand secara langsung melalui dialog form.
+### A. Penambahan & Edit Data Manual (1 Layar)
+- **Master Distributor**: Tombol `+ Tambah Distributor`, `+ Tambah Depo`, dan `+ Tambah Area` pada layar `Master Distributor`.
+- **Master Target Kuota**:
+  - Form 1 layar untuk tambah & edit `Depo (Sell-In)` + `Area (Sell-Out & AO)` sekaligus.
+  - Mendukung filter **Multi-Periode** dan kolom `Periode` pada tabel hirarki.
+- **Tim & Area Sales (`Master Sales`)**:
+  - 3 mode tampilan: **`Per Distributor`** (`DistributorAssignmentHierarchyView`), **`Per Sales`**, dan **`Tabel Datar`**.
+  - Modal **`Atur PIC`** 1 layar menggunakan endpoint `POST /api/sales-distributor-assignments/bulk-map`.
 
 ### B. Tarik Data Eksisting ke Template Excel (`with_data = true`)
-- Tombol **`Tarik Excel Template`** tersedia di:
-  1. Header layar `Master Target Kuota` (mengekspor data target periode aktif).
-  2. Header layar `Master Distributor` (mengekspor struktur Region, Distributor, Depo, dan Area).
-  3. Layar `Bulk Upload & Rollback` (opsi *Tarik Template + Data Eksisting*).
-- **Format Output**:
-  - Kolom sheet 1 (`Data Upload`) mengikuti urutan dan nama kolom template upload standar sehingga **dapat diedit dan diunggah ulang langsung tanpa mengubah struktur**.
-  - Sheet 2 (`Panduan & Kode Referensi`) memuat referensi kode aktif (Brand, Distributor, Depo, Area, Sales).
-- **API Endpoint**: `GET /api/bulk-upload/template/{entity}?with_data=true&period=YYYYMM`.
+- Tersedia di `Master Target Kuota` (mendukung multi-periode), `Master Distributor`, dan `Bulk Upload & Rollback`.
+- **API Endpoint**: `GET /api/bulk-upload/template/{entity}?with_data=true&period=YYYYMM,YYYYMM`.
 
 ---
 
-## 6. Lokasi File Kunci
-- Backend Controller: `BE/app/Http/Controllers/MasterTargetController.php`
-- Dashboard Controller: `BE/app/Http/Controllers/DashboardController.php`
-- Import Service: `BE/app/Services/BatchImportService.php`
-- Export Template: `BE/app/Exports/BulkUploadTemplateExport.php`
-- Master Target View: `FE/lib/features/master_data/presentation/widgets/target_distributor_hierarchy_view.dart`
-- Dashboard Screen: `FE/lib/features/dashboard/presentation/dashboard_home_screen.dart`
-- Dashboard Provider: `FE/lib/features/dashboard/providers/dashboard_provider.dart`
-- Bulk Upload Screen: `FE/lib/features/bulk_upload/presentation/bulk_upload_screen.dart`
+## 6. Perhitungan Insentif Distributor & Standar Satuan
+- **Live Auto-Calc**: Layar `Insentif Distributor` langsung mengalkulasi otomatis saat halaman dibuka atau periode diubah (tombol `Kunci Hitungan` dan ikon refresh ganda di header sudah ditiadakan).
+- **Satuan Active Outlet (AO)**: Seluruh UI, KPI, tabel, dan export Excel WAJIB memakai satuan **`Toko`** / **`Outlet`**, **bukan `Kg`**.
+- **Optimasi Memori & Export Excel**:
+  - Agregasi realisasi multi-periode pada `SelloutDistributor` menggunakan SQL `GROUP BY` agar tidak melebihi batas memori PHP (`128 MB`).
+  - `DistributorBreakdownExport` mengimplementasikan `WithMultipleSheets` dan `Export` agar `Save to Excel` berjalan tanpa error.
+
+---
+
+## 7. Standar RBAC & 11 Menu Sidebar
+Tabel `menus` disinkronkan 1-to-1 dengan 11 menu sidebar (`dashboard_layout.dart`) melalui migrasi `2026_11_20_000001_sync_sidebar_menus_for_rbac.php` dan `DatabaseSeeder.php`:
+1. `Dashboard` (`/dashboard`)
+2. `Master Distributor` (`/master/distributor`)
+3. `Master Target Kuota` (`/master/target`)
+4. `Realisasi Penjualan` (`/master/realisasi`)
+5. `Tim & Area Sales` (`/master/surabaya`)
+6. `Insentif Distributor` (`/incentives/distributor`)
+7. `Insentif Industri` (`/incentives/industri`)
+8. `Insentif Surabaya` (`/incentives/surabaya`)
+9. `Skema & Bobot` (`/settings/incentives`)
+10. `Bulk Upload Data` (`/bulk-upload`)
+11. `Pengguna & Akses` (`/users`)
+
+Filter visibilitas sidebar di `dashboard_layout.dart` (`_isItemAllowed`) memprioritaskan exact route match terlebih dahulu sebelum fallback route grup lama.
+
+---
+
+## 8. Design System Frontend (Material 3 Light & Dark Mode)
+- **Tema Terpusat**: `FE/lib/core/theme/app_theme.dart` (`useMaterial3: true`, font tunggal `PlusJakartaSans`, `AppSemanticColors` via `ThemeExtension`).
+- **Palet Light Mode**: Scaffold `#F8FAFC`, Surface/Card/Sidebar `#FFFFFF`, Border `#E2E8F0`, Teks `#0F172A` / `#64748B`, Aksen Indigo `#4F46E5`.
+- **Palet Dark Mode**: Scaffold `#0F172A`, Surface/Card/Sidebar `#1E293B`, Border `#334155`, Teks `#F8FAFC` / `#94A3B8`, Aksen Indigo `#6366F1`.
+- **Aturan Wajib Styling**:
+  - **Nol hardcode warna** di widget/screen (`Color(0x...)`, `Colors.white/black/grey`, atau `AppColors.*` statis dilarang di presentation layer). Wajib gunakan `Theme.of(context).colorScheme`, `Theme.of(context).textTheme`, `context.semantic`, atau `context.colors`.
+  - Gunakan token `*Solid` (`successSolid`, `dangerSolid`, `warningSolid`, `infoSolid`) untuk background tombol terisi & SnackBar agar kontras teks putih memenuhi standar AA di Light maupun Dark Mode.
+  - **Radius & Elevation**: `12px` untuk Card/Dialog/Panel utama, `8px` untuk Button/Input/Badge/Chip; `elevation: 0` dengan border tipis `1px` + shadow halus hanya di Light Mode.
+  - Gunakan `initialValue:` (bukan `value:`) pada `DropdownButtonFormField` di Flutter 3.33+.
+
+---
+
+## 9. Alur Build & Auto-Deploy Produksi (cPanel)
+- **Production URLs**:
+  - Backend: `https://api-prod.garamonline.com` (`/home/susantimegah/public_html/api-prod.garamonline.com`, PHP 8.5, PostgreSQL `susantimegah_sales_insentif`)
+  - Frontend: `https://insentif-dev.susantimegah.com` (`/home/susantimegah/public_html/insentif-dev.susantimegah.com`, di belakang Cloudflare CDN)
+- **SSH/SFTP**: `susantimegah@163.61.58.29:22` menggunakan SSH key `C:\Users\Susan\.ssh\cpanel_insentif_rsa` (`.ppk` untuk WinSCP).
+- **Perintah Build & Deploy**:
+  1. Build FE: `flutter build web --release --pwa-strategy=none --dart-define=API_BASE_URL=https://api-prod.garamonline.com/api`
+  2. Deploy otomatis: `powershell -ExecutionPolicy Bypass -File "deploy_cpanel/deploy_ke_cpanel.ps1"`
+     - Menyinkronkan BE & FE, memberi stempel cache-busting `?v=yyyyMMddHHmmss` pada `flutter_bootstrap.js` & `main.dart.js` (didukung `FE/web/.htaccess` `Cache-Control: no-cache` untuk bypass cache Cloudflare), mengunggah delta via WinSCP, dan menjalankan `php artisan optimize:clear` via SSH.
+
+---
+
+## 10. Lokasi File Kunci
+- Backend Controllers: `BE/app/Http/Controllers/DashboardController.php`, `MasterTargetController.php`, `IncentiveCalculationController.php`, `SalesAssignmentController.php`, `RoleController.php`, `MenuController.php`
+- Services & Exports: `BE/app/Services/BatchImportService.php`, `IncentiveCalculationService.php`, `BE/app/Exports/BulkUploadTemplateExport.php`, `DistributorBreakdownExport.php`
+- Theme & Shell FE: `FE/lib/core/theme/app_theme.dart`, `FE/lib/core/constants/app_colors.dart`, `FE/lib/features/dashboard/presentation/dashboard_layout.dart`
+- Layar Utama FE: `dashboard_home_screen.dart`, `master_target_screen.dart`, `target_distributor_hierarchy_view.dart`, `master_surabaya_screen.dart`, `distributor_assignment_hierarchy_view.dart`, `incentive_calculation_screen.dart`, `user_management_screen.dart`, `bulk_upload_screen.dart`
+- Deploy Script: `deploy_cpanel/deploy_ke_cpanel.ps1` & `deploy_cpanel/deploy_ke_cpanel.bat`
 - File Template Master: `templates/template_master_target_distributor.xlsx`
 
