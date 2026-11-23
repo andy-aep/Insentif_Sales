@@ -121,7 +121,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   const SizedBox(width: AppSpacing.md),
                                   Expanded(
                                     child: Text(
-                                      'PT SUSANTI MEGAH · INSENTIF',
+                                      'PT SUSANTI MEGAH',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: context.monoStyle(
@@ -195,7 +195,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
 
                             Text(
-                              'Username atau email',
+                              'Username',
                               style: tt.labelMedium?.copyWith(color: sem.textSecondary),
                             ),
                             const SizedBox(height: AppSpacing.xs + 2),
@@ -213,13 +213,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   minWidth: 40,
                                   minHeight: 44,
                                 ),
-                                hintText: 'mis. bayu_spv',
                                 filled: true,
                                 fillColor: cs.surface,
                               ),
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
-                                  return 'Isi username atau email.';
+                                  return 'Isi username.';
                                 }
                                 return null;
                               },
@@ -261,7 +260,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     setState(() => _obscurePassword = !_obscurePassword);
                                   },
                                 ),
-                                hintText: 'Kata sandi akun',
                                 filled: true,
                                 fillColor: cs.surface,
                               ),
@@ -335,7 +333,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
             return Row(
               children: [
-                // Left Editorial Deep Brine Ledger Panel
+                // Left Editorial Deep Brine Panel with Geometric Architectural Chart
                 Expanded(
                   flex: 5,
                   child: Container(
@@ -366,13 +364,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             const SizedBox(width: AppSpacing.md),
                             Expanded(
                               child: Text(
-                                'PT SUSANTI MEGAH · DISTRIBUSI & INSENTIF',
+                                'PT SUSANTI MEGAH',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: context.monoStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.7,
+                                  letterSpacing: 0.9,
                                   color: sem.heroMuted,
                                 ),
                               ),
@@ -388,52 +386,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               Text(
                                 'Rekap kuota, tonase, dan insentif sales dalam satu buku kerja.',
                                 style: tt.displayLarge?.copyWith(
-                                  fontSize: 32,
-                                  height: 1.18,
-                                  letterSpacing: -0.75,
+                                  fontSize: 30,
+                                  height: 1.2,
+                                  letterSpacing: -0.7,
                                   color: sem.heroOnSurface,
                                 ),
                               ),
-                              const SizedBox(height: AppSpacing.xl),
+                              const SizedBox(height: AppSpacing.xxl),
                               Container(
+                                height: 190,
+                                padding: const EdgeInsets.all(AppSpacing.xl),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(AppRadius.card),
                                   border: Border.all(color: sem.heroBorder),
+                                  color: sem.heroBorder.withValues(alpha: 0.22),
                                 ),
-                                child: Column(
-                                  children: [
-                                    _buildSchemeNoteRow(
-                                      context,
-                                      scheme: 'Konsumsi',
-                                      detail: 'Sell-In Depo (ASM), Sell-Out Area (SPV), Active Outlet (Toko)',
-                                    ),
-                                    Divider(height: 1, color: sem.heroBorder),
-                                    _buildSchemeNoteRow(
-                                      context,
-                                      scheme: 'Industri',
-                                      detail: 'Tonase kontrak (Kg) & pembukaan toko baru (NOO)',
-                                    ),
-                                    Divider(height: 1, color: sem.heroBorder),
-                                    _buildSchemeNoteRow(
-                                      context,
-                                      scheme: 'Surabaya',
-                                      detail: 'Evaluasi kuota langsung TO, SM, dan koordinasi ASC',
-                                    ),
-                                  ],
+                                child: CustomPaint(
+                                  painter: _LedgerMetricIllustrationPainter(
+                                    gridColor: sem.heroBorder,
+                                    barMutedColor: sem.heroMuted.withValues(alpha: 0.24),
+                                    barAccentColor: sem.heroAccent,
+                                    lineColor: sem.heroOnSurface,
+                                  ),
+                                  child: const SizedBox.expand(),
                                 ),
                               ),
                             ],
                           ),
                         ),
                         const Spacer(),
-                        Divider(height: 1, color: sem.heroBorder),
-                        const SizedBox(height: AppSpacing.md),
-                        Text(
-                          'Data realisasi tersinkron dengan faktur SAP & upload batch bulanan.',
-                          style: tt.bodySmall?.copyWith(
-                            color: sem.heroMuted,
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -461,44 +442,98 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
+}
 
-  Widget _buildSchemeNoteRow(
-    BuildContext context, {
-    required String scheme,
-    required String detail,
-  }) {
-    final sem = context.semantic;
-    final tt = Theme.of(context).textTheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.md,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 82,
-            child: Text(
-              scheme,
-              style: context.monoStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
-                color: sem.heroAccent,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              detail,
-              style: tt.bodySmall?.copyWith(
-                color: sem.heroOnSurface,
-                height: 1.4,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+class _LedgerMetricIllustrationPainter extends CustomPainter {
+  final Color gridColor;
+  final Color barMutedColor;
+  final Color barAccentColor;
+  final Color lineColor;
+
+  const _LedgerMetricIllustrationPainter({
+    required this.gridColor,
+    required this.barMutedColor,
+    required this.barAccentColor,
+    required this.lineColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final gridPaint = Paint()
+      ..color = gridColor
+      ..strokeWidth = 1.0;
+
+    // 3 subtle horizontal baseline rules + crisp bottom baseline
+    for (int i = 0; i <= 3; i++) {
+      final y = size.height * (0.2 + i * 0.25);
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+
+    const ratios = [0.34, 0.52, 0.44, 0.68, 0.61, 0.82, 0.94];
+    final count = ratios.length;
+    final slotWidth = size.width / count;
+    final pairWidth = (slotWidth * 0.58).clamp(16.0, 34.0);
+    final singleBarW = (pairWidth - 4) / 2;
+    final baseY = size.height * 0.95;
+    final maxBarH = size.height * 0.78;
+
+    final mutedPaint = Paint()..color = barMutedColor;
+    final accentPaint = Paint()..color = barAccentColor;
+    final accentSoftPaint = Paint()..color = barAccentColor.withValues(alpha: 0.45);
+    final linePoints = <Offset>[];
+
+    for (int i = 0; i < count; i++) {
+      final centerX = slotWidth * i + slotWidth / 2;
+      final targetH = maxBarH * (ratios[i] * 0.85).clamp(0.18, 0.95);
+      final actualH = maxBarH * ratios[i];
+
+      final targetRect = RRect.fromRectAndCorners(
+        Rect.fromLTWH(centerX - pairWidth / 2, baseY - targetH, singleBarW, targetH),
+        topLeft: const Radius.circular(AppRadius.tag),
+        topRight: const Radius.circular(AppRadius.tag),
+      );
+      canvas.drawRRect(targetRect, mutedPaint);
+
+      final actualTop = baseY - actualH;
+      final actualRect = RRect.fromRectAndCorners(
+        Rect.fromLTWH(centerX - pairWidth / 2 + singleBarW + 4, actualTop, singleBarW, actualH),
+        topLeft: const Radius.circular(AppRadius.tag),
+        topRight: const Radius.circular(AppRadius.tag),
+      );
+      canvas.drawRRect(actualRect, i >= count - 2 ? accentPaint : accentSoftPaint);
+
+      linePoints.add(Offset(centerX + (singleBarW + 4) / 2, actualTop - 6));
+    }
+
+    final linePaint = Paint()
+      ..color = lineColor.withValues(alpha: 0.85)
+      ..strokeWidth = 1.6
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final path = Path()..moveTo(linePoints.first.dx, linePoints.first.dy);
+    for (int i = 1; i < linePoints.length; i++) {
+      path.lineTo(linePoints[i].dx, linePoints[i].dy);
+    }
+    canvas.drawPath(path, linePaint);
+
+    final dotOuterPaint = Paint()..color = lineColor;
+    final dotInnerPaint = Paint()..color = barAccentColor;
+    for (int i = 0; i < linePoints.length; i++) {
+      final pt = linePoints[i];
+      canvas.drawCircle(pt, i == linePoints.length - 1 ? 4.0 : 2.6, dotOuterPaint);
+      if (i == linePoints.length - 1) {
+        canvas.drawCircle(pt, 2.0, dotInnerPaint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _LedgerMetricIllustrationPainter oldDelegate) {
+    return oldDelegate.gridColor != gridColor ||
+        oldDelegate.barMutedColor != barMutedColor ||
+        oldDelegate.barAccentColor != barAccentColor ||
+        oldDelegate.lineColor != lineColor;
   }
 }

@@ -279,10 +279,10 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Asymmetric Hierarchy: Hero Incentive Spotlight (5) + 3-Column Operational Ledger (7)
+        // Asymmetric Hierarchy: Hero Incentive Spotlight (4) + 3-Column Operational Ledger (8)
         LayoutBuilder(
           builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= 1020;
+            final isWide = constraints.maxWidth >= 1080;
             final cs = Theme.of(context).colorScheme;
             final sem = context.semantic;
             final colors = context.colors;
@@ -306,7 +306,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          'TOTAL INSENTIF PERIODE INI',
+                          'TOTAL INSENTIF',
                           style: context.monoStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w600,
@@ -433,7 +433,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                   : (pct >= 80 ? cs.primary : (pct > 0 ? sem.warning : colors.textMuted));
 
               return Padding(
-                padding: const EdgeInsets.all(AppSpacing.xl),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xl),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -478,7 +478,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                     const SizedBox(height: 3),
                     Text(
                       secondaryLine,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: colors.textSecondary,
@@ -497,7 +497,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       footnote,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontSize: 11,
@@ -510,19 +510,19 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
             }
 
             final String sellThroughNote = realSellIn > 0
-                ? 'Sell-through ${sellThroughPct.toStringAsFixed(1)}% (${sellThroughPct >= 85 ? 'stok lancar' : (sellThroughPct >= 65 ? 'moderat' : 'stok menumpuk')})'
-                : 'Konsumsi multi-brand';
+                ? 'Sell-through ${sellThroughPct.toStringAsFixed(1)}% · SPV'
+                : 'Konsumsi multi-brand · SPV';
 
             final sellInMetric = buildLedgerMetric(
-              label: 'Sell-In Depo (ASM)',
+              label: 'Sell-In Depo',
               primaryValue: '${CurrencyFormatter.formatNumber(realSellIn)} Kg',
               secondaryLine: 'Target ${CurrencyFormatter.formatNumber(targetSellIn)} Kg',
               pct: achSellIn,
-              footnote: '$totalDist distributor · $scopeLabel',
+              footnote: '$totalDist distributor · ASM',
             );
 
             final sellOutMetric = buildLedgerMetric(
-              label: 'Sell-Out Area (SPV)',
+              label: 'Sell-Out Area',
               primaryValue: '${CurrencyFormatter.formatNumber(realSellOut)} Kg',
               secondaryLine: 'Target ${CurrencyFormatter.formatNumber(targetSellOut)} Kg',
               pct: achSellOut,
@@ -530,7 +530,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
             );
 
             final aoMetric = buildLedgerMetric(
-              label: 'Active Outlet (Toko)',
+              label: 'Active Outlet',
               primaryValue: '${CurrencyFormatter.formatNumber(realOutlet)} Toko',
               secondaryLine: 'Target ${CurrencyFormatter.formatNumber(targetOutlet)} Toko',
               pct: achOutlet,
@@ -572,9 +572,9 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(flex: 5, child: heroSpotlightBlock),
+                    Expanded(flex: 4, child: heroSpotlightBlock),
                     const SizedBox(width: AppSpacing.lg),
-                    Expanded(flex: 7, child: operationalLedger),
+                    Expanded(flex: 8, child: operationalLedger),
                   ],
                 ),
               );
@@ -1165,7 +1165,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
           : (m.pct >= 100 ? sem.success : (m.pct >= 80 ? cs.primary : (m.pct > 0 ? sem.warning : colors.textMuted)));
 
       return Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1210,7 +1210,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
             const SizedBox(height: 3),
             Text(
               m.secondaryLine,
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
             ),
@@ -1227,7 +1227,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
             const SizedBox(height: AppSpacing.sm),
             Text(
               m.footnote,
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontSize: 11,
@@ -1269,14 +1269,14 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                 ),
         );
 
-        if (constraints.maxWidth >= 960) {
+        if (constraints.maxWidth >= 1080) {
           return IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(flex: 5, child: heroPanel),
+                Expanded(flex: 4, child: heroPanel),
                 const SizedBox(width: AppSpacing.lg),
-                Expanded(flex: 7, child: ledger),
+                Expanded(flex: 8, child: ledger),
               ],
             ),
           );

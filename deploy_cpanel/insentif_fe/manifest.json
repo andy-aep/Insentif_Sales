@@ -1,11 +1,11 @@
 {
-    "name": "sales_incentive_web",
-    "short_name": "sales_incentive_web",
+    "name": "Sales Insentif",
+    "short_name": "Sales Insentif",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F6F4EE",
+    "theme_color": "#0B5D51",
+    "description": "Sistem Perhitungan Insentif & Distribusi Penjualan PT Susanti Megah",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
