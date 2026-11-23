@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -137,6 +138,16 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
     return false;
   }
 
+  NavItemData? _findActiveNavItem(List<NavItemData> items, String currentRoute) {
+    for (final item in items) {
+      if (currentRoute == item.route ||
+          (item.route != '/dashboard' && currentRoute.startsWith(item.route))) {
+        return item;
+      }
+    }
+    return null;
+  }
+
   void _showQuickJumpDialog(List<NavItemData> items) {
     showDialog(
       context: context,
@@ -146,6 +157,7 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
           builder: (ctx, setDialogState) {
             final cs = Theme.of(ctx).colorScheme;
             final tt = Theme.of(ctx).textTheme;
+            final sem = ctx.semantic;
             final filtered = items
                 .where((i) =>
                     i.title.toLowerCase().contains(query.toLowerCase()) ||
@@ -155,57 +167,95 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
               backgroundColor: cs.surface,
               surfaceTintColor: Colors.transparent,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.card),
                 side: BorderSide(color: cs.outlineVariant),
               ),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 460, maxHeight: 420),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextField(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: TextField(
                         autofocus: true,
                         onChanged: (v) => setDialogState(() => query = v),
+                        onSubmitted: (_) {
+                          if (filtered.isNotEmpty) {
+                            Navigator.pop(ctx);
+                            context.go(filtered.first.route);
+                          }
+                        },
                         style: tt.bodyLarge?.copyWith(color: cs.onSurface),
                         decoration: InputDecoration(
-                          hintText: 'Ketik nama menu untuk berpindah halaman...',
-                          prefixIcon: const Icon(LucideIcons.search, size: 17),
+                          hintText: 'Ketik nama menu lalu tekan Enter...',
+                          prefixIcon: const Icon(LucideIcons.search, size: 16),
+                          prefixIconConstraints: const BoxConstraints(
+                            minWidth: 36,
+                            minHeight: 36,
+                          ),
                           filled: true,
-                          fillColor: cs.surfaceContainerLow,
+                          fillColor: sem.subtleBg,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: filtered.length,
-                          itemBuilder: (_, idx) {
-                            final item = filtered[idx];
-                            return ListTile(
-                              dense: true,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                    ),
+                    Divider(height: 1, color: cs.outlineVariant),
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? Center(
+                              child: Text(
+                                'Menu tidak ditemukan',
+                                style: tt.bodySmall,
                               ),
-                              leading: Icon(item.icon, size: 18, color: cs.primary),
-                              title: Text(
-                                item.title,
-                                style: tt.titleSmall,
-                              ),
-                              trailing: Text(
-                                item.group,
-                                style: tt.labelSmall,
-                              ),
-                              onTap: () {
-                                Navigator.pop(ctx);
-                                context.go(item.route);
+                            )
+                          : ListView.separated(
+                              padding: const EdgeInsets.all(AppSpacing.sm),
+                              itemCount: filtered.length,
+                              separatorBuilder: (_, __) => const SizedBox(height: 2),
+                              itemBuilder: (_, idx) {
+                                final item = filtered[idx];
+                                return Material(
+                                  color: Colors.transparent,
+                                  borderRadius: BorderRadius.circular(AppRadius.control),
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(AppRadius.control),
+                                    hoverColor: sem.hoverBg,
+                                    onTap: () {
+                                      Navigator.pop(ctx);
+                                      context.go(item.route);
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: AppSpacing.md,
+                                        vertical: 10,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(item.icon, size: 16, color: cs.primary),
+                                          const SizedBox(width: AppSpacing.md),
+                                          Expanded(
+                                            child: Text(
+                                              item.title,
+                                              style: tt.titleSmall,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          Text(
+                                            item.group,
+                                            style: tt.labelSmall?.copyWith(
+                                              fontSize: 10,
+                                              letterSpacing: 0.6,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
                               },
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
+                            ),
+                    ),
+                  ],
                 ),
               ),
             );
@@ -236,20 +286,13 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
             backgroundColor: cs.surface,
             surfaceTintColor: Colors.transparent,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppRadius.card),
               side: BorderSide(color: cs.outlineVariant),
             ),
             title: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: cs.primaryContainer,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(LucideIcons.key, color: cs.primary, size: 18),
-                ),
-                const SizedBox(width: 12),
+                Icon(LucideIcons.key, color: cs.primary, size: 18),
+                const SizedBox(width: AppSpacing.md),
                 Text(
                   'Ganti Kata Sandi Saya',
                   style: tt.titleLarge,
@@ -267,13 +310,13 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
                         color: sem.dangerBg,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(AppRadius.control),
                         border: Border.all(color: sem.danger.withValues(alpha: 0.35)),
                       ),
                       child: Row(
                         children: [
                           Icon(LucideIcons.alertCircle, color: sem.danger, size: 16),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: Text(
                               errorText!,
@@ -283,7 +326,7 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: AppSpacing.md),
                   ],
                   TextField(
                     controller: currentPassCtrl,
@@ -292,12 +335,12 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                     decoration: InputDecoration(
                       labelText: 'Kata Sandi Saat Ini',
                       suffixIcon: IconButton(
-                        icon: Icon(obscureCurrent ? LucideIcons.eyeOff : LucideIcons.eye, size: 18),
+                        icon: Icon(obscureCurrent ? LucideIcons.eyeOff : LucideIcons.eye, size: 17),
                         onPressed: () => setDialogState(() => obscureCurrent = !obscureCurrent),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   TextField(
                     controller: newPassCtrl,
                     obscureText: obscureNew,
@@ -306,12 +349,12 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                       labelText: 'Kata Sandi Baru',
                       hintText: 'Minimal 6 karakter',
                       suffixIcon: IconButton(
-                        icon: Icon(obscureNew ? LucideIcons.eyeOff : LucideIcons.eye, size: 18),
+                        icon: Icon(obscureNew ? LucideIcons.eyeOff : LucideIcons.eye, size: 17),
                         onPressed: () => setDialogState(() => obscureNew = !obscureNew),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   TextField(
                     controller: confirmPassCtrl,
                     obscureText: obscureConfirm,
@@ -319,7 +362,7 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                     decoration: InputDecoration(
                       labelText: 'Konfirmasi Kata Sandi Baru',
                       suffixIcon: IconButton(
-                        icon: Icon(obscureConfirm ? LucideIcons.eyeOff : LucideIcons.eye, size: 18),
+                        icon: Icon(obscureConfirm ? LucideIcons.eyeOff : LucideIcons.eye, size: 17),
                         onPressed: () => setDialogState(() => obscureConfirm = !obscureConfirm),
                       ),
                     ),
@@ -392,7 +435,7 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
           backgroundColor: cs.surface,
           surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppRadius.card),
             side: BorderSide(color: cs.outlineVariant),
           ),
           titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
@@ -400,20 +443,20 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
           title: Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: cs.primaryContainer,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(AppRadius.control),
                   border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
                 ),
                 alignment: Alignment.center,
                 child: Text(
                   (user?.name.isNotEmpty == true ? user!.name[0] : 'U').toUpperCase(),
-                  style: tt.titleLarge?.copyWith(color: cs.primary),
+                  style: tt.titleMedium?.copyWith(color: cs.onPrimaryContainer),
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -439,37 +482,37 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
               children: [
                 const Divider(height: 24),
                 Container(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
                     color: sem.subtleBg,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppRadius.control),
                     border: Border.all(color: cs.outlineVariant),
                   ),
                   child: Column(
                     children: [
                       _buildProfileRow(ctx, 'Posisi', user?.position?.name ?? 'Tanpa Posisi'),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       _buildProfileRow(ctx, 'Email', user?.email ?? '-'),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       _buildProfileRow(ctx, 'Role Akses', user?.role?.displayName ?? '-'),
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: cs.primary,
                     side: BorderSide(color: cs.primary.withValues(alpha: 0.45)),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  icon: const Icon(LucideIcons.key, size: 16),
+                  icon: const Icon(LucideIcons.key, size: 15),
                   label: const Text('Ganti Kata Sandi Saya'),
                   onPressed: () {
                     Navigator.pop(ctx);
                     _showChangeOwnPasswordDialog();
                   },
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.sm),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: sem.dangerBg,
@@ -477,8 +520,8 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  icon: const Icon(LucideIcons.logOut, size: 16),
-                  label: const Text('Keluar dari Akun (Logout)'),
+                  icon: const Icon(LucideIcons.logOut, size: 15),
+                  label: const Text('Keluar dari Akun'),
                   onPressed: () {
                     Navigator.pop(ctx);
                     _showLogoutDialog();
@@ -498,7 +541,7 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: tt.bodySmall),
-        const SizedBox(width: 12),
+        const SizedBox(width: AppSpacing.md),
         Flexible(
           child: Text(
             value,
@@ -523,20 +566,13 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
           backgroundColor: cs.surface,
           surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppRadius.card),
             side: BorderSide(color: cs.outlineVariant),
           ),
           title: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: sem.dangerBg,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(LucideIcons.logOut, color: sem.danger, size: 18),
-              ),
-              const SizedBox(width: 12),
+              Icon(LucideIcons.logOut, color: sem.danger, size: 18),
+              const SizedBox(width: AppSpacing.md),
               Text('Keluar dari Sesi', style: tt.titleLarge),
             ],
           ),
@@ -583,288 +619,346 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
     final visibleNavItems = _allNavItems.where((item) {
       return _isItemAllowed(item, user?.role);
     }).toList();
+    final activeNav = _findActiveNavItem(visibleNavItems, currentRoute);
 
-    return Scaffold(
-      key: _scaffoldKey,
-      drawer: !isDesktop ? _buildMobileDrawer(context, visibleNavItems, currentRoute) : null,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Row(
-        children: [
-          // Clean SaaS Left Sidebar
-          if (isDesktop)
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: showExpandedSidebar ? 248 : 72,
-              curve: Curves.easeOutCubic,
-              decoration: BoxDecoration(
-                color: cs.surface,
-                border: Border(right: BorderSide(color: cs.outlineVariant)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Brand Header
-                  Container(
-                    height: 64,
-                    padding: EdgeInsets.symmetric(horizontal: showExpandedSidebar ? 18 : 14),
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.keyK, control: true): () =>
+            _showQuickJumpDialog(visibleNavItems),
+        const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () =>
+            _showQuickJumpDialog(visibleNavItems),
+      },
+      child: Focus(
+        autofocus: false,
+        child: Scaffold(
+          key: _scaffoldKey,
+          drawer: !isDesktop ? _buildMobileDrawer(context, visibleNavItems, currentRoute) : null,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          body: SafeArea(
+            child: Row(
+              children: [
+                // Precision Left Navigation Rail / Sidebar
+                if (isDesktop)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: showExpandedSidebar ? 240 : 68,
+                    curve: Curves.easeOutCubic,
                     decoration: BoxDecoration(
-                      border: Border(bottom: BorderSide(color: cs.outlineVariant)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: showExpandedSidebar
-                          ? MainAxisAlignment.start
-                          : MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 34,
-                          height: 34,
-                          decoration: BoxDecoration(
-                            color: cs.primary,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            LucideIcons.layoutGrid,
-                            color: cs.onPrimary,
-                            size: 18,
-                          ),
-                        ),
-                        if (showExpandedSidebar) ...[
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'Sales Insentif',
-                              style: tt.titleLarge?.copyWith(fontSize: 16.5),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              LucideIcons.panelLeftClose,
-                              size: 17,
-                              color: cs.onSurfaceVariant,
-                            ),
-                            tooltip: 'Ringkas Sidebar',
-                            visualDensity: VisualDensity.compact,
-                            onPressed: () => setState(() => _sidebarExpanded = false),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-
-                  // Grouped Navigation Items
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
-                      children: _buildGroupedSidebarItems(
-                        context,
-                        visibleNavItems,
-                        currentRoute,
-                        showExpandedSidebar,
-                      ),
-                    ),
-                  ),
-
-                  // Bottom Footer Actions
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(10, 10, 10, 14),
-                    decoration: BoxDecoration(
-                      border: Border(top: BorderSide(color: cs.outlineVariant)),
+                      color: cs.surface,
+                      border: Border(right: BorderSide(color: cs.outlineVariant)),
                     ),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        if (!showExpandedSidebar) ...[
-                          IconButton(
-                            icon: Icon(
-                              LucideIcons.panelLeftOpen,
-                              size: 18,
-                              color: cs.onSurfaceVariant,
-                            ),
-                            tooltip: 'Perlebar Sidebar',
-                            onPressed: () => setState(() => _sidebarExpanded = true),
+                        // Brand Header
+                        Container(
+                          height: 56,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: showExpandedSidebar ? AppSpacing.lg : AppSpacing.md,
                           ),
-                          const SizedBox(height: 4),
-                        ],
-                        _buildSidebarTile(
-                          context: context,
-                          title: 'Keluar',
-                          icon: LucideIcons.logOut,
-                          isSelected: false,
-                          showExpanded: showExpandedSidebar,
-                          isDanger: true,
-                          onTap: _showLogoutDialog,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-          // Right Area: Clean Topbar + Main Canvas
-          Expanded(
-            child: Column(
-              children: [
-                // Top AppBar
-                Container(
-                  height: 64,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  decoration: BoxDecoration(
-                    color: cs.surface,
-                    border: Border(bottom: BorderSide(color: cs.outlineVariant)),
-                  ),
-                  child: Row(
-                    children: [
-                      if (!isDesktop) ...[
-                        IconButton(
-                          icon: Icon(LucideIcons.menu, color: cs.onSurface),
-                          tooltip: 'Buka Menu',
-                          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-
-                      // Quick Search Trigger
-                      if (screenWidth >= 560)
-                        InkWell(
-                          onTap: () => _showQuickJumpDialog(visibleNavItems),
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            width: screenWidth >= 900 ? 300 : 210,
-                            height: 38,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(
-                              color: sem.subtleBg,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: cs.outlineVariant),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  LucideIcons.search,
-                                  size: 15,
-                                  color: cs.onSurfaceVariant,
+                          decoration: BoxDecoration(
+                            border: Border(bottom: BorderSide(color: cs.outlineVariant)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: showExpandedSidebar
+                                ? MainAxisAlignment.start
+                                : MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 30,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  color: cs.primary,
+                                  borderRadius: BorderRadius.circular(AppRadius.control),
                                 ),
-                                const SizedBox(width: 9),
+                                alignment: Alignment.center,
+                                child: Icon(
+                                  LucideIcons.barChart2,
+                                  color: cs.onPrimary,
+                                  size: 16,
+                                ),
+                              ),
+                              if (showExpandedSidebar) ...[
+                                const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
-                                    'Cari menu atau fitur...',
-                                    style: tt.bodySmall?.copyWith(fontSize: 12.5),
+                                    'Sales Insentif',
+                                    style: tt.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: -0.3,
+                                    ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: cs.surface,
-                                    borderRadius: BorderRadius.circular(5),
-                                    border: Border.all(color: cs.outlineVariant),
+                                IconButton(
+                                  icon: Icon(
+                                    LucideIcons.panelLeftClose,
+                                    size: 16,
+                                    color: cs.onSurfaceVariant,
                                   ),
-                                  child: Text(
-                                    '⌘F',
-                                    style: tt.labelSmall?.copyWith(fontSize: 10.5),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                      const Spacer(),
-
-                      // Quick Upload Button
-                      _buildTopActionButton(
-                        context: context,
-                        icon: LucideIcons.uploadCloud,
-                        tooltip: 'Bulk Upload Data',
-                        onTap: () => context.go('/bulk-upload'),
-                      ),
-                      const SizedBox(width: 8),
-
-                      // Light / Dark Mode Toggle
-                      _buildTopActionButton(
-                        context: context,
-                        icon: isDark ? LucideIcons.sun : LucideIcons.moon,
-                        tooltip: isDark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap',
-                        iconColor: isDark ? sem.warning : cs.onSurfaceVariant,
-                        onTap: () => ref.read(themeProvider.notifier).toggleTheme(),
-                      ),
-                      const SizedBox(width: 12),
-
-                      Container(
-                        width: 1,
-                        height: 24,
-                        color: cs.outlineVariant,
-                      ),
-                      const SizedBox(width: 12),
-
-                      // User Profile Button
-                      InkWell(
-                        onTap: _showProfileDialog,
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 34,
-                                height: 34,
-                                decoration: BoxDecoration(
-                                  color: cs.primaryContainer,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: cs.primary.withValues(alpha: 0.25)),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  (user?.name.isNotEmpty == true ? user!.name[0] : 'A').toUpperCase(),
-                                  style: tt.titleSmall?.copyWith(
-                                    color: cs.primary,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              if (screenWidth >= 520) ...[
-                                const SizedBox(width: 10),
-                                ConstrainedBox(
-                                  constraints: BoxConstraints(maxWidth: screenWidth < 800 ? 110 : 160),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        user?.name ?? 'Administrator',
-                                        overflow: TextOverflow.ellipsis,
-                                        style: tt.labelLarge?.copyWith(fontSize: 13),
-                                      ),
-                                      Text(
-                                        user?.email ?? (user?.role?.displayName ?? 'admin@salestify.id'),
-                                        overflow: TextOverflow.ellipsis,
-                                        style: tt.bodySmall?.copyWith(fontSize: 11),
-                                      ),
-                                    ],
-                                  ),
+                                  tooltip: 'Ringkas Sidebar',
+                                  visualDensity: VisualDensity.compact,
+                                  onPressed: () => setState(() => _sidebarExpanded = false),
                                 ),
                               ],
                             ],
                           ),
                         ),
+
+                        // Grouped Navigation Items
+                        Expanded(
+                          child: ListView(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm + 2,
+                              vertical: AppSpacing.md,
+                            ),
+                            children: _buildGroupedSidebarItems(
+                              context,
+                              visibleNavItems,
+                              currentRoute,
+                              showExpandedSidebar,
+                            ),
+                          ),
+                        ),
+
+                        // Bottom Footer Actions
+                        Container(
+                          padding: const EdgeInsets.all(AppSpacing.sm + 2),
+                          decoration: BoxDecoration(
+                            border: Border(top: BorderSide(color: cs.outlineVariant)),
+                          ),
+                          child: Column(
+                            children: [
+                              if (!showExpandedSidebar) ...[
+                                IconButton(
+                                  icon: Icon(
+                                    LucideIcons.panelLeftOpen,
+                                    size: 16,
+                                    color: cs.onSurfaceVariant,
+                                  ),
+                                  tooltip: 'Perlebar Sidebar',
+                                  onPressed: () => setState(() => _sidebarExpanded = true),
+                                ),
+                                const SizedBox(height: AppSpacing.xs),
+                              ],
+                              _buildSidebarTile(
+                                context: context,
+                                title: 'Keluar',
+                                icon: LucideIcons.logOut,
+                                isSelected: false,
+                                showExpanded: showExpandedSidebar,
+                                isDanger: true,
+                                onTap: _showLogoutDialog,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Right Area: Compact Precision Topbar + Main Canvas
+                Expanded(
+                  child: Column(
+                    children: [
+                      // Top Header Strip (56px)
+                      Container(
+                        height: 56,
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                        decoration: BoxDecoration(
+                          color: cs.surface,
+                          border: Border(bottom: BorderSide(color: cs.outlineVariant)),
+                        ),
+                        child: Row(
+                          children: [
+                            if (!isDesktop) ...[
+                              IconButton(
+                                icon: Icon(LucideIcons.menu, color: cs.onSurface, size: 18),
+                                tooltip: 'Buka Menu',
+                                onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                            ],
+
+                            // Active Section Breadcrumb
+                            if (activeNav != null && screenWidth >= 820) ...[
+                              Text(
+                                activeNav.group,
+                                style: tt.labelSmall?.copyWith(
+                                  fontSize: 10.5,
+                                  letterSpacing: 0.7,
+                                  color: sem.textFaint,
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                                child: Text(
+                                  '/',
+                                  style: tt.bodySmall?.copyWith(color: sem.textFaint),
+                                ),
+                              ),
+                              Text(
+                                activeNav.title,
+                                style: tt.titleSmall?.copyWith(color: cs.onSurface),
+                              ),
+                              const SizedBox(width: AppSpacing.xl),
+                            ],
+
+                            // Quick Command Trigger (Ctrl+K)
+                            if (screenWidth >= 560)
+                              InkWell(
+                                onTap: () => _showQuickJumpDialog(visibleNavItems),
+                                borderRadius: BorderRadius.circular(AppRadius.control),
+                                child: Container(
+                                  width: screenWidth >= 1100 ? 260 : 200,
+                                  height: 34,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  decoration: BoxDecoration(
+                                    color: sem.subtleBg,
+                                    borderRadius: BorderRadius.circular(AppRadius.control),
+                                    border: Border.all(color: cs.outlineVariant),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        LucideIcons.search,
+                                        size: 14,
+                                        color: cs.onSurfaceVariant,
+                                      ),
+                                      const SizedBox(width: AppSpacing.sm),
+                                      Expanded(
+                                        child: Text(
+                                          'Pindah menu...',
+                                          style: tt.bodySmall?.copyWith(fontSize: 12),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 5,
+                                          vertical: 1.5,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: cs.surface,
+                                          borderRadius: BorderRadius.circular(AppRadius.tag),
+                                          border: Border.all(color: cs.outlineVariant),
+                                        ),
+                                        child: Text(
+                                          'Ctrl K',
+                                          style: tt.labelSmall?.copyWith(
+                                            fontSize: 10,
+                                            letterSpacing: 0.2,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                            const Spacer(),
+
+                            // Quick Upload Shortcut
+                            _buildTopActionButton(
+                              context: context,
+                              icon: LucideIcons.uploadCloud,
+                              tooltip: 'Bulk Upload Data',
+                              onTap: () => context.go('/bulk-upload'),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+
+                            // Theme Toggle
+                            _buildTopActionButton(
+                              context: context,
+                              icon: isDark ? LucideIcons.sun : LucideIcons.moon,
+                              tooltip: isDark ? 'Mode Terang' : 'Mode Gelap',
+                              iconColor: isDark ? sem.warning : cs.onSurfaceVariant,
+                              onTap: () => ref.read(themeProvider.notifier).toggleTheme(),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+
+                            Container(
+                              width: 1,
+                              height: 20,
+                              color: cs.outlineVariant,
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+
+                            // User Profile Button
+                            InkWell(
+                              onTap: _showProfileDialog,
+                              borderRadius: BorderRadius.circular(AppRadius.control),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 30,
+                                      height: 30,
+                                      decoration: BoxDecoration(
+                                        color: cs.primaryContainer,
+                                        borderRadius: BorderRadius.circular(AppRadius.control),
+                                        border: Border.all(
+                                          color: cs.primary.withValues(alpha: 0.25),
+                                        ),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        (user?.name.isNotEmpty == true ? user!.name[0] : 'A')
+                                            .toUpperCase(),
+                                        style: tt.labelLarge?.copyWith(
+                                          color: cs.onPrimaryContainer,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                    if (screenWidth >= 520) ...[
+                                      const SizedBox(width: 9),
+                                      ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                          maxWidth: screenWidth < 800 ? 110 : 160,
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              user?.name ?? 'Administrator',
+                                              overflow: TextOverflow.ellipsis,
+                                              style: tt.labelLarge?.copyWith(fontSize: 12.5),
+                                            ),
+                                            Text(
+                                              user?.role?.displayName ?? user?.email ?? 'User',
+                                              overflow: TextOverflow.ellipsis,
+                                              style: tt.bodySmall?.copyWith(fontSize: 10.5),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Main Content Canvas
+                      Expanded(
+                        child: Container(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                          child: widget.child,
+                        ),
                       ),
                     ],
-                  ),
-                ),
-
-                // Main Content Canvas
-                Expanded(
-                  child: Container(
-                    color: Theme.of(context).scaffoldBackgroundColor,
-                    child: widget.child,
                   ),
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -882,20 +976,20 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
       message: tooltip,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.control),
         hoverColor: sem.hoverBg,
         child: Container(
-          width: 38,
-          height: 38,
+          width: 34,
+          height: 34,
           decoration: BoxDecoration(
             color: sem.subtleBg,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppRadius.control),
             border: Border.all(color: cs.outlineVariant),
           ),
           alignment: Alignment.center,
           child: Icon(
             icon,
-            size: 17,
+            size: 16,
             color: iconColor ?? cs.onSurfaceVariant,
           ),
         ),
@@ -910,23 +1004,25 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
     bool showExpanded,
   ) {
     final tt = Theme.of(context).textTheme;
+    final sem = context.semantic;
     final List<Widget> widgets = [];
     String? lastGroup;
 
     for (final item in items) {
       if (item.group != lastGroup) {
         if (lastGroup != null) {
-          widgets.add(const SizedBox(height: 16));
+          widgets.add(const SizedBox(height: AppSpacing.lg));
         }
         if (showExpanded) {
           widgets.add(
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 4, 10, 6),
+              padding: const EdgeInsets.fromLTRB(10, 2, 10, 6),
               child: Text(
                 item.group,
                 style: tt.labelSmall?.copyWith(
-                  fontSize: 10.5,
-                  letterSpacing: 0.8,
+                  fontSize: 10,
+                  letterSpacing: 0.9,
+                  color: sem.textFaint,
                 ),
               ),
             ),
@@ -965,45 +1061,66 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final sem = context.semantic;
+    final isDark = context.isDarkMode;
 
-    final Color activeBg = isSelected ? cs.primaryContainer : Colors.transparent;
+    final Color activeBg = isSelected
+        ? (isDark ? cs.primaryContainer : cs.primaryContainer)
+        : Colors.transparent;
     final Color iconColor = isDanger
         ? sem.danger
-        : (isSelected ? cs.primary : cs.onSurfaceVariant);
+        : (isSelected ? cs.onPrimaryContainer : cs.onSurfaceVariant);
     final Color textColor = isDanger
         ? sem.danger
-        : (isSelected ? cs.primary : sem.textSecondary);
+        : (isSelected ? cs.onPrimaryContainer : sem.textSecondary);
 
     final tile = Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 1.5),
       child: Material(
-        color: activeBg,
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppRadius.control),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
-          hoverColor: isSelected ? cs.primaryContainer : sem.hoverBg,
-          child: Container(
-            height: 40,
-            padding: EdgeInsets.symmetric(horizontal: showExpanded ? 12 : 0),
-            alignment: showExpanded ? Alignment.centerLeft : Alignment.center,
+          borderRadius: BorderRadius.circular(AppRadius.control),
+          hoverColor: isSelected ? activeBg : sem.hoverBg,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            height: 38,
+            decoration: BoxDecoration(
+              color: activeBg,
+              borderRadius: BorderRadius.circular(AppRadius.control),
+            ),
             child: Row(
-              mainAxisAlignment: showExpanded ? MainAxisAlignment.start : MainAxisAlignment.center,
+              mainAxisAlignment:
+                  showExpanded ? MainAxisAlignment.start : MainAxisAlignment.center,
               children: [
-                Icon(icon, size: 18, color: iconColor),
+                if (showExpanded)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOutCubic,
+                    width: 2.5,
+                    height: isSelected ? 18 : 0,
+                    margin: const EdgeInsets.only(left: 2, right: 9),
+                    decoration: BoxDecoration(
+                      color: isSelected ? cs.primary : Colors.transparent,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                Icon(icon, size: 17, color: iconColor),
                 if (showExpanded) ...[
-                  const SizedBox(width: 11),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       title,
                       style: tt.bodyMedium?.copyWith(
-                        fontSize: 13.5,
+                        fontSize: 13,
                         fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                         color: textColor,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const SizedBox(width: AppSpacing.sm),
                 ],
               ],
             ),
@@ -1034,31 +1151,32 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              height: 64,
-              padding: const EdgeInsets.symmetric(horizontal: 18),
+              height: 56,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               decoration: BoxDecoration(
                 border: Border(bottom: BorderSide(color: cs.outlineVariant)),
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 34,
-                    height: 34,
+                    width: 30,
+                    height: 30,
                     decoration: BoxDecoration(
                       color: cs.primary,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppRadius.control),
                     ),
-                    child: Icon(LucideIcons.layoutGrid, color: cs.onPrimary, size: 18),
+                    alignment: Alignment.center,
+                    child: Icon(LucideIcons.barChart2, color: cs.onPrimary, size: 16),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'Sales Insentif',
-                      style: tt.titleLarge,
+                      style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                     ),
                   ),
                   IconButton(
-                    icon: Icon(LucideIcons.x, size: 18, color: cs.onSurfaceVariant),
+                    icon: Icon(LucideIcons.x, size: 17, color: cs.onSurfaceVariant),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -1066,7 +1184,10 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
             ),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm + 2,
+                  vertical: AppSpacing.md,
+                ),
                 children: _buildGroupedSidebarItems(
                   context,
                   visibleNavItems,

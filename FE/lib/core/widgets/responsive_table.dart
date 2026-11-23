@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 /// A wrapper widget that ensures data tables and wide components
 /// are horizontally scrollable with visible scrollbar and min-width expansion.
@@ -36,11 +37,12 @@ class _ResponsiveTableCardState extends State<ResponsiveTableCard> {
             : widget.minWidth;
 
         return ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadius.card),
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: cs.surface,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppRadius.card),
+              border: Border.all(color: cs.outlineVariant),
             ),
             child: Scrollbar(
               controller: _scrollController,

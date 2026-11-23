@@ -2496,31 +2496,46 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
     required IconData icon,
     required Color color,
   }) {
+    final colors = context.colors;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md + 2, vertical: 10),
       decoration: BoxDecoration(
-        color: context.colors.bgElevated,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.colors.border),
+        color: colors.bgCard,
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        border: Border.all(color: colors.border),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: color, size: 18),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(title, style: TextStyle(color: context.colors.textMuted, fontSize: 11)),
-              Text(value, style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15)),
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: colors.textMuted,
+                  fontSize: 11,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(icon, color: colors.textFaint, size: 13),
             ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: context.tabularNumStyle(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
           ),
         ],
       ),

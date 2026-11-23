@@ -529,9 +529,9 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                       style: ElevatedButton.styleFrom(
                         backgroundColor: context.semantic.successSolid,
                         foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        elevation: 2,
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.control)),
+                        elevation: 0,
                       ),
                       icon: state.isExporting
                           ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
@@ -630,20 +630,65 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                           _buildSummaryItem(context, title: 'Akumulasi Reward Insentif', value: CurrencyFormatter.formatRupiah(state.summary.totalReward), icon: LucideIcons.wallet, color: context.semantic.success),
                         ]);
 
-              return LayoutBuilder(
-                builder: (context, kpiConstraints) {
-                  final maxW = kpiConstraints.maxWidth;
-                  final cols = maxW >= 980 ? 4 : (maxW >= 540 ? 2 : 1);
-                  const spacing = 16.0;
-                  final itemWidth = ((maxW - spacing * (cols - 1)) / cols).floorToDouble();
-                  return Wrap(
-                    spacing: spacing,
-                    runSpacing: spacing,
-                    children: kpiCards
-                        .map((card) => SizedBox(width: itemWidth, child: card))
-                        .toList(),
-                  );
-                },
+              return Container(
+                decoration: BoxDecoration(
+                  color: colors.bgCard,
+                  borderRadius: BorderRadius.circular(AppRadius.card),
+                  border: Border.all(color: colors.border),
+                ),
+                child: LayoutBuilder(
+                  builder: (context, kpiConstraints) {
+                    final maxW = kpiConstraints.maxWidth;
+                    if (maxW >= 920) {
+                      return IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (int i = 0; i < kpiCards.length; i++) ...[
+                              if (i > 0) VerticalDivider(width: 1, thickness: 1, color: colors.border),
+                              Expanded(child: kpiCards[i]),
+                            ],
+                          ],
+                        ),
+                      );
+                    }
+                    if (maxW >= 540 && kpiCards.length == 4) {
+                      return Column(
+                        children: [
+                          IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(child: kpiCards[0]),
+                                VerticalDivider(width: 1, thickness: 1, color: colors.border),
+                                Expanded(child: kpiCards[1]),
+                              ],
+                            ),
+                          ),
+                          Divider(height: 1, color: colors.border),
+                          IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(child: kpiCards[2]),
+                                VerticalDivider(width: 1, thickness: 1, color: colors.border),
+                                Expanded(child: kpiCards[3]),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                    return Column(
+                      children: [
+                        for (int i = 0; i < kpiCards.length; i++) ...[
+                          if (i > 0) Divider(height: 1, color: colors.border),
+                          kpiCards[i],
+                        ],
+                      ],
+                    );
+                  },
+                ),
               );
             },
           ),
@@ -823,32 +868,51 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                 ),
                 Divider(height: 1, color: colors.border),
 
-                if (state.isLoading)
-                  Padding(padding: EdgeInsets.all(60), child: Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary)))
-                else if ((activeKategori == 'KONSUMSI' || activeKategori == 'DISTRIBUTOR') && state.isBreakdownView)
-                  _buildDistributorCardsView(context, state)
-                else if (activeKategori == 'INDUSTRI' && state.isBreakdownView)
-                  _buildIndustriBreakdownList(context, state)
-                else if (activeKategori == 'SURABAYA' && state.isBreakdownView)
-                  _buildSurabayaBreakdownList(context, state)
-                else if (filteredResults.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(LucideIcons.calculator, size: 48, color: colors.textMuted),
-                          const SizedBox(height: 16),
-                          Text('Belum Ada Data Insentif pada Periode Ini', style: GoogleFonts.plusJakartaSans(fontSize: 17, fontWeight: FontWeight.bold, color: colors.textPrimary)),
-                          const SizedBox(height: 6),
-                          Text('Pilih periode lain atau pastikan Master Target & Realisasi sudah tersedia.', style: TextStyle(fontSize: 13, color: colors.textSecondary)),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  _buildSummaryTable(context, filteredResults, colors),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  switchInCurve: Curves.easeOutCubic,
+                  child: KeyedSubtree(
+                    key: ValueKey('${activeKategori}_${state.isBreakdownView}_${state.isLoading}'),
+                    child: state.isLoading
+                        ? Padding(
+                            padding: const EdgeInsets.all(60),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                          )
+                        : ((activeKategori == 'KONSUMSI' || activeKategori == 'DISTRIBUTOR') && state.isBreakdownView)
+                            ? _buildDistributorCardsView(context, state)
+                            : (activeKategori == 'INDUSTRI' && state.isBreakdownView)
+                                ? _buildIndustriBreakdownList(context, state)
+                                : (activeKategori == 'SURABAYA' && state.isBreakdownView)
+                                    ? _buildSurabayaBreakdownList(context, state)
+                                    : filteredResults.isEmpty
+                                        ? Padding(
+                                            padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
+                                            child: Center(
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(LucideIcons.calculator, size: 42, color: colors.textMuted),
+                                                  const SizedBox(height: AppSpacing.md),
+                                                  Text(
+                                                    'Belum Ada Data Insentif pada Periode Ini',
+                                                    style: Theme.of(context).textTheme.titleLarge,
+                                                  ),
+                                                  const SizedBox(height: AppSpacing.xs),
+                                                  Text(
+                                                    'Pilih periode lain atau pastikan Master Target & Realisasi sudah tersedia.',
+                                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colors.textSecondary),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          )
+                                        : _buildSummaryTable(context, filteredResults, colors),
+                  ),
+                ),
               ],
             ),
           ),
@@ -859,36 +923,47 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
 
   Widget _buildSummaryItem(BuildContext context, {required String title, required String value, required IconData icon, required Color color}) {
     final colors = context.colors;
-    return Container(
-      constraints: const BoxConstraints(minHeight: 86),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: colors.bgCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.border, width: 1.2),
-        boxShadow: colors.cardShadows,
-      ),
-      child: Row(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md + 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: colors.textSecondary)),
-                const SizedBox(height: 3),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(value, maxLines: 1, style: GoogleFonts.plusJakartaSans(fontSize: 17, fontWeight: FontWeight.bold, color: colors.textPrimary)),
+          Row(
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colors.textMuted,
+                    letterSpacing: 0.2,
+                  ),
                 ),
-              ],
+              ),
+              Icon(icon, size: 14, color: colors.textFaint),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              maxLines: 1,
+              style: context.tabularNumStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: colors.textPrimary,
+              ),
             ),
           ),
         ],

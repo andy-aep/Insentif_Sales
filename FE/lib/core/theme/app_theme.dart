@@ -2,6 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 
+/// Consistent spacing scale (4px base grid) to eliminate arbitrary magic numbers.
+class AppSpacing {
+  static const double xs = 4.0;
+  static const double sm = 8.0;
+  static const double md = 12.0;
+  static const double lg = 16.0;
+  static const double xl = 24.0;
+  static const double xxl = 32.0;
+  static const double xxxl = 48.0;
+}
+
+/// Consistent crisp border-radius tokens for Utilitarian / Precision UI.
+class AppRadius {
+  static const double tag = 4.0;
+  static const double control = 6.0;
+  static const double card = 10.0;
+}
+
+/// Shared tabular figure font feature for aligned KPIs, currency, tonnage, and tables.
+const List<FontFeature> kTabularFigures = [FontFeature.tabularFigures()];
+
 /// Adaptive semantic & surface tokens registered on ThemeData.extensions.
 @immutable
 class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
@@ -62,54 +83,55 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
   static const AppSemanticColors light = AppSemanticColors(
     success: AppColors.successLightMode,
     successBg: AppColors.successBgLight,
-    successSolid: AppColors.successLightMode, // #059669
+    successSolid: AppColors.successLightMode, // #15803D
     warning: AppColors.warningLightMode,
     warningBg: AppColors.warningBgLight,
-    warningSolid: Color(0xFFB45309), // Amber 700 (AA contrast with white)
+    warningSolid: AppColors.warningLightMode, // #B45309
     danger: AppColors.dangerLightMode,
     dangerBg: AppColors.dangerBgLight,
     dangerSolid: AppColors.dangerLightMode, // #DC2626
     info: AppColors.infoLightMode,
     infoBg: AppColors.infoBgLight,
-    infoSolid: AppColors.infoLightMode, // #0284C7
-    secondaryAccent: Color(0xFF0D9488), // Teal 600
-    secondaryAccentBg: Color(0xFFF0FDFA), // Teal 50
-    tableHeaderBg: AppColors.slate50,
-    hoverBg: AppColors.slate100,
-    subtleBg: AppColors.slate50,
-    elevatedBg: AppColors.slate100,
+    infoSolid: AppColors.infoLightMode, // #0369A1
+    // Restrained architectural steel slate (never competes with primary accent)
+    secondaryAccent: Color(0xFF334155),
+    secondaryAccentBg: Color(0xFFF1F5F9),
+    tableHeaderBg: AppColors.slate100,
+    hoverBg: AppColors.slate150,
+    subtleBg: AppColors.slate100,
+    elevatedBg: AppColors.slate150,
     border: AppColors.slate200,
     borderStrong: AppColors.slate300,
-    textPrimary: AppColors.slate900,
-    textSecondary: AppColors.slate700,
+    textPrimary: AppColors.inkPrimary,
+    textSecondary: AppColors.inkSecondary,
     textMuted: AppColors.slate500,
     textFaint: AppColors.slate400,
-    cardShadowColor: Color(0x0A0F172A),
+    cardShadowColor: Color(0x00000000),
   );
 
   static const AppSemanticColors dark = AppSemanticColors(
     success: AppColors.successDarkMode,
-    successBg: Color(0x2E10B981),
-    successSolid: AppColors.successLightMode, // #059669 (AA contrast with white)
+    successBg: Color(0x2610B981),
+    successSolid: AppColors.successLightMode, // #15803D (AA contrast with white)
     warning: AppColors.warningDarkMode,
-    warningBg: Color(0x2EF59E0B),
-    warningSolid: Color(0xFFB45309), // Amber 700 (AA contrast with white)
+    warningBg: Color(0x26F59E0B),
+    warningSolid: AppColors.warningLightMode, // #B45309 (AA contrast with white)
     danger: AppColors.dangerDarkMode,
-    dangerBg: Color(0x2EEF4444),
+    dangerBg: Color(0x26EF4444),
     dangerSolid: AppColors.dangerLightMode, // #DC2626 (AA contrast with white)
     info: AppColors.infoDarkMode,
-    infoBg: Color(0x2E38BDF8),
-    infoSolid: AppColors.infoLightMode, // #0284C7 (AA contrast with white)
-    secondaryAccent: Color(0xFF2DD4BF), // Teal 400
-    secondaryAccentBg: Color(0x2E14B8A6),
+    infoBg: Color(0x2638BDF8),
+    infoSolid: AppColors.infoLightMode, // #0369A1 (AA contrast with white)
+    secondaryAccent: Color(0xFF94A3B8),
+    secondaryAccentBg: Color(0x2664748B),
     tableHeaderBg: AppColors.slate850,
-    hoverBg: Color(0xFF273549),
+    hoverBg: AppColors.slate875,
     subtleBg: AppColors.slate850,
-    elevatedBg: Color(0xFF273549),
+    elevatedBg: AppColors.slate875,
     border: AppColors.slate700,
     borderStrong: AppColors.slate600,
-    textPrimary: AppColors.slate50,
-    textSecondary: AppColors.slate300,
+    textPrimary: Color(0xFFF8FAFC),
+    textSecondary: Color(0xFFCBD5E1),
     textMuted: AppColors.slate400,
     textFaint: AppColors.slate500,
     cardShadowColor: Color(0x00000000),
@@ -256,14 +278,9 @@ class AppThemeColors {
   Color get secondaryAccent => _semantic.secondaryAccent;
   Color get secondaryAccentBg => _semantic.secondaryAccentBg;
 
-  BoxShadow get cardShadow => BoxShadow(
-        color: _semantic.cardShadowColor,
-        blurRadius: isDark ? 0 : 10,
-        spreadRadius: 0,
-        offset: const Offset(0, 2),
-      );
-
-  List<BoxShadow> get cardShadows => isDark ? const [] : [cardShadow];
+  /// Precision hairline surfaces use 1px borders + surface tonal contrast — zero blurry card shadows.
+  BoxShadow get cardShadow => const BoxShadow(color: Colors.transparent);
+  List<BoxShadow> get cardShadows => const [];
 }
 
 extension AppThemeExtension on BuildContext {
@@ -275,11 +292,30 @@ extension AppThemeExtension on BuildContext {
       Theme.of(this).extension<AppSemanticColors>() ??
       (isDarkMode ? AppSemanticColors.dark : AppSemanticColors.light);
   AppThemeColors get colors => AppThemeColors(Theme.of(this));
+
+  /// Tabular numeric TextStyle for financial figures, tonnage (Kg), outlets (Toko), and percentages.
+  TextStyle tabularNumStyle({
+    double fontSize = 14,
+    FontWeight fontWeight = FontWeight.w700,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return GoogleFonts.plusJakartaSans(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color ?? colorScheme.onSurface,
+      letterSpacing: letterSpacing ?? (fontSize >= 20 ? -0.4 : -0.1),
+      height: height,
+      fontFeatures: kTabularFigures,
+    );
+  }
 }
 
 class AppTheme {
-  static const double radiusCard = 12.0;
-  static const double radiusControl = 8.0;
+  static const double radiusCard = AppRadius.card; // 10px
+  static const double radiusControl = AppRadius.control; // 6px
+  static const double radiusTag = AppRadius.tag; // 4px
 
   static TextTheme _buildTextTheme(TextTheme base, Color primary, Color secondary, Color muted) {
     final jakarta = GoogleFonts.plusJakartaSansTextTheme(base);
@@ -289,46 +325,53 @@ class AppTheme {
         fontWeight: FontWeight.w700,
         letterSpacing: -0.6,
         color: primary,
-        height: 1.2,
+        height: 1.15,
+        fontFeatures: kTabularFigures,
       ),
       headlineMedium: GoogleFonts.plusJakartaSans(
         fontSize: 22,
         fontWeight: FontWeight.w700,
-        letterSpacing: -0.4,
+        letterSpacing: -0.45,
         color: primary,
         height: 1.25,
+        fontFeatures: kTabularFigures,
       ),
       headlineSmall: GoogleFonts.plusJakartaSans(
         fontSize: 18,
         fontWeight: FontWeight.w700,
-        letterSpacing: -0.25,
+        letterSpacing: -0.3,
         color: primary,
         height: 1.3,
+        fontFeatures: kTabularFigures,
       ),
       titleLarge: GoogleFonts.plusJakartaSans(
         fontSize: 16,
         fontWeight: FontWeight.w700,
-        letterSpacing: -0.2,
+        letterSpacing: -0.25,
         color: primary,
         height: 1.35,
+        fontFeatures: kTabularFigures,
       ),
       titleMedium: GoogleFonts.plusJakartaSans(
         fontSize: 14.5,
         fontWeight: FontWeight.w600,
+        letterSpacing: -0.15,
         color: primary,
         height: 1.35,
+        fontFeatures: kTabularFigures,
       ),
       titleSmall: GoogleFonts.plusJakartaSans(
         fontSize: 13,
         fontWeight: FontWeight.w600,
         color: primary,
         height: 1.35,
+        fontFeatures: kTabularFigures,
       ),
       bodyLarge: GoogleFonts.plusJakartaSans(
         fontSize: 14,
         fontWeight: FontWeight.w400,
         color: secondary,
-        height: 1.5,
+        height: 1.48,
       ),
       bodyMedium: GoogleFonts.plusJakartaSans(
         fontSize: 13,
@@ -346,17 +389,20 @@ class AppTheme {
         fontSize: 13,
         fontWeight: FontWeight.w600,
         color: primary,
+        fontFeatures: kTabularFigures,
       ),
       labelMedium: GoogleFonts.plusJakartaSans(
         fontSize: 12,
         fontWeight: FontWeight.w600,
         color: secondary,
+        fontFeatures: kTabularFigures,
       ),
       labelSmall: GoogleFonts.plusJakartaSans(
         fontSize: 11,
         fontWeight: FontWeight.w600,
-        letterSpacing: 0.3,
+        letterSpacing: 0.4,
         color: muted,
+        fontFeatures: kTabularFigures,
       ),
     );
   }
@@ -391,6 +437,7 @@ class AppTheme {
       extensions: [semantic],
       scaffoldBackgroundColor: scaffoldBg,
       canvasColor: colorScheme.surface,
+      dividerColor: semantic.border,
       textTheme: textTheme,
       fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
       iconTheme: IconThemeData(color: colorScheme.onSurfaceVariant, size: 18),
@@ -431,8 +478,8 @@ class AppTheme {
           disabledForegroundColor: semantic.textFaint,
           elevation: 0,
           shadowColor: Colors.transparent,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-          minimumSize: const Size(0, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+          minimumSize: const Size(0, 38),
           shape: controlShape,
           textStyle: GoogleFonts.plusJakartaSans(
             fontWeight: FontWeight.w600,
@@ -445,8 +492,8 @@ class AppTheme {
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-          minimumSize: const Size(0, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+          minimumSize: const Size(0, 38),
           shape: controlShape,
           textStyle: GoogleFonts.plusJakartaSans(
             fontWeight: FontWeight.w600,
@@ -460,8 +507,8 @@ class AppTheme {
           backgroundColor: colorScheme.surface,
           side: BorderSide(color: semantic.borderStrong),
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          minimumSize: const Size(0, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          minimumSize: const Size(0, 38),
           shape: controlShape,
           textStyle: GoogleFonts.plusJakartaSans(
             fontWeight: FontWeight.w600,
@@ -472,8 +519,8 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: colorScheme.primary,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          minimumSize: const Size(0, 38),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          minimumSize: const Size(0, 36),
           shape: controlShape,
           textStyle: GoogleFonts.plusJakartaSans(
             fontWeight: FontWeight.w600,
@@ -485,7 +532,7 @@ class AppTheme {
         filled: true,
         fillColor: colorScheme.surface,
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusControl),
           borderSide: BorderSide(color: semantic.borderStrong),
@@ -538,11 +585,11 @@ class AppTheme {
           }
           return colorScheme.surface;
         }),
-        headingRowHeight: 44,
-        dataRowMinHeight: 48,
-        dataRowMaxHeight: 68,
+        headingRowHeight: 40,
+        dataRowMinHeight: 46,
+        dataRowMaxHeight: 66,
         horizontalMargin: 16,
-        columnSpacing: 20,
+        columnSpacing: 18,
         dividerThickness: 1,
         headingTextStyle: GoogleFonts.plusJakartaSans(
           fontSize: 11.5,
@@ -554,6 +601,7 @@ class AppTheme {
           fontSize: 13,
           fontWeight: FontWeight.w400,
           color: colorScheme.onSurface,
+          fontFeatures: kTabularFigures,
         ),
       ),
       tabBarTheme: TabBarThemeData(
@@ -582,16 +630,17 @@ class AppTheme {
           fontSize: 12,
           fontWeight: FontWeight.w600,
           color: colorScheme.onSurface,
+          fontFeatures: kTabularFigures,
         ),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       ),
       popupMenuTheme: PopupMenuThemeData(
         color: colorScheme.surface,
         surfaceTintColor: Colors.transparent,
-        elevation: 2,
+        elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusControl),
-          side: BorderSide(color: semantic.border),
+          side: BorderSide(color: semantic.borderStrong),
         ),
         textStyle: textTheme.bodyMedium,
       ),
@@ -599,24 +648,27 @@ class AppTheme {
         menuStyle: MenuStyle(
           backgroundColor: WidgetStatePropertyAll(colorScheme.surface),
           surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          elevation: const WidgetStatePropertyAll(0),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(radiusControl),
-              side: BorderSide(color: semantic.border),
+              side: BorderSide(color: semantic.borderStrong),
             ),
           ),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: isDark ? AppColors.slate800 : AppColors.slate900,
+        elevation: 0,
+        backgroundColor: isDark ? AppColors.slate850 : AppColors.inkPrimary,
         contentTextStyle: GoogleFonts.plusJakartaSans(
-          color: AppColors.slate50,
+          color: const Color(0xFFF8FAFC),
           fontSize: 13,
           fontWeight: FontWeight.w500,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusControl),
+          side: isDark ? BorderSide(color: semantic.borderStrong) : BorderSide.none,
         ),
       ),
       checkboxTheme: CheckboxThemeData(
@@ -626,7 +678,7 @@ class AppTheme {
         }),
         checkColor: WidgetStatePropertyAll(colorScheme.onPrimary),
         side: BorderSide(color: semantic.borderStrong, width: 1.5),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusTag)),
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
@@ -643,7 +695,7 @@ class AppTheme {
         }),
       ),
       scrollbarTheme: ScrollbarThemeData(
-        radius: const Radius.circular(6),
+        radius: const Radius.circular(radiusTag),
         thickness: const WidgetStatePropertyAll(6),
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.hovered) || states.contains(WidgetState.dragged)) {
@@ -655,11 +707,12 @@ class AppTheme {
       ),
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
-          color: isDark ? AppColors.slate700 : AppColors.slate900,
-          borderRadius: BorderRadius.circular(6),
+          color: isDark ? AppColors.slate875 : AppColors.inkPrimary,
+          borderRadius: BorderRadius.circular(radiusTag),
+          border: isDark ? Border.all(color: semantic.borderStrong) : null,
         ),
         textStyle: GoogleFonts.plusJakartaSans(
-          color: AppColors.slate50,
+          color: const Color(0xFFF8FAFC),
           fontSize: 11.5,
           fontWeight: FontWeight.w500,
         ),
@@ -676,66 +729,66 @@ class AppTheme {
 
   static ThemeData get lightTheme {
     const colorScheme = ColorScheme.light(
-      primary: AppColors.indigoLight, // #4F46E5
+      primary: AppColors.brandLight, // #0F766E Deep Maritime Teal
       onPrimary: Color(0xFFFFFFFF),
-      primaryContainer: AppColors.indigoSoftLight, // #EEF2FF
-      onPrimaryContainer: AppColors.indigoDeep, // #4338CA
-      secondary: Color(0xFF0D9488), // Teal 600
+      primaryContainer: AppColors.brandSoftLight, // #F0FDFA
+      onPrimaryContainer: AppColors.brandDeep, // #115E59
+      secondary: Color(0xFF334155), // Architectural Slate 700
       onSecondary: Color(0xFFFFFFFF),
-      secondaryContainer: Color(0xFFF0FDFA),
-      onSecondaryContainer: Color(0xFF115E59),
-      tertiary: AppColors.infoLightMode, // #0284C7
+      secondaryContainer: Color(0xFFF1F5F9),
+      onSecondaryContainer: Color(0xFF1E293B),
+      tertiary: AppColors.infoLightMode, // #0369A1
       onTertiary: Color(0xFFFFFFFF),
       surface: Color(0xFFFFFFFF),
-      onSurface: AppColors.slate900, // #0F172A
+      onSurface: AppColors.inkPrimary, // #111827
       onSurfaceVariant: AppColors.slate500, // #64748B
-      surfaceContainerLowest: AppColors.slate50, // #F8FAFC
-      surfaceContainerLow: AppColors.slate50, // #F8FAFC
-      surfaceContainer: AppColors.slate100, // #F1F5F9
-      surfaceContainerHigh: AppColors.slate200, // #E2E8F0
+      surfaceContainerLowest: AppColors.slate50, // #F6F7F9
+      surfaceContainerLow: AppColors.slate100, // #F1F3F6
+      surfaceContainer: AppColors.slate150, // #EAECEF
+      surfaceContainerHigh: AppColors.slate200, // #E2E6EC
       surfaceContainerHighest: AppColors.slate200,
-      outline: AppColors.slate300, // #CBD5E1
-      outlineVariant: AppColors.slate200, // #E2E8F0
+      outline: AppColors.slate300, // #CBD2DC
+      outlineVariant: AppColors.slate200, // #E2E6EC
       error: AppColors.dangerLightMode, // #DC2626
       onError: Color(0xFFFFFFFF),
       errorContainer: AppColors.dangerBgLight,
       onErrorContainer: Color(0xFF991B1B),
-      shadow: AppColors.slate900,
+      shadow: AppColors.inkPrimary,
     );
 
     return _buildTheme(
       brightness: Brightness.light,
       colorScheme: colorScheme,
       semantic: AppSemanticColors.light,
-      scaffoldBg: AppColors.slate50, // #F8FAFC
+      scaffoldBg: AppColors.slate50, // #F6F7F9
     );
   }
 
   static ThemeData get darkTheme {
     const colorScheme = ColorScheme.dark(
-      primary: AppColors.indigoDark, // #6366F1
+      primary: AppColors.brandDark, // #0D9488 Maritime Teal (AA white text + crisp on dark)
       onPrimary: Color(0xFFFFFFFF),
-      primaryContainer: Color(0x336366F1),
-      onPrimaryContainer: AppColors.indigoBright, // #818CF8
-      secondary: Color(0xFF2DD4BF), // Teal 400
+      primaryContainer: Color(0x2E14B8A6),
+      onPrimaryContainer: AppColors.brandBright, // #5EEAD4
+      secondary: Color(0xFF94A3B8), // Architectural Slate 400
       onSecondary: AppColors.slate900,
-      secondaryContainer: Color(0x2E14B8A6),
-      onSecondaryContainer: Color(0xFF5EEAD4),
+      secondaryContainer: Color(0x2664748B),
+      onSecondaryContainer: Color(0xFFCBD5E1),
       tertiary: AppColors.infoDarkMode, // #38BDF8
       onTertiary: AppColors.slate900,
-      surface: AppColors.slate800, // #1E293B
-      onSurface: AppColors.slate50, // #F8FAFC
+      surface: AppColors.slate800, // #111827
+      onSurface: Color(0xFFF8FAFC),
       onSurfaceVariant: AppColors.slate400, // #94A3B8
-      surfaceContainerLowest: AppColors.slate900, // #0F172A
-      surfaceContainerLow: AppColors.slate850, // #172033
-      surfaceContainer: Color(0xFF273549),
-      surfaceContainerHigh: AppColors.slate700, // #334155
+      surfaceContainerLowest: AppColors.slate900, // #090D16
+      surfaceContainerLow: AppColors.slate850, // #161F30
+      surfaceContainer: AppColors.slate875, // #1F2A3E
+      surfaceContainerHigh: AppColors.slate700, // #243044
       surfaceContainerHighest: AppColors.slate700,
-      outline: AppColors.slate600, // #475569
-      outlineVariant: AppColors.slate700, // #334155
+      outline: AppColors.slate600, // #36455E
+      outlineVariant: AppColors.slate700, // #243044
       error: AppColors.dangerLightMode, // #DC2626 (AA contrast with white text on error buttons)
       onError: Color(0xFFFFFFFF),
-      errorContainer: Color(0x2EEF4444),
+      errorContainer: Color(0x26EF4444),
       onErrorContainer: Color(0xFFFCA5A5),
       shadow: AppColors.slate950,
     );
@@ -744,7 +797,7 @@ class AppTheme {
       brightness: Brightness.dark,
       colorScheme: colorScheme,
       semantic: AppSemanticColors.dark,
-      scaffoldBg: AppColors.slate900, // #0F172A
+      scaffoldBg: AppColors.slate900, // #090D16
     );
   }
 }

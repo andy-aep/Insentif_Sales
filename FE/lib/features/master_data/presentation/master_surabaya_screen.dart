@@ -2210,31 +2210,46 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
     required IconData icon,
     required Color color,
   }) {
+    final colors = context.colors;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md + 2, vertical: 10),
       decoration: BoxDecoration(
-        color: context.colors.bgElevated,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.colors.border),
+        color: colors.bgCard,
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        border: Border.all(color: colors.border),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: color, size: 18),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(title, style: TextStyle(color: context.colors.textMuted, fontSize: 11)),
-              Text(value, style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: colors.textMuted,
+                  fontSize: 11,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(icon, color: colors.textFaint, size: 13),
             ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: context.tabularNumStyle(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
           ),
         ],
       ),
@@ -2802,31 +2817,50 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                                         itemBuilder: (context, idx) {
                                           final c = filteredSap[idx];
                                           final isSelected = selectedSapCustomer?.cardCode == c.cardCode;
-                                          return ListTile(
-                                            dense: true,
-                                            selected: isSelected,
-                                            selectedTileColor: context.semantic.success.withValues(alpha: 0.12),
-                                            title: Text(
-                                              c.cardName,
-                                              style: TextStyle(
-                                                color: context.colors.textPrimary,
-                                                fontSize: 12.5,
-                                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            subtitle: Text(
-                                              '${c.cardCode}${c.city.isNotEmpty ? " • ${c.city}" : ""}',
-                                              style: TextStyle(color: context.colors.textMuted, fontSize: 11),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            trailing: isSelected
-                                                ? Icon(LucideIcons.check, size: 16, color: context.semantic.success)
-                                                : null,
+                                          return InkWell(
                                             onTap: () => setDState(() {
                                               selectedSapCustomer = c;
                                               selectedCustomerId = null;
                                             }),
+                                            child: AnimatedContainer(
+                                              duration: const Duration(milliseconds: 150),
+                                              curve: Curves.easeOutCubic,
+                                              color: isSelected
+                                                  ? context.semantic.success.withValues(alpha: 0.1)
+                                                  : Colors.transparent,
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: AppSpacing.md,
+                                                vertical: 10,
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Text(
+                                                          c.cardName,
+                                                          style: TextStyle(
+                                                            color: context.colors.textPrimary,
+                                                            fontSize: 12.5,
+                                                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                                          ),
+                                                          overflow: TextOverflow.ellipsis,
+                                                        ),
+                                                        const SizedBox(height: 2),
+                                                        Text(
+                                                          '${c.cardCode}${c.city.isNotEmpty ? " • ${c.city}" : ""}',
+                                                          style: TextStyle(color: context.colors.textMuted, fontSize: 11),
+                                                          overflow: TextOverflow.ellipsis,
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  if (isSelected)
+                                                    Icon(LucideIcons.check, size: 15, color: context.semantic.success),
+                                                ],
+                                              ),
+                                            ),
                                           );
                                         },
                                       ),

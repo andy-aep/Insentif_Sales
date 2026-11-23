@@ -28,19 +28,12 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Sticky Header & Multi-Period Filter Bar (selalu terjangkau saat scroll)
+        // Sticky Header & Multi-Period Filter Bar (crisp 1px hairline, zero shadow)
         Container(
-          padding: const EdgeInsets.fromLTRB(28, 12, 28, 12),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.md),
           decoration: BoxDecoration(
             color: context.colors.bgCard,
-            border: Border(bottom: BorderSide(color: context.colors.border.withValues(alpha: 0.7))),
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            border: Border(bottom: BorderSide(color: context.colors.border)),
           ),
           child: _buildHeader(context, authUser, dashState),
         ),
@@ -48,7 +41,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
         // Scrollable Dashboard Content
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(28, 20, 28, 28),
+            padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xl, AppSpacing.xl, AppSpacing.xxl),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -78,32 +71,22 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     final scheme = state.salesScheme.toUpperCase();
     final userName = user?.name ?? state.user?['name'] ?? (isAdmin ? 'Administrator' : 'Sales');
 
-    String portalBadge = canManage
-        ? 'PORTAL ADMINISTRATOR • $scopeLabel'
-        : 'PORTAL EKSEKUTIF ${userPos.isNotEmpty ? '• $userPos ' : ''}• $scopeLabel';
-    String headerSubtitle =
-        'Halo $userName, pantau performa penjualan, Sell-Through, Region, Brand, dan pencapaian tim.';
+    String contextMeta = canManage
+        ? 'Administrator • Cakupan $scopeLabel • $userName'
+        : 'Eksekutif${userPos.isNotEmpty ? ' $userPos' : ''} • Cakupan $scopeLabel • $userName';
+    String pageTitle = isAdmin ? 'Ringkasan Insentif & Distribusi' : 'Pencapaian Insentif Saya';
 
     if (!isAdmin) {
       if (scheme == 'INDUSTRI') {
-        portalBadge = 'PORTAL SALES INDUSTRI • $userPos';
-        headerSubtitle =
-            'Halo $userName, pantau target Sell-In (Kg), pencapaian NOO (New Open Outlet), dan rincian insentif Industri Anda.';
+        contextMeta = 'Sales Industri ($userPos) • $userName • Kuota Volume (Kg) & NOO';
       } else if (scheme == 'SURABAYA') {
-        if (userPos == 'ASC') {
-          portalBadge = 'PORTAL KOORDINATOR SURABAYA • ASC';
-          headerSubtitle =
-              'Halo $userName, pantau evaluasi pencapaian tim bawahan (TO & SM) serta akumulasi insentif koordinasi ASC Anda.';
-        } else {
-          portalBadge = 'PORTAL SALES SURABAYA • $userPos';
-          headerSubtitle =
-              'Halo $userName, pantau kuota penjualan langsung Surabaya, realisasi tonase (Kg), dan perhitungan insentif Anda.';
-        }
+        contextMeta = userPos == 'ASC'
+            ? 'Koordinator Surabaya (ASC) • $userName • Evaluasi Tim TO & SM'
+            : 'Sales Surabaya ($userPos) • $userName • Kuota Penjualan Langsung';
       } else {
-        portalBadge = 'PORTAL SALES DISTRIBUTOR • $userPos';
-        headerSubtitle = userPos == 'ASM'
-            ? 'Halo $userName, pantau target kuota Sell-In Depo penugasan, realisasi distributor, dan estimasi insentif Anda.'
-            : 'Halo $userName, pantau target kuota Sell-Out Area, sebaran Active Outlet (AO), dan estimasi insentif Anda.';
+        contextMeta = userPos == 'ASM'
+            ? 'Sales Distributor (ASM) • $userName • Sell-In Depo'
+            : 'Sales Distributor ($userPos) • $userName • Sell-Out Area & Active Outlet';
       }
     }
 
@@ -114,45 +97,19 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
         final titleSection = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Wrap(
-              spacing: 10,
-              runSpacing: 4,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Text(
-                  isAdmin ? 'Sales Incentive Command Center' : 'Dashboard Pencapaian Insentif',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.4,
-                    color: context.colors.textPrimary,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: (isAdmin ? Theme.of(context).colorScheme.primary : context.semantic.secondaryAccent).withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    portalBadge,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                      color: isAdmin ? Theme.of(context).colorScheme.primary : context.semantic.secondaryAccent,
-                      letterSpacing: 0.4,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 3),
             Text(
-              headerSubtitle,
+              pageTitle,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontSize: 18.5,
+                letterSpacing: -0.35,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              contextMeta,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 12.5,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: context.colors.textMuted,
               ),
             ),
@@ -293,102 +250,277 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     final totalReward = (kpi['total_incentive_pool'] as num?)?.toDouble() ?? 0.0;
     final totalDist = (kpi['total_distributors'] as num?)?.toInt() ?? 0;
     final totalSales = (kpi['total_sales'] as num?)?.toInt() ?? 0;
+    final incentiveRatioPct = (kpi['incentive_ratio_pct'] as num?)?.toDouble() ?? 0.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // KPI Summary Cards
+        // Focal Point: Asymmetric Hero Budget Card + 3-Column Hairline Operational Ledger
         LayoutBuilder(
           builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= 960;
-            final isMid = constraints.maxWidth >= 600 && !isWide;
+            final isWide = constraints.maxWidth >= 980;
+            final cs = Theme.of(context).colorScheme;
+            final sem = context.semantic;
+            final colors = context.colors;
 
-            final card1 = _buildKpiCard(
-              title: 'Target Sell-In (Depo/ASM)',
-              value: '${CurrencyFormatter.formatNumber(targetSellIn)} Kg',
-              subValue: 'Realisasi: ${CurrencyFormatter.formatNumber(realSellIn)} Kg',
-              badgeText: '${achSellIn.toStringAsFixed(1)}%',
-              badgeColor: achSellIn >= 100 ? context.semantic.success : (achSellIn > 0 ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant),
-              icon: LucideIcons.truck,
-              footerText: '$totalDist Distributor ($scopeLabel)',
-              progress: (achSellIn / 100).clamp(0.0, 1.0),
-            );
-
-            final card2 = _buildKpiCard(
-              title: 'Target Sell-Out (Area/SPV)',
-              value: '${CurrencyFormatter.formatNumber(targetSellOut)} Kg',
-              subValue: 'Realisasi: ${CurrencyFormatter.formatNumber(realSellOut)} Kg',
-              badgeText: '${achSellOut.toStringAsFixed(1)}%',
-              badgeColor: achSellOut >= 100 ? context.semantic.success : (achSellOut > 0 ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant),
-              icon: LucideIcons.shoppingBag,
-              footerText: 'Konsumsi Multi-Brand',
-              progress: (achSellOut / 100).clamp(0.0, 1.0),
-            );
-
-            final card3 = _buildKpiCard(
-              title: 'Target Active Outlet (AO)',
-              value: '${CurrencyFormatter.formatNumber(targetOutlet)} Toko',
-              subValue: 'Aktual: ${CurrencyFormatter.formatNumber(realOutlet)} Toko',
-              badgeText: '${achOutlet.toStringAsFixed(1)}%',
-              badgeColor: achOutlet >= 100 ? context.semantic.success : (achOutlet > 0 ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant),
-              icon: LucideIcons.store,
-              footerText: 'Cakupan Toko Ritel Area',
-              progress: (achOutlet / 100).clamp(0.0, 1.0),
-            );
-
-            final card4 = _buildKpiCard(
-              title: 'Estimasi Budget Insentif',
-              value: CurrencyFormatter.formatRupiah(totalReward),
-              subValue: totalReward > 0 ? 'Terkalkulasi Periode Aktif' : 'Belum Dijalankan',
-              badgeText: '$totalSales Sales',
-              badgeColor: context.semantic.secondaryAccent,
-              icon: LucideIcons.coins,
-              footerText: 'Skema Konsumsi & Industri',
-              progress: totalReward > 0 ? 1.0 : 0.0,
-            );
-
-            if (isWide) {
-              return Row(
+            final heroBudgetPanel = Container(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              decoration: BoxDecoration(
+                color: colors.bgCard,
+                borderRadius: BorderRadius.circular(AppRadius.card),
+                border: Border.all(color: colors.border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(child: card1),
-                  const SizedBox(width: 14),
-                  Expanded(child: card2),
-                  const SizedBox(width: 14),
-                  Expanded(child: card3),
-                  const SizedBox(width: 14),
-                  Expanded(child: card4),
+                  Row(
+                    children: [
+                      Container(
+                        width: 3,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: cs.primary,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          'ESTIMASI BUDGET INSENTIF',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            letterSpacing: 0.8,
+                            color: colors.textMuted,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        totalReward > 0 ? 'Terkalkulasi' : 'Menunggu',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: totalReward > 0 ? sem.success : colors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      CurrencyFormatter.formatRupiah(totalReward),
+                      style: context.tabularNumStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.7,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Divider(height: 1, color: colors.border),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '$totalSales Sales • $totalDist Distributor ($scopeLabel)',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        incentiveRatioPct > 0
+                            ? 'Rasio ${incentiveRatioPct.toStringAsFixed(2)}%'
+                            : 'Skema Aktif',
+                        style: context.tabularNumStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: cs.primary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
+              ),
+            );
+
+            Widget buildLedgerMetric({
+              required String label,
+              required String primaryValue,
+              required String secondaryLine,
+              required double pct,
+              required String footnote,
+            }) {
+              final Color statusColor = pct >= 100
+                  ? sem.success
+                  : (pct >= 80 ? cs.primary : (pct > 0 ? sem.warning : colors.textMuted));
+
+              return Padding(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                              color: colors.textMuted,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(
+                          '${pct.toStringAsFixed(1)}%',
+                          style: context.tabularNumStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: statusColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        primaryValue,
+                        style: context.tabularNumStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.4,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      secondaryLine,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.tabularNumStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(2),
+                      child: LinearProgressIndicator(
+                        value: (pct / 100).clamp(0.0, 1.0),
+                        minHeight: 3,
+                        backgroundColor: colors.bgElevated,
+                        valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      footnote,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 11,
+                        color: colors.textFaint,
+                      ),
+                    ),
+                  ],
+                ),
               );
             }
 
-            if (isMid) {
-              return Column(
-                children: [
-                  Row(children: [Expanded(child: card1), const SizedBox(width: 14), Expanded(child: card2)]),
-                  const SizedBox(height: 14),
-                  Row(children: [Expanded(child: card3), const SizedBox(width: 14), Expanded(child: card4)]),
-                ],
+            final sellInMetric = buildLedgerMetric(
+              label: 'Sell-In (Depo / ASM)',
+              primaryValue: '${CurrencyFormatter.formatNumber(realSellIn)} Kg',
+              secondaryLine: 'Target ${CurrencyFormatter.formatNumber(targetSellIn)} Kg',
+              pct: achSellIn,
+              footnote: '$totalDist Distributor ($scopeLabel)',
+            );
+
+            final sellOutMetric = buildLedgerMetric(
+              label: 'Sell-Out (Area / SPV)',
+              primaryValue: '${CurrencyFormatter.formatNumber(realSellOut)} Kg',
+              secondaryLine: 'Target ${CurrencyFormatter.formatNumber(targetSellOut)} Kg',
+              pct: achSellOut,
+              footnote: 'Konsumsi Multi-Brand',
+            );
+
+            final aoMetric = buildLedgerMetric(
+              label: 'Active Outlet (AO)',
+              primaryValue: '${CurrencyFormatter.formatNumber(realOutlet)} Toko',
+              secondaryLine: 'Target ${CurrencyFormatter.formatNumber(targetOutlet)} Toko',
+              pct: achOutlet,
+              footnote: 'Cakupan Toko Ritel Area',
+            );
+
+            final operationalLedger = Container(
+              decoration: BoxDecoration(
+                color: colors.bgCard,
+                borderRadius: BorderRadius.circular(AppRadius.card),
+                border: Border.all(color: colors.border),
+              ),
+              child: constraints.maxWidth >= 680
+                  ? IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(child: sellInMetric),
+                          VerticalDivider(width: 1, thickness: 1, color: colors.border),
+                          Expanded(child: sellOutMetric),
+                          VerticalDivider(width: 1, thickness: 1, color: colors.border),
+                          Expanded(child: aoMetric),
+                        ],
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        sellInMetric,
+                        Divider(height: 1, color: colors.border),
+                        sellOutMetric,
+                        Divider(height: 1, color: colors.border),
+                        aoMetric,
+                      ],
+                    ),
+            );
+
+            if (isWide) {
+              return IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(flex: 4, child: heroBudgetPanel),
+                    const SizedBox(width: AppSpacing.lg),
+                    Expanded(flex: 8, child: operationalLedger),
+                  ],
+                ),
               );
             }
 
             return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                card1,
-                const SizedBox(height: 14),
-                card2,
-                const SizedBox(height: 14),
-                card3,
-                const SizedBox(height: 14),
-                card4,
+                heroBudgetPanel,
+                const SizedBox(height: AppSpacing.md),
+                operationalLedger,
               ],
             );
           },
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.md),
 
-        // Executive Health Strip: Sell-Through, Omzet DPP, Rasio Insentif
+        // Compact Precision Health Strip: Sell-Through, Omzet DPP, Rasio Insentif
         _buildExecutiveHealthStrip(context, kpi),
-        const SizedBox(height: 20),
+        const SizedBox(height: AppSpacing.xl),
 
         // Section: Sales Leaderboard & Performa Distributor (Sell-In + Watchlist)
         LayoutBuilder(
@@ -1291,104 +1423,89 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     required String footerText,
     required double progress,
   }) {
+    final colors = context.colors;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: context.colors.bgCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
-        boxShadow: context.colors.cardShadows,
+        color: colors.bgCard,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: badgeColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
+              Icon(icon, color: colors.textMuted, size: 15),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: colors.textMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                child: Icon(icon, color: badgeColor, size: 20),
               ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: badgeColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    badgeText,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.plusJakartaSans(
-                      color: badgeColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                badgeText,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.tabularNumStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: badgeColor,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          Text(
-            title,
-            style: GoogleFonts.plusJakartaSans(
-              color: context.colors.textMuted,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w500,
+          const SizedBox(height: AppSpacing.md),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: context.tabularNumStyle(
+                fontSize: 21,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.4,
+                color: colors.textPrimary,
+              ),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: GoogleFonts.plusJakartaSans(
-              color: context.colors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.3,
-            ),
-          ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             subValue,
-            style: GoogleFonts.plusJakartaSans(
-              color: context.colors.textSecondary,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: context.tabularNumStyle(
               fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: colors.textSecondary,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.md),
           ClipRRect(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(2),
             child: LinearProgressIndicator(
               value: progress,
-              minHeight: 5,
-              backgroundColor: context.colors.bgElevated,
+              minHeight: 3,
+              backgroundColor: colors.bgElevated,
               valueColor: AlwaysStoppedAnimation<Color>(badgeColor),
             ),
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Icon(LucideIcons.info, size: 12, color: context.colors.textFaint),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  footerText,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.plusJakartaSans(
-                    color: context.colors.textFaint,
-                    fontSize: 11,
-                  ),
-                ),
-              ),
-            ],
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            footerText,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontSize: 11,
+              color: colors.textFaint,
+            ),
           ),
         ],
       ),
@@ -1528,7 +1645,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
       children: [
         Text(
           '${CurrencyFormatter.formatNumber(realVal)} / ${CurrencyFormatter.formatNumber(targetVal)} $unit',
-          style: GoogleFonts.plusJakartaSans(
+          style: context.tabularNumStyle(
             color: colors.textPrimary,
             fontSize: 12,
             fontWeight: FontWeight.w600,
@@ -1538,15 +1655,15 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
           decoration: BoxDecoration(
-            color: badgeColor.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(6),
+            color: badgeColor.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(AppRadius.tag),
           ),
           child: Text(
             '${pct.toStringAsFixed(1)}%',
-            style: GoogleFonts.plusJakartaSans(
+            style: context.tabularNumStyle(
               color: badgeColor,
               fontSize: 10.5,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
@@ -1804,93 +1921,79 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
         ? Theme.of(context).colorScheme.onSurfaceVariant
         : (incentiveRatioPct <= 3.0 ? context.semantic.success : context.semantic.warning);
 
-    Widget buildTile({
-      required IconData icon,
-      required Color iconColor,
+    Widget buildStripCell({
+      required Color statusColor,
       required String label,
       required String value,
       required String badge,
-      required Color badgeColor,
       required String caption,
     }) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-        decoration: BoxDecoration(
-          color: context.colors.bgCard,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
-          boxShadow: context.colors.cardShadows,
-        ),
-        child: Row(
+      final colors = context.colors;
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, size: 19, color: iconColor),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                            color: context.colors.textMuted,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: badgeColor.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          badge,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
-                            color: badgeColor,
-                          ),
-                        ),
-                      ),
-                    ],
+            Row(
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(height: 3),
-                  Text(
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: colors.textMuted,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  badge,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: statusColor,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Flexible(
+                  child: Text(
                     value,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: context.colors.textPrimary,
+                    style: context.tabularNumStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: colors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    caption,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 11,
-                      color: context.colors.textMuted,
-                    ),
-                  ),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(
+              caption,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 11,
+                color: colors.textMuted,
               ),
             ),
           ],
@@ -1898,61 +2001,66 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
       );
     }
 
-    final tile1 = buildTile(
-      icon: LucideIcons.activity,
-      iconColor: stColor,
+    final cell1 = buildStripCell(
+      statusColor: stColor,
       label: 'Sell-Through (SO ÷ SI)',
       value: '${sellThroughPct.toStringAsFixed(1)}%',
       badge: stBadge,
-      badgeColor: stColor,
       caption: 'SO ${_formatCompactKg(realSellOut)} vs SI ${_formatCompactKg(realSellIn)}',
     );
 
-    final tile2 = buildTile(
-      icon: LucideIcons.banknote,
-      iconColor: context.semantic.secondaryAccent,
+    final cell2 = buildStripCell(
+      statusColor: Theme.of(context).colorScheme.primary,
       label: 'Total Omzet Penjualan',
       value: CurrencyFormatter.formatRupiah(displayOmzet),
       badge: omzetBadge,
-      badgeColor: context.semantic.secondaryAccent,
       caption: totalDppSellOut > 0
           ? 'DPP Sell-In: ${CurrencyFormatter.formatRupiah(totalDppSellIn)}'
           : 'Akumulasi nominal transaksi periode terpilih',
     );
 
-    final tile3 = buildTile(
-      icon: LucideIcons.pieChart,
-      iconColor: ratioColor,
+    final cell3 = buildStripCell(
+      statusColor: ratioColor,
       label: 'Rasio Insentif / Omzet',
       value: '${incentiveRatioPct.toStringAsFixed(2)}%',
       badge: ratioBadge,
-      badgeColor: ratioColor,
       caption: 'Budget ${CurrencyFormatter.formatRupiah(totalReward)} dari Omzet Sell-Out',
     );
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth >= 820) {
-          return Row(
+    final colors = context.colors;
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.bgCard,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: colors.border),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth >= 820) {
+            return IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: cell1),
+                  VerticalDivider(width: 1, thickness: 1, color: colors.border),
+                  Expanded(child: cell2),
+                  VerticalDivider(width: 1, thickness: 1, color: colors.border),
+                  Expanded(child: cell3),
+                ],
+              ),
+            );
+          }
+          return Column(
             children: [
-              Expanded(child: tile1),
-              const SizedBox(width: 14),
-              Expanded(child: tile2),
-              const SizedBox(width: 14),
-              Expanded(child: tile3),
+              cell1,
+              Divider(height: 1, color: colors.border),
+              cell2,
+              Divider(height: 1, color: colors.border),
+              cell3,
             ],
           );
-        }
-        return Column(
-          children: [
-            tile1,
-            const SizedBox(height: 12),
-            tile2,
-            const SizedBox(height: 12),
-            tile3,
-          ],
-        );
-      },
+        },
+      ),
     );
   }
 
