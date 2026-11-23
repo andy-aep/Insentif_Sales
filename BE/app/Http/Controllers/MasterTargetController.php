@@ -72,6 +72,7 @@ class MasterTargetController extends Controller
             ->whereNotNull('distributor_id')
             ->when(! empty($periodList), fn ($q) => $q->whereIn('period', $periodList))
             ->when($request->distributor_id, fn ($q) => $q->where('distributor_id', $request->distributor_id))
+            ->when($request->depo_id, fn ($q) => $q->where('depo_id', $request->depo_id))
             ->when($request->brand_id, fn ($q) => $q->where('brand_id', $request->brand_id))
             ->when($request->metrik_target, fn ($q) => $q->where('metrik_target', $request->metrik_target));
 

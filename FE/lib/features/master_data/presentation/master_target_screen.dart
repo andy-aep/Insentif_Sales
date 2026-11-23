@@ -323,6 +323,12 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
     bool isSubmitting = false;
     bool didInitialFetch = false;
 
+    List<dynamic> extractList(dynamic data) {
+      if (data is List) return data;
+      if (data is Map && data['data'] is List) return data['data'] as List;
+      return const [];
+    }
+
     Future<void> loadAreasForDepo(int? depoId, StateSetter setDialogState) async {
       if (depoId == null) {
         setDialogState(() {
@@ -331,13 +337,17 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
         });
         return;
       }
-      setDialogState(() => isLoadingAreas = true);
+      setDialogState(() {
+        isLoadingAreas = true;
+        dialogAreas = [];
+        selectedAreaId = null;
+      });
       try {
         final res = await DioClient.instance.get(
           ApiEndpoints.areas,
           queryParameters: {'depo_id': depoId, 'limit': 500},
         );
-        final List raw = res.data['data'] ?? (res.data is List ? res.data : []);
+        final List raw = extractList(res.data);
         final fetched = raw.map((e) => AreaModel.fromJson(e)).toList()
           ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
         syncAreaControllers(fetched);
@@ -363,13 +373,20 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
         });
         return;
       }
-      setDialogState(() => isLoadingDepos = true);
+      setDialogState(() {
+        isLoadingDepos = true;
+        dialogDepos = [];
+        selectedDepoId = null;
+        currentDepo = null;
+        dialogAreas = [];
+        selectedAreaId = null;
+      });
       try {
         final res = await DioClient.instance.get(
           ApiEndpoints.depos,
           queryParameters: {'distributor_id': distId, 'limit': 500},
         );
-        final List raw = res.data['data'] ?? (res.data is List ? res.data : []);
+        final List raw = extractList(res.data);
         final fetched = raw.map((e) => DepoModel.fromJson(e)).toList()
           ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
         int? nextDepoId = selectedDepoId;

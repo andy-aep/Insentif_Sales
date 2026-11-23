@@ -76,12 +76,14 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
   int _perPage = 10;
 
   int? _distId;
+  int? _depoId;
   int? _brandId;
   String _metric = 'ALL';
   String _search = '';
   final _searchCtrl = TextEditingController();
 
   int? get activeDistributorId => _distId;
+  int? get activeDepoId => _depoId;
   int? get activeBrandId => _brandId;
 
   @override
@@ -117,6 +119,7 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
       final params = <String, dynamic>{'page': page ?? _page, 'per_page': _perPage};
       if (widget.period.isNotEmpty && widget.period != 'ALL') params['period'] = widget.period;
       if (_distId != null) params['distributor_id'] = _distId;
+      if (_depoId != null) params['depo_id'] = _depoId;
       if (_brandId != null) params['brand_id'] = _brandId;
       if (_metric != 'ALL') params['metrik_target'] = _metric;
       if (_search.isNotEmpty) params['search'] = _search;
@@ -366,6 +369,11 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
     final targetState = ref.watch(masterTargetProvider);
     final sortedDists = List<DistributorModel>.from(master.distributors)
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final filteredDepos = master.depos
+        .where((dp) => _distId == null || dp.distributorId == _distId)
+        .toList()
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final effectiveDepoId = filteredDepos.any((dp) => dp.id == _depoId) ? _depoId : null;
     num s(String k) => (_summary[k] as num?) ?? 0;
 
     final rawPeriod = widget.period.trim();
@@ -458,7 +466,29 @@ class TargetDistributorHierarchyViewState extends ConsumerState<TargetDistributo
                     ...sortedDists.map((d) => DropdownMenuItem<int?>(value: d.id, child: Text('${d.name} (${d.code})', overflow: TextOverflow.ellipsis))),
                   ],
                   onChanged: (v) {
-                    _distId = v;
+                    setState(() {
+                      _distId = v;
+                      _depoId = null;
+                    });
+                    reload(page: 1);
+                  },
+                ),
+              ),
+              // 3. Filter Depo (mengikuti Distributor terpilih)
+              SizedBox(
+                width: 225,
+                child: DropdownButtonFormField<int?>(
+                  key: ValueKey('filter_depo_${_distId}_${effectiveDepoId}_${filteredDepos.length}'),
+                  initialValue: effectiveDepoId,
+                  isExpanded: true,
+                  dropdownColor: colors.bgElevated,
+                  decoration: _dec('Filter Depo', LucideIcons.home),
+                  items: [
+                    const DropdownMenuItem<int?>(value: null, child: Text('Semua Depo')),
+                    ...filteredDepos.map((dp) => DropdownMenuItem<int?>(value: dp.id, child: Text('${dp.name} (${dp.code})', overflow: TextOverflow.ellipsis))),
+                  ],
+                  onChanged: (v) {
+                    setState(() => _depoId = v);
                     reload(page: 1);
                   },
                 ),

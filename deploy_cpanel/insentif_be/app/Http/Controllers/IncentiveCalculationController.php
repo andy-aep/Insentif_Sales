@@ -598,10 +598,10 @@ class IncentiveCalculationController extends Controller
         }
 
         usort($cardItems, static function ($a, $b) {
-            return strcasecmp((string) $a['distributor_name'], (string) $b['distributor_name'])
+            return strcmp((string) $a['period'], (string) $b['period'])
+                ?: strcasecmp((string) $a['distributor_name'], (string) $b['distributor_name'])
                 ?: strcasecmp((string) $a['depo_name'], (string) $b['depo_name'])
-                ?: strcasecmp((string) $a['brand_name'], (string) $b['brand_name'])
-                ?: strcmp((string) $a['period'], (string) $b['period']);
+                ?: strcasecmp((string) $a['brand_name'], (string) $b['brand_name']);
         });
 
         $totalPersonilCount = $selectedUser ? 1 : count($uniquePersonil);

@@ -100,27 +100,54 @@ class DistributorSellOutAoSheet implements FromArray, ShouldAutoSize, WithEvents
             ],
         ];
 
-        $no = 1;
+        $areaRows = [];
         foreach ($this->cards as $card) {
             $areas = $card['areas'] ?? [];
             foreach ($areas as $area) {
-                $rows[] = [
-                    $no++,
-                    (string) ($card['period'] ?? '-'),
-                    (string) ($card['distributor_name'] ?? '-'),
-                    (string) ($card['depo_name'] ?? '-'),
-                    (string) ($area['area_name'] ?? '-'),
-                    (string) ($area['brand_name'] ?? ($card['brand_name'] ?? '-')),
-                    (float) ($area['sell_out_target'] ?? 0),
-                    (float) ($area['sell_out_real'] ?? 0),
-                    (float) ($area['sell_out_ach_pct'] ?? 0),
-                    (float) ($area['sell_out_reward'] ?? 0),
-                    (float) ($area['ao_target'] ?? 0),
-                    (float) ($area['ao_real'] ?? 0),
-                    (float) ($area['ao_ach_pct'] ?? 0),
-                    (float) ($area['ao_reward'] ?? 0),
+                $areaRows[] = [
+                    'period' => (string) ($card['period'] ?? '-'),
+                    'distributor_name' => (string) ($card['distributor_name'] ?? '-'),
+                    'depo_name' => (string) ($card['depo_name'] ?? '-'),
+                    'area_name' => (string) ($area['area_name'] ?? '-'),
+                    'brand_name' => (string) ($area['brand_name'] ?? ($card['brand_name'] ?? '-')),
+                    'sell_out_target' => (float) ($area['sell_out_target'] ?? 0),
+                    'sell_out_real' => (float) ($area['sell_out_real'] ?? 0),
+                    'sell_out_ach_pct' => (float) ($area['sell_out_ach_pct'] ?? 0),
+                    'sell_out_reward' => (float) ($area['sell_out_reward'] ?? 0),
+                    'ao_target' => (float) ($area['ao_target'] ?? 0),
+                    'ao_real' => (float) ($area['ao_real'] ?? 0),
+                    'ao_ach_pct' => (float) ($area['ao_ach_pct'] ?? 0),
+                    'ao_reward' => (float) ($area['ao_reward'] ?? 0),
                 ];
             }
+        }
+
+        usort($areaRows, static function ($a, $b) {
+            return strcmp($a['period'], $b['period'])
+                ?: strcasecmp($a['distributor_name'], $b['distributor_name'])
+                ?: strcasecmp($a['depo_name'], $b['depo_name'])
+                ?: strcasecmp($a['area_name'], $b['area_name'])
+                ?: strcasecmp($a['brand_name'], $b['brand_name']);
+        });
+
+        $no = 1;
+        foreach ($areaRows as $row) {
+            $rows[] = [
+                $no++,
+                $row['period'],
+                $row['distributor_name'],
+                $row['depo_name'],
+                $row['area_name'],
+                $row['brand_name'],
+                $row['sell_out_target'],
+                $row['sell_out_real'],
+                $row['sell_out_ach_pct'],
+                $row['sell_out_reward'],
+                $row['ao_target'],
+                $row['ao_real'],
+                $row['ao_ach_pct'],
+                $row['ao_reward'],
+            ];
         }
 
         return $rows;
