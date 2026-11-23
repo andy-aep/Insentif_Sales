@@ -1,58 +1,69 @@
 import 'package:flutter/material.dart';
 export '../theme/app_theme.dart';
 
-/// Base Design System palette tokens (Utilitarian / Precision: Cool Zinc Neutrals +
-/// single Maritime Teal brand accent + restrained Semantic status colors).
+/// Base Design System palette tokens — "Maritime Trade Ledger".
+/// Warm Alabaster Paper & Deep Brine Ink (Light) + Night Cargo Deck (Dark).
 /// Prefer `Theme.of(context).colorScheme`, `Theme.of(context).textTheme`, and
 /// `context.semantic` inside widgets so colors adapt cleanly to Light & Dark modes.
 class AppColors {
-  // Primary Brand Accent — Deep Maritime Teal (PT Susanti Megah)
-  static const Color brandLight = Color(0xFF0F766E); // Teal 700 (5.4:1 with white)
-  static const Color brandDark = Color(0xFF0D9488); // Teal 600 (AA with white & crisp on dark)
-  static const Color brandSoftLight = Color(0xFFF0FDFA); // Teal 50 whisper surface
-  static const Color brandSoftDark = Color(0xFF134E4A); // Teal 900
-  static const Color brandDeep = Color(0xFF115E59); // Teal 800
-  static const Color brandBright = Color(0xFF5EEAD4); // Teal 300 (dark active text/icon)
+  // Primary Brand Accent — Deep Maritime Viridian
+  static const Color brandLight = Color(0xFF0B5D51); // Primary Light (>7:1 on ivory)
+  static const Color brandDark = Color(0xFF1F9E8B); // Primary Dark (Night Cargo Deck)
+  static const Color brandSoftLight = Color(0xFFDFECE8); // Warm Viridian mist container
+  static const Color brandSoftDark = Color(0xFF173832); // Dark Viridian container
+  static const Color brandDeep = Color(0xFF084239); // On primaryContainer Light
+  static const Color brandBright = Color(0xFF6CE0CE); // On primaryContainer Dark
 
-  // Neutral Carbon / Zinc Scale (Utilitarian Precision)
-  static const Color slate50 = Color(0xFFF6F7F9); // Light scaffold canvas
-  static const Color slate100 = Color(0xFFF1F3F6); // Light subtle inset / table header
-  static const Color slate150 = Color(0xFFEAECEF); // Light hover / elevated inset
-  static const Color slate200 = Color(0xFFE2E6EC); // Light 1px hairline border
-  static const Color slate300 = Color(0xFFCBD2DC); // Light strong border / Dark secondary text
-  static const Color slate400 = Color(0xFF94A3B8); // Dark muted text / Light faint text
-  static const Color slate500 = Color(0xFF64748B); // Light muted text
-  static const Color slate600 = Color(0xFF36455E); // Dark strong border
-  static const Color slate700 = Color(0xFF243044); // Dark 1px hairline border
-  static const Color slate800 = Color(0xFF111827); // Dark surface / card / sidebar
-  static const Color slate850 = Color(0xFF161F30); // Dark subtle inset / table header
-  static const Color slate875 = Color(0xFF1F2A3E); // Dark hover / elevated inset
-  static const Color slate900 = Color(0xFF090D16); // Dark scaffold canvas
-  static const Color slate950 = Color(0xFF05080F);
+  // Warm Alabaster Paper Scale (Light Mode)
+  static const Color paperCanvas = Color(0xFFF6F4EE); // Warm Alabaster scaffold canvas
+  static const Color paperCard = Color(0xFFFCFBF7); // Warm Ivory Paper surface
+  static const Color paperInset = Color(0xFFEFECE4); // Warm Sand table head / inset
+  static const Color paperHover = Color(0xFFE6E2D8); // Warm hover / elevated inset
+  static const Color paperBorder = Color(0xFFDDD8CE); // 1px crisp rule
+  static const Color paperBorderStrong = Color(0xFFC5BEB0); // Strong outline & chart target bar
 
-  // Ink Scale (Light Mode high-legibility charcoal)
-  static const Color inkPrimary = Color(0xFF111827);
-  static const Color inkSecondary = Color(0xFF374151);
+  // Deep Brine Ink & Hero Contrast Surface
+  static const Color inkPrimary = Color(0xFF161816); // Deep Brine Charcoal
+  static const Color inkSecondary = Color(0xFF3E423E);
+  static const Color inkMuted = Color(0xFF6E736D);
+  static const Color inkFaint = Color(0xFF9A9E97);
+  static const Color brineHeroLight = Color(0xFF142623); // Editorial & Hero Dark Brine panel
+  static const Color brineHeroDark = Color(0xFF192E2A); // Night Cargo Hero spotlight
+  static const Color brineHeroBorder = Color(0xFF27453F);
+  static const Color pewterSecondary = Color(0xFF525B56);
+  static const Color pewterBgLight = Color(0xFFEAECE9);
 
-  // Semantic Status Accents — Light Mode
-  static const Color successLightMode = Color(0xFF15803D); // Forest Green 700
-  static const Color successBgLight = Color(0xFFF0FDF4);
-  static const Color warningLightMode = Color(0xFFB45309); // Amber 700
-  static const Color warningBgLight = Color(0xFFFFFBEB);
-  static const Color dangerLightMode = Color(0xFFDC2626); // Red 600
-  static const Color dangerBgLight = Color(0xFFFEF2F2);
-  static const Color infoLightMode = Color(0xFF0369A1); // Ocean Sky 700
-  static const Color infoBgLight = Color(0xFFF0F9FF);
+  // Night Cargo Deck Scale (Dark Mode — warm mineral slate, never pure black invert)
+  static const Color cargoCanvas = Color(0xFF0E1211);
+  static const Color cargoSurface = Color(0xFF151B19);
+  static const Color cargoInset = Color(0xFF1C2421);
+  static const Color cargoHover = Color(0xFF232D29);
+  static const Color cargoBorder = Color(0xFF28332F);
+  static const Color cargoBorderStrong = Color(0xFF394742);
+  static const Color cargoInkPrimary = Color(0xFFF2EFE9);
+  static const Color cargoInkSecondary = Color(0xFFC7C4BC);
+  static const Color cargoInkMuted = Color(0xFF8C948E);
+  static const Color cargoInkFaint = Color(0xFF5E6661);
+
+  // Semantic Status Accents — Light Mode (harmonized with Warm Alabaster)
+  static const Color successLightMode = Color(0xFF1E6B43); // Deep Moss Green
+  static const Color successBgLight = Color(0xFFE9F4ED);
+  static const Color warningLightMode = Color(0xFFB85D19); // Burnt Amber Salt
+  static const Color warningBgLight = Color(0xFFFDF1E6);
+  static const Color dangerLightMode = Color(0xFFB93829); // Brick Vermilion
+  static const Color dangerBgLight = Color(0xFFFCECE9);
+  static const Color infoLightMode = Color(0xFF185A7A); // Deep Harbor Blue
+  static const Color infoBgLight = Color(0xFFE8F2F7);
 
   // Semantic Status Accents — Dark Mode
-  static const Color successDarkMode = Color(0xFF34D399); // Emerald 400
-  static const Color successBgDark = Color(0xFF064E3B);
-  static const Color warningDarkMode = Color(0xFFFBBF24); // Amber 400
-  static const Color warningBgDark = Color(0xFF78350F);
-  static const Color dangerDarkMode = Color(0xFFF87171); // Red 400
-  static const Color dangerBgDark = Color(0xFF7F1D1D);
-  static const Color infoDarkMode = Color(0xFF38BDF8); // Sky 400
-  static const Color infoBgDark = Color(0xFF0C4A6E);
+  static const Color successDarkMode = Color(0xFF4CC38A);
+  static const Color successBgDark = Color(0x264CC38A);
+  static const Color warningDarkMode = Color(0xFFE89B54);
+  static const Color warningBgDark = Color(0x26E89B54);
+  static const Color dangerDarkMode = Color(0xFFE56B5E);
+  static const Color dangerBgDark = Color(0x26E56B5E);
+  static const Color infoDarkMode = Color(0xFF58B0DA);
+  static const Color infoBgDark = Color(0x2658B0DA);
 
   // Compatibility aliases
   static const Color primary = brandLight;

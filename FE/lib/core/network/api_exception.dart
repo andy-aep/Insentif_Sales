@@ -52,16 +52,16 @@ class ApiException implements Exception {
         case DioExceptionType.connectionTimeout:
         case DioExceptionType.sendTimeout:
         case DioExceptionType.receiveTimeout:
-          message = 'Waktu koneksi ke server habis (Timeout).';
+          message = 'Waktu koneksi habis. Coba muat ulang.';
           break;
         case DioExceptionType.connectionError:
-          message = 'Gagal terhubung ke server Backend di ${dioException.requestOptions.uri}.';
+          message = 'Tidak dapat terhubung ke server. Periksa koneksi lalu coba lagi.';
           break;
         case DioExceptionType.cancel:
           message = 'Permintaan dibatalkan.';
           break;
         default:
-          message = dioException.message ?? 'Terjadi kesalahan sistem yang tidak terduga.';
+          message = dioException.message ?? 'Permintaan gagal diproses. Coba ulangi beberapa saat lagi.';
       }
     }
 

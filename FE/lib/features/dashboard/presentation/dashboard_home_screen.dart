@@ -1,9 +1,8 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:fl_chart/fl_chart.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -19,6 +18,7 @@ class DashboardHomeScreen extends ConsumerStatefulWidget {
 class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
   bool _showUnderperformingDist = false;
   String _trendMetric = 'SELL_IN'; // 'SELL_IN' | 'SELL_OUT'
+  int? _touchedTrendIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +28,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Sticky Header & Multi-Period Filter Bar (crisp 1px hairline, zero shadow)
+        // Sticky Header & Period Control Rule
         Container(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.md),
           decoration: BoxDecoration(
@@ -38,7 +38,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
           child: _buildHeader(context, authUser, dashState),
         ),
 
-        // Scrollable Dashboard Content
+        // Main Workspace Scroll Canvas
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xl, AppSpacing.xl, AppSpacing.xxl),
@@ -67,153 +67,172 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     final isAdmin = state.mode == 'ADMIN';
     final canManage = state.user?['can_manage'] != false;
     final scopeLabel = (state.user?['scope_label'] ?? 'Nasional').toString();
-    final userPos = (state.kpi['position'] ?? state.user?['position'] ?? user?.position?.code ?? '').toString().toUpperCase();
+    final userPos = (state.kpi['position'] ?? state.user?['position'] ?? user?.position?.code ?? '')
+        .toString()
+        .toUpperCase();
     final scheme = state.salesScheme.toUpperCase();
     final userName = user?.name ?? state.user?['name'] ?? (isAdmin ? 'Administrator' : 'Sales');
+    final periodLabel = state.selectedPeriod.isEmpty ? '-' : state.selectedPeriod;
 
+    final String pageTitle = isAdmin ? 'Ringkasan distribusi & insentif' : 'Capaian & insentif';
     String contextMeta = canManage
-        ? 'Administrator • Cakupan $scopeLabel • $userName'
-        : 'Eksekutif${userPos.isNotEmpty ? ' $userPos' : ''} • Cakupan $scopeLabel • $userName';
-    String pageTitle = isAdmin ? 'Ringkasan Insentif & Distribusi' : 'Pencapaian Insentif Saya';
+        ? 'Cakupan $scopeLabel · $userName'
+        : 'Eksekutif${userPos.isNotEmpty ? ' $userPos' : ''} · Cakupan $scopeLabel · $userName';
 
     if (!isAdmin) {
       if (scheme == 'INDUSTRI') {
-        contextMeta = 'Sales Industri ($userPos) • $userName • Kuota Volume (Kg) & NOO';
+        contextMeta = 'Sales Industri ($userPos) · $userName · Kuota Volume (Kg) & NOO';
       } else if (scheme == 'SURABAYA') {
         contextMeta = userPos == 'ASC'
-            ? 'Koordinator Surabaya (ASC) • $userName • Evaluasi Tim TO & SM'
-            : 'Sales Surabaya ($userPos) • $userName • Kuota Penjualan Langsung';
+            ? 'Koordinator Surabaya (ASC) · $userName · Evaluasi Tim TO & SM'
+            : 'Sales Surabaya ($userPos) · $userName · Penjualan Langsung';
       } else {
         contextMeta = userPos == 'ASM'
-            ? 'Sales Distributor (ASM) • $userName • Sell-In Depo'
-            : 'Sales Distributor ($userPos) • $userName • Sell-Out Area & Active Outlet';
+            ? 'Sales Distributor (ASM) · $userName · Sell-In Depo'
+            : 'Sales Distributor ($userPos) · $userName · Sell-Out Area & Active Outlet';
       }
     }
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isNarrow = constraints.maxWidth < 860;
+        final isNarrow = constraints.maxWidth < 880;
+        final cs = Theme.of(context).colorScheme;
+        final tt = Theme.of(context).textTheme;
+        final colors = context.colors;
 
         final titleSection = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               pageTitle,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontSize: 18.5,
-                letterSpacing: -0.35,
-              ),
+              style: tt.headlineSmall,
             ),
-            const SizedBox(height: 2),
-            Text(
-              contextMeta,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: context.colors.textMuted,
-              ),
+            const SizedBox(height: 3),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: colors.bgSubtle,
+                    borderRadius: BorderRadius.circular(AppRadius.tag),
+                    border: Border.all(color: colors.border),
+                  ),
+                  child: Text(
+                    'PERIODE $periodLabel',
+                    style: context.monoStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      color: cs.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    contextMeta,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: tt.bodySmall?.copyWith(color: colors.textMuted),
+                  ),
+                ),
+              ],
             ),
           ],
         );
 
-          final actionsSection = Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              // Multi-Period Selector Button
-              if (state.availablePeriods.isNotEmpty)
-                Builder(
-                  builder: (context) {
-                    final selectedList = state.selectedPeriodsList;
-                    final labelText = selectedList.length == 1
-                        ? 'Periode: ${selectedList.first}'
-                        : 'Periode: ${selectedList.length} Bulan (${selectedList.first}–${selectedList.last})';
+        final actionsSection = Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            if (state.availablePeriods.isNotEmpty)
+              Builder(
+                builder: (context) {
+                  final selectedList = state.selectedPeriodsList;
+                  final labelText = selectedList.length == 1
+                      ? 'Periode ${selectedList.first}'
+                      : '${selectedList.length} periode (${selectedList.first}–${selectedList.last})';
 
-                    return InkWell(
-                      borderRadius: BorderRadius.circular(8),
-                      onTap: () => _showMultiPeriodPickerDialog(context, ref, state),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: context.colors.bgElevated,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: selectedList.length > 1 ? Theme.of(context).colorScheme.primary : context.colors.border,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(LucideIcons.calendar, size: 15, color: Theme.of(context).colorScheme.primary),
-                            const SizedBox(width: 8),
-                            Text(
-                              labelText,
-                              style: GoogleFonts.plusJakartaSans(
-                                color: context.colors.textPrimary,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Icon(LucideIcons.chevronDown, size: 14, color: context.colors.textMuted),
-                          ],
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(AppRadius.control),
+                    hoverColor: colors.bgHover,
+                    onTap: () => _showMultiPeriodPickerDialog(context, ref, state),
+                    child: Container(
+                      height: 44,
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: colors.bgSubtle,
+                        borderRadius: BorderRadius.circular(AppRadius.control),
+                        border: Border.all(
+                          color: selectedList.length > 1 ? cs.primary : colors.borderStrong,
                         ),
                       ),
-                    );
-                  },
-                ),
-
-              // Refresh Button
-              IconButton(
-                icon: state.isLoading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(LucideIcons.refreshCw, size: 16),
-                tooltip: 'Muat Ulang Data',
-                onPressed: state.isLoading
-                    ? null
-                    : () => ref.read(dashboardProvider.notifier).fetchSummary(),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(LucideIcons.calendar, size: 15, color: cs.primary),
+                          const SizedBox(width: AppSpacing.sm),
+                          Text(
+                            labelText,
+                            style: tt.labelLarge?.copyWith(fontSize: 12.5),
+                          ),
+                          const SizedBox(width: AppSpacing.xs + 2),
+                          Icon(LucideIcons.chevronDown, size: 14, color: colors.textMuted),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
 
-              if (isAdmin) ...[
-                if (canManage)
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    icon: const Icon(LucideIcons.uploadCloud, size: 15),
-                    label: Text('Upload Data', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 12.5)),
-                    onPressed: () => context.go('/bulk-upload'),
+            Tooltip(
+              message: 'Muat ulang data',
+              child: InkWell(
+                borderRadius: BorderRadius.circular(AppRadius.control),
+                hoverColor: colors.bgHover,
+                onTap: state.isLoading ? null : () => ref.read(dashboardProvider.notifier).fetchSummary(),
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: colors.bgCard,
+                    borderRadius: BorderRadius.circular(AppRadius.control),
+                    border: Border.all(color: colors.borderStrong),
                   ),
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: context.colors.textPrimary,
-                    side: BorderSide(color: context.colors.border),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  icon: const Icon(LucideIcons.calculator, size: 14),
-                  label: Text('Lihat Insentif', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 12.5)),
-                  onPressed: () => context.go('/incentives/distributor'),
+                  alignment: Alignment.center,
+                  child: state.isLoading
+                      ? SizedBox(
+                          width: 15,
+                          height: 15,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary),
+                        )
+                      : Icon(LucideIcons.refreshCw, size: 16, color: colors.textSecondary),
                 ),
-              ],
+              ),
+            ),
+
+            if (isAdmin) ...[
+              if (canManage)
+                ElevatedButton.icon(
+                  icon: const Icon(LucideIcons.uploadCloud, size: 15),
+                  label: const Text('Upload Excel'),
+                  onPressed: () => context.go('/bulk-upload'),
+                ),
+              OutlinedButton.icon(
+                icon: const Icon(LucideIcons.calculator, size: 15),
+                label: const Text('Hitung insentif'),
+                onPressed: () => context.go('/incentives/distributor'),
+              ),
             ],
-          );
+          ],
+        );
 
         if (isNarrow) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               titleSection,
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               actionsSection,
             ],
           );
@@ -222,7 +241,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
         return Row(
           children: [
             Expanded(child: titleSection),
-            const SizedBox(width: 16),
+            const SizedBox(width: AppSpacing.lg),
             actionsSection,
           ],
         );
@@ -250,25 +269,34 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     final totalReward = (kpi['total_incentive_pool'] as num?)?.toDouble() ?? 0.0;
     final totalDist = (kpi['total_distributors'] as num?)?.toInt() ?? 0;
     final totalSales = (kpi['total_sales'] as num?)?.toInt() ?? 0;
+
+    final sellThroughPct = (kpi['sell_through_pct'] as num?)?.toDouble() ?? 0.0;
+    final totalDppSellIn = (kpi['total_dpp_sell_in'] as num?)?.toDouble() ?? 0.0;
+    final totalDppSellOut = (kpi['total_dpp_sell_out'] as num?)?.toDouble() ?? 0.0;
     final incentiveRatioPct = (kpi['incentive_ratio_pct'] as num?)?.toDouble() ?? 0.0;
+    final double displayOmzet = totalDppSellOut > 0 ? totalDppSellOut : totalDppSellIn;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Focal Point: Asymmetric Hero Budget Card + 3-Column Hairline Operational Ledger
+        // Asymmetric Hierarchy: Hero Incentive Spotlight (5) + 3-Column Operational Ledger (7)
         LayoutBuilder(
           builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= 980;
+            final isWide = constraints.maxWidth >= 1020;
             final cs = Theme.of(context).colorScheme;
             final sem = context.semantic;
             final colors = context.colors;
 
-            final heroBudgetPanel = Container(
+            final heroStatusText = totalReward > 0
+                ? (incentiveRatioPct <= 3.0 ? 'Rasio efisien' : 'Perlu pantau')
+                : 'Belum dihitung';
+
+            final heroSpotlightBlock = Container(
               padding: const EdgeInsets.all(AppSpacing.xl),
               decoration: BoxDecoration(
-                color: colors.bgCard,
+                color: sem.heroSurface,
                 borderRadius: BorderRadius.circular(AppRadius.card),
-                border: Border.all(color: colors.border),
+                border: Border.all(color: sem.heroBorder),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -276,28 +304,30 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        width: 3,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          color: cs.primary,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: Text(
-                          'ESTIMASI BUDGET INSENTIF',
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            letterSpacing: 0.8,
-                            color: colors.textMuted,
+                          'TOTAL INSENTIF PERIODE INI',
+                          style: context.monoStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.7,
+                            color: sem.heroMuted,
                           ),
                         ),
                       ),
-                      Text(
-                        totalReward > 0 ? 'Terkalkulasi' : 'Menunggu',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: totalReward > 0 ? sem.success : colors.textMuted,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(AppRadius.tag),
+                          border: Border.all(color: sem.heroBorder),
+                        ),
+                        child: Text(
+                          heroStatusText,
+                          style: context.monoStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: totalReward > 0 ? sem.heroAccent : sem.heroMuted,
+                          ),
                         ),
                       ),
                     ],
@@ -309,39 +339,82 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                     child: Text(
                       CurrencyFormatter.formatRupiah(totalReward),
                       style: context.tabularNumStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.7,
-                        color: colors.textPrimary,
+                        fontSize: 34,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.9,
+                        color: sem.heroOnSurface,
                       ),
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                  Divider(height: 1, color: colors.border),
+                  const SizedBox(height: 6),
+                  Text(
+                    incentiveRatioPct > 0
+                        ? 'Rasio ${incentiveRatioPct.toStringAsFixed(2)}% dari omzet ${totalDppSellOut > 0 ? 'Sell-Out' : 'Sell-In'} · $totalSales sales ($totalDist distributor)'
+                        : '$totalSales sales · $totalDist distributor ($scopeLabel)',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: sem.heroMuted,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Divider(height: 1, color: sem.heroBorder),
                   const SizedBox(height: AppSpacing.md),
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          '$totalSales Sales • $totalDist Distributor ($scopeLabel)',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: colors.textSecondary,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              totalDppSellOut > 0 ? 'Omzet DPP Sell-Out' : 'Omzet DPP Sell-In',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontSize: 11,
+                                color: sem.heroMuted,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              CurrencyFormatter.formatRupiah(displayOmzet),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: context.tabularNumStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w600,
+                                color: sem.heroOnSurface,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (totalDppSellOut > 0 && totalDppSellIn > 0) ...[
+                        const SizedBox(width: AppSpacing.lg),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'DPP Sell-In',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  fontSize: 11,
+                                  color: sem.heroMuted,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                CurrencyFormatter.formatRupiah(totalDppSellIn),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: context.tabularNumStyle(
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: sem.heroMuted,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Text(
-                        incentiveRatioPct > 0
-                            ? 'Rasio ${incentiveRatioPct.toStringAsFixed(2)}%'
-                            : 'Skema Aktif',
-                        style: context.tabularNumStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: cs.primary,
-                        ),
-                      ),
+                      ],
                     ],
                   ),
                 ],
@@ -374,7 +447,6 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.labelMedium?.copyWith(
                               color: colors.textMuted,
-                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
@@ -389,34 +461,32 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: AppSpacing.sm),
+                    const SizedBox(height: AppSpacing.md),
                     FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,
                       child: Text(
                         primaryValue,
                         style: context.tabularNumStyle(
-                          fontSize: 20,
+                          fontSize: 22,
                           fontWeight: FontWeight.w700,
-                          letterSpacing: -0.4,
+                          letterSpacing: -0.5,
                           color: colors.textPrimary,
                         ),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.xs),
+                    const SizedBox(height: 3),
                     Text(
                       secondaryLine,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: context.tabularNumStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: colors.textSecondary,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(AppRadius.tag),
                       child: LinearProgressIndicator(
                         value: (pct / 100).clamp(0.0, 1.0),
                         minHeight: 3,
@@ -439,28 +509,32 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
               );
             }
 
+            final String sellThroughNote = realSellIn > 0
+                ? 'Sell-through ${sellThroughPct.toStringAsFixed(1)}% (${sellThroughPct >= 85 ? 'stok lancar' : (sellThroughPct >= 65 ? 'moderat' : 'stok menumpuk')})'
+                : 'Konsumsi multi-brand';
+
             final sellInMetric = buildLedgerMetric(
-              label: 'Sell-In (Depo / ASM)',
+              label: 'Sell-In Depo (ASM)',
               primaryValue: '${CurrencyFormatter.formatNumber(realSellIn)} Kg',
               secondaryLine: 'Target ${CurrencyFormatter.formatNumber(targetSellIn)} Kg',
               pct: achSellIn,
-              footnote: '$totalDist Distributor ($scopeLabel)',
+              footnote: '$totalDist distributor · $scopeLabel',
             );
 
             final sellOutMetric = buildLedgerMetric(
-              label: 'Sell-Out (Area / SPV)',
+              label: 'Sell-Out Area (SPV)',
               primaryValue: '${CurrencyFormatter.formatNumber(realSellOut)} Kg',
               secondaryLine: 'Target ${CurrencyFormatter.formatNumber(targetSellOut)} Kg',
               pct: achSellOut,
-              footnote: 'Konsumsi Multi-Brand',
+              footnote: sellThroughNote,
             );
 
             final aoMetric = buildLedgerMetric(
-              label: 'Active Outlet (AO)',
+              label: 'Active Outlet (Toko)',
               primaryValue: '${CurrencyFormatter.formatNumber(realOutlet)} Toko',
               secondaryLine: 'Target ${CurrencyFormatter.formatNumber(targetOutlet)} Toko',
               pct: achOutlet,
-              footnote: 'Cakupan Toko Ritel Area',
+              footnote: 'Cakupan toko ritel area',
             );
 
             final operationalLedger = Container(
@@ -498,9 +572,9 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(flex: 4, child: heroBudgetPanel),
+                    Expanded(flex: 5, child: heroSpotlightBlock),
                     const SizedBox(width: AppSpacing.lg),
-                    Expanded(flex: 8, child: operationalLedger),
+                    Expanded(flex: 7, child: operationalLedger),
                   ],
                 ),
               );
@@ -509,20 +583,16 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                heroBudgetPanel,
+                heroSpotlightBlock,
                 const SizedBox(height: AppSpacing.md),
                 operationalLedger,
               ],
             );
           },
         ),
-        const SizedBox(height: AppSpacing.md),
-
-        // Compact Precision Health Strip: Sell-Through, Omzet DPP, Rasio Insentif
-        _buildExecutiveHealthStrip(context, kpi),
         const SizedBox(height: AppSpacing.xl),
 
-        // Section: Sales Leaderboard & Performa Distributor (Sell-In + Watchlist)
+        // Section: Capaian sales tertinggi & Capaian distributor
         LayoutBuilder(
           builder: (context, constraints) {
             final isDesktop = constraints.maxWidth >= 960;
@@ -530,10 +600,10 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(flex: 3, child: _buildLeaderboardCard(context, state.leaderboard)),
-                  const SizedBox(width: 20),
+                  Expanded(flex: 7, child: _buildLeaderboardCard(context, state.leaderboard)),
+                  const SizedBox(width: AppSpacing.lg),
                   Expanded(
-                    flex: 2,
+                    flex: 5,
                     child: _buildDistributorCard(
                       context,
                       state.distributors,
@@ -547,7 +617,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
             return Column(
               children: [
                 _buildLeaderboardCard(context, state.leaderboard),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
                 _buildDistributorCard(
                   context,
                   state.distributors,
@@ -557,9 +627,9 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
             );
           },
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: AppSpacing.xxl),
 
-        // Section: Performa per Region & Kontribusi per Brand (Executive Analytics)
+        // Section: Sebaran per wilayah & Kontribusi per brand
         if (state.regionPerformance.isNotEmpty || state.brandPerformance.isNotEmpty) ...[
           LayoutBuilder(
             builder: (context, constraints) {
@@ -569,12 +639,12 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      flex: 3,
+                      flex: 7,
                       child: _buildRegionPerformanceCard(context, state.regionPerformance),
                     ),
-                    const SizedBox(width: 20),
+                    const SizedBox(width: AppSpacing.lg),
                     Expanded(
-                      flex: 2,
+                      flex: 5,
                       child: _buildBrandPerformanceCard(context, state.brandPerformance),
                     ),
                   ],
@@ -583,16 +653,16 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
               return Column(
                 children: [
                   _buildRegionPerformanceCard(context, state.regionPerformance),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppSpacing.lg),
                   _buildBrandPerformanceCard(context, state.brandPerformance),
                 ],
               );
             },
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpacing.xxl),
         ],
 
-        // Section: Tren Target vs Realisasi 6 Periode (Sell-In / Sell-Out)
+        // Section: Tren 6 periode terakhir (direct labels, minimal gridlines)
         if (state.monthlyTrend.isNotEmpty) _buildMonthlyTrendCard(context, state.monthlyTrend),
       ],
     );
@@ -628,7 +698,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     final estimatedReward = (kpi['estimated_reward'] as num?)?.toDouble() ?? 0.0;
     final grade = (kpi['grade'] ?? '-').toString();
     final gradeBadge = grade == '-'
-        ? 'Menunggu'
+        ? 'Belum ada grade'
         : (grade.toLowerCase().startsWith('grade') ? grade : 'Grade $grade');
     final overallAch = (kpi['overall_ach_pct'] as num?)?.toDouble() ?? 0.0;
 
@@ -638,92 +708,53 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Personalized KPI Cards
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= 960;
-
-            final cardMain = isAsm
-                ? _buildKpiCard(
-                    title: 'Target Sell-In Depo Saya',
-                    value: '${CurrencyFormatter.formatNumber(myTargetSellIn)} Kg',
-                    subValue: 'Realisasi: ${CurrencyFormatter.formatNumber(realSellIn)} Kg',
-                    badgeText: '${achSellIn.toStringAsFixed(1)}%',
-                    badgeColor: achSellIn >= 100 ? context.semantic.success : Theme.of(context).colorScheme.primary,
-                    icon: LucideIcons.truck,
-                    footerText: '$assignedDepos Depo di Bawah Tanggung Jawab',
-                    progress: (achSellIn / 100).clamp(0.0, 1.0),
-                  )
-                : _buildKpiCard(
-                    title: 'Target Sell-Out Area Saya',
-                    value: '${CurrencyFormatter.formatNumber(myTargetSellOut)} Kg',
-                    subValue: 'Realisasi: ${CurrencyFormatter.formatNumber(realSellOut)} Kg',
-                    badgeText: '${achSellOut.toStringAsFixed(1)}%',
-                    badgeColor: achSellOut >= 100 ? context.semantic.success : Theme.of(context).colorScheme.primary,
-                    icon: LucideIcons.shoppingBag,
-                    footerText: '$assignedAreas Area di Bawah Tanggung Jawab',
-                    progress: (achSellOut / 100).clamp(0.0, 1.0),
-                  );
-
-            final cardOutlet = isAsm
-                ? _buildKpiCard(
-                    title: 'Depo Penugasan Aktif',
-                    value: '$assignedDepos Depo',
-                    subValue: 'Distributor ASM Area Kerja',
-                    badgeText: 'ASM Konsumsi',
-                    badgeColor: context.semantic.secondaryAccent,
-                    icon: LucideIcons.mapPin,
-                    footerText: 'Tingkat Depo Konsumsi',
-                    progress: 1.0,
-                  )
-                : _buildKpiCard(
-                    title: 'Target Active Outlet (AO)',
-                    value: '${CurrencyFormatter.formatNumber(myTargetOutlet)} Toko',
-                    subValue: 'Realisasi: ${CurrencyFormatter.formatNumber(realOutlet)} Toko',
-                    badgeText: '${achOutlet.toStringAsFixed(1)}%',
-                    badgeColor: achOutlet >= 100 ? context.semantic.success : Theme.of(context).colorScheme.primary,
-                    icon: LucideIcons.store,
-                    footerText: 'Target Sebaran Toko Aktif',
-                    progress: (achOutlet / 100).clamp(0.0, 1.0),
-                  );
-
-            final cardReward = _buildKpiCard(
-              title: 'Estimasi Insentif Saya',
-              value: CurrencyFormatter.formatRupiah(estimatedReward),
-              subValue: grade != '-' ? '$gradeBadge (${overallAch.toStringAsFixed(1)}%)' : 'Belum Ada Kalkulasi',
-              badgeText: gradeBadge,
-              badgeColor: estimatedReward > 0 ? context.semantic.success : Theme.of(context).colorScheme.onSurfaceVariant,
-              icon: LucideIcons.award,
-              footerText: 'Periode ${state.selectedPeriod}',
-              progress: estimatedReward > 0 ? (overallAch / 100).clamp(0.0, 1.0) : 0.0,
-            );
-
-            if (isWide) {
-              return Row(
-                children: [
-                  Expanded(child: cardMain),
-                  const SizedBox(width: 16),
-                  Expanded(child: cardOutlet),
-                  const SizedBox(width: 16),
-                  Expanded(child: cardReward),
-                ],
-              );
-            }
-
-            return Column(
-              children: [
-                cardMain,
-                const SizedBox(height: 14),
-                cardOutlet,
-                const SizedBox(height: 14),
-                cardReward,
-              ],
-            );
-          },
+        _buildSalesHeroSection(
+          context,
+          heroTitle: 'ESTIMASI INSENTIF PERIODE INI',
+          heroAmount: CurrencyFormatter.formatRupiah(estimatedReward),
+          heroStatus: gradeBadge,
+          heroStatusPositive: estimatedReward > 0,
+          heroFootnote: grade != '-'
+              ? 'Pencapaian gabungan ${overallAch.toStringAsFixed(1)}% · Periode ${state.selectedPeriod}'
+              : 'Belum ada kalkulasi untuk periode ${state.selectedPeriod}',
+          metrics: [
+            if (isAsm)
+              _SalesLedgerMetricData(
+                label: 'Sell-In Depo',
+                primaryValue: '${CurrencyFormatter.formatNumber(realSellIn)} Kg',
+                secondaryLine: 'Target ${CurrencyFormatter.formatNumber(myTargetSellIn)} Kg',
+                pct: achSellIn,
+                footnote: '$assignedDepos depo penugasan',
+              )
+            else ...[
+              _SalesLedgerMetricData(
+                label: 'Sell-Out Area',
+                primaryValue: '${CurrencyFormatter.formatNumber(realSellOut)} Kg',
+                secondaryLine: 'Target ${CurrencyFormatter.formatNumber(myTargetSellOut)} Kg',
+                pct: achSellOut,
+                footnote: '$assignedAreas area penugasan',
+              ),
+              _SalesLedgerMetricData(
+                label: 'Active Outlet (AO)',
+                primaryValue: '${CurrencyFormatter.formatNumber(realOutlet)} Toko',
+                secondaryLine: 'Target ${CurrencyFormatter.formatNumber(myTargetOutlet)} Toko',
+                pct: achOutlet,
+                footnote: 'Sebaran toko ritel area',
+              ),
+            ],
+            if (isAsm)
+              _SalesLedgerMetricData(
+                label: 'Depo aktif',
+                primaryValue: '$assignedDepos Depo',
+                secondaryLine: 'Penugasan skema Konsumsi ($posCode)',
+                pct: assignedDepos > 0 ? 100 : 0,
+                footnote: 'Tingkat distributor',
+                hidePercentage: true,
+              ),
+          ],
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: AppSpacing.xl),
 
-        // Breakdown Rincian Depo / Area Penugasan
         _buildSalesBreakdownCard(context, state.breakdown, isAsm),
       ],
     );
@@ -761,123 +792,83 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     final nooReward = (noo['final_reward'] as num?)?.toDouble() ?? 0.0;
 
     final totalReward = (card['total_reward'] as num?)?.toDouble() ?? (sellInReward + nooReward);
+    final colors = context.colors;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= 960;
-
-            final cardSellIn = _buildKpiCard(
-              title: 'Pencapaian Sell-In Industri (Bobot ${sellInWeight.toStringAsFixed(0)}%)',
-              value: '${CurrencyFormatter.formatNumber(sellInActual)} / ${CurrencyFormatter.formatNumber(sellInTarget)} Kg',
-              subValue:
-                  'Min Ach: ${sellInMinAch.toStringAsFixed(0)}% • Tarif: Rp ${CurrencyFormatter.formatNumber(sellInRate)}/Kg',
-              badgeText: '${sellInAch.toStringAsFixed(1)}% (${sellInPassed ? "Lolos" : "Tidak Lolos"})',
-              badgeColor: sellInPassed ? context.semantic.success : context.semantic.danger,
-              icon: LucideIcons.factory,
-              footerText: 'Insentif Sell-In: ${CurrencyFormatter.formatRupiah(sellInReward)} • $sellInGrade',
-              progress: (sellInAch / 100).clamp(0.0, 1.0),
-            );
-
-            final cardNoo = _buildKpiCard(
-              title: 'Pencapaian NOO / Customer Baru (Bobot ${nooWeight.toStringAsFixed(0)}%)',
-              value: '$nooActual / $nooTarget Customer NOO',
-              subValue:
-                  'Volume NOO: ${CurrencyFormatter.formatNumber(nooVolumeKg)} Kg • Tarif: Rp ${CurrencyFormatter.formatNumber(nooRate)}/Kg',
-              badgeText: '${nooAch.toStringAsFixed(1)}% (${nooPassed ? "Lolos" : "Tidak Lolos"})',
-              badgeColor: nooPassed ? context.semantic.success : context.semantic.danger,
-              icon: LucideIcons.userPlus,
-              footerText: 'Insentif NOO: ${CurrencyFormatter.formatRupiah(nooReward)} • $nooGrade',
-              progress: (nooAch / 100).clamp(0.0, 1.0),
-            );
-
-            final cardTotal = _buildKpiCard(
-              title: 'Total Insentif Sales Industri Saya',
-              value: CurrencyFormatter.formatRupiah(totalReward),
-              subValue:
-                  'Sell-In: ${CurrencyFormatter.formatRupiah(sellInReward)} + NOO: ${CurrencyFormatter.formatRupiah(nooReward)}',
-              badgeText: 'Posisi $posCode',
-              badgeColor: totalReward > 0 ? context.semantic.success : Theme.of(context).colorScheme.onSurfaceVariant,
-              icon: LucideIcons.award,
-              footerText: 'Periode ${state.selectedPeriod} • ${customers.length} Customer Industri',
-              progress: totalReward > 0 ? 1.0 : 0.0,
-            );
-
-            if (isWide) {
-              return Row(
-                children: [
-                  Expanded(child: cardSellIn),
-                  const SizedBox(width: 16),
-                  Expanded(child: cardNoo),
-                  const SizedBox(width: 16),
-                  Expanded(child: cardTotal),
-                ],
-              );
-            }
-
-            return Column(
-              children: [
-                cardSellIn,
-                const SizedBox(height: 14),
-                cardNoo,
-                const SizedBox(height: 14),
-                cardTotal,
-              ],
-            );
-          },
+        _buildSalesHeroSection(
+          context,
+          heroTitle: 'TOTAL INSENTIF INDUSTRI ($posCode)',
+          heroAmount: CurrencyFormatter.formatRupiah(totalReward),
+          heroStatus: totalReward > 0 ? 'Terkalkulasi' : 'Rp 0',
+          heroStatusPositive: totalReward > 0,
+          heroFootnote:
+              'Sell-In ${CurrencyFormatter.formatRupiah(sellInReward)} + NOO ${CurrencyFormatter.formatRupiah(nooReward)} · ${customers.length} customer',
+          metrics: [
+            _SalesLedgerMetricData(
+              label: 'Sell-In Industri (${sellInWeight.toStringAsFixed(0)}%)',
+              primaryValue: '${CurrencyFormatter.formatNumber(sellInActual)} Kg',
+              secondaryLine: 'Target ${CurrencyFormatter.formatNumber(sellInTarget)} Kg',
+              pct: sellInAch,
+              footnote: 'Min ${sellInMinAch.toStringAsFixed(0)}% · ${CurrencyFormatter.formatRate(sellInRate)}/Kg · $sellInGrade',
+              forcePassedColor: sellInPassed,
+            ),
+            _SalesLedgerMetricData(
+              label: 'New Open Outlet (${nooWeight.toStringAsFixed(0)}%)',
+              primaryValue: '$nooActual Toko',
+              secondaryLine: 'Target $nooTarget Toko · Vol ${CurrencyFormatter.formatNumber(nooVolumeKg)} Kg',
+              pct: nooAch,
+              footnote: 'Min ${nooMinAch.toStringAsFixed(0)}% · ${CurrencyFormatter.formatRate(nooRate)}/Kg · $nooGrade',
+              forcePassedColor: nooPassed,
+            ),
+          ],
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: AppSpacing.xl),
 
-        // Rincian Rumus Perhitungan Industri
+        // Formula Details
         Container(
-          padding: const EdgeInsets.all(22),
+          padding: const EdgeInsets.all(AppSpacing.xl),
           decoration: BoxDecoration(
-            color: context.colors.bgCard,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
-            boxShadow: context.colors.cardShadows,
+            color: colors.bgCard,
+            borderRadius: BorderRadius.circular(AppRadius.card),
+            border: Border.all(color: colors.border),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Icon(LucideIcons.calculator, color: Theme.of(context).colorScheme.primary, size: 20),
-                  const SizedBox(width: 10),
+                  Icon(LucideIcons.calculator, color: Theme.of(context).colorScheme.primary, size: 17),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
-                      'Rincian Perhitungan Insentif Sales Industri ($posCode)',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 16.5,
-                        fontWeight: FontWeight.w700,
-                        color: context.colors.textPrimary,
-                      ),
+                      'Ringkasan perhitungan insentif Industri ($posCode)',
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: AppSpacing.md),
               Wrap(
-                spacing: 16,
-                runSpacing: 12,
+                spacing: AppSpacing.lg,
+                runSpacing: AppSpacing.md,
                 children: [
                   _buildFormulaBox(
                     context,
-                    title: '1. Komponen Sell-In (${sellInWeight.toStringAsFixed(0)}%)',
+                    title: 'Komponen Sell-In (${sellInWeight.toStringAsFixed(0)}%)',
                     formula: sellInPassed
-                        ? '${CurrencyFormatter.formatNumber(sellInActual)} Kg × Rp ${CurrencyFormatter.formatNumber(sellInRate)} × ${sellInWeight.toStringAsFixed(0)}% = ${CurrencyFormatter.formatRupiah(sellInReward)}'
-                        : 'Tidak lolos syarat Min Ach ${sellInMinAch.toStringAsFixed(0)}% (Capai ${sellInAch.toStringAsFixed(1)}%) → Rp 0',
+                        ? '${CurrencyFormatter.formatNumber(sellInActual)} Kg × ${CurrencyFormatter.formatRate(sellInRate)} × ${sellInWeight.toStringAsFixed(0)}% = ${CurrencyFormatter.formatRupiah(sellInReward)}'
+                        : 'Capaian ${sellInAch.toStringAsFixed(1)}% di bawah batas ${sellInMinAch.toStringAsFixed(0)}% → Rp 0',
                     passed: sellInPassed,
                     grade: sellInGrade,
                   ),
                   _buildFormulaBox(
                     context,
-                    title: '2. Komponen NOO / New Open Outlet (${nooWeight.toStringAsFixed(0)}%)',
+                    title: 'Komponen NOO (${nooWeight.toStringAsFixed(0)}%)',
                     formula: nooPassed
-                        ? '${CurrencyFormatter.formatNumber(nooVolumeKg)} Kg (Vol NOO) × Rp ${CurrencyFormatter.formatNumber(nooRate)} × ${nooWeight.toStringAsFixed(0)}% = ${CurrencyFormatter.formatRupiah(nooReward)}'
-                        : 'Tidak lolos syarat Min Ach ${nooMinAch.toStringAsFixed(0)}% atau 0 NOO (Capai ${nooAch.toStringAsFixed(1)}%) → Rp 0',
+                        ? '${CurrencyFormatter.formatNumber(nooVolumeKg)} Kg (NOO) × ${CurrencyFormatter.formatRate(nooRate)} × ${nooWeight.toStringAsFixed(0)}% = ${CurrencyFormatter.formatRupiah(nooReward)}'
+                        : 'Belum memenuhi batas ${nooMinAch.toStringAsFixed(0)}% atau 0 NOO → Rp 0',
                     passed: nooPassed,
                     grade: nooGrade,
                   ),
@@ -886,56 +877,41 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: AppSpacing.xl),
 
-        // Rincian Customer Industri & Status NOO
+        // Customer List & NOO Evaluation
         Container(
-          padding: const EdgeInsets.all(22),
+          padding: const EdgeInsets.all(AppSpacing.xl),
           decoration: BoxDecoration(
-            color: context.colors.bgCard,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
-            boxShadow: context.colors.cardShadows,
+            color: colors.bgCard,
+            borderRadius: BorderRadius.circular(AppRadius.card),
+            border: Border.all(color: colors.border),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: Row(
-                      children: [
-                        Icon(LucideIcons.building2, color: context.semantic.secondaryAccent, size: 20),
-                        const SizedBox(width: 10),
-                        Flexible(
-                          child: Text(
-                            'Rincian Customer Industri & Evaluasi Status NOO',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 16.5,
-                              fontWeight: FontWeight.w700,
-                              color: context.colors.textPrimary,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      'Customer industri & status NOO',
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
                   Text(
-                    '${customers.length} Customer',
-                    style: GoogleFonts.plusJakartaSans(color: context.colors.textMuted, fontSize: 12),
+                    '${customers.length} customer',
+                    style: context.monoStyle(fontSize: 11.5, color: colors.textMuted),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.lg),
               if (customers.isEmpty)
                 Padding(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
                   child: Center(
                     child: Text(
-                      'Belum ada transaksi customer industri pada periode ini',
-                      style: TextStyle(color: context.colors.textMuted),
+                      'Belum ada transaksi customer industri di periode ini.',
+                      style: TextStyle(color: colors.textMuted),
                     ),
                   ),
                 )
@@ -944,7 +920,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: customers.length,
-                  separatorBuilder: (_, __) => const Divider(height: 16),
+                  separatorBuilder: (_, __) => Divider(height: AppSpacing.lg, color: colors.border),
                   itemBuilder: (context, idx) {
                     final c = customers[idx] as Map<String, dynamic>;
                     final isNoo = c['is_noo'] == true;
@@ -955,61 +931,59 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                           decoration: BoxDecoration(
-                            color: (isNoo ? context.semantic.success : Theme.of(context).colorScheme.onSurfaceVariant).withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
+                            color: isNoo ? context.semantic.successBg : colors.bgSubtle,
+                            borderRadius: BorderRadius.circular(AppRadius.tag),
+                            border: Border.all(
+                              color: isNoo
+                                  ? context.semantic.success.withValues(alpha: 0.35)
+                                  : colors.border,
+                            ),
                           ),
                           child: Text(
                             isNoo ? 'NOO VALID' : custType,
-                            style: GoogleFonts.plusJakartaSans(
-                              color: isNoo ? context.semantic.success : context.colors.textSecondary,
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
+                            style: context.monoStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: isNoo ? context.semantic.success : colors.textSecondary,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: AppSpacing.md),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 '${c['customer_name'] ?? '-'} (${c['customer_code'] ?? '-'})',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 13.5,
-                                  color: context.colors.textPrimary,
-                                ),
+                                style: Theme.of(context).textTheme.titleSmall,
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Kota: ${c['city'] ?? '-'} • ${c['noo_reason'] ?? '-'}',
-                                style: GoogleFonts.plusJakartaSans(
-                                  color: context.colors.textMuted,
-                                  fontSize: 11.5,
-                                ),
+                                '${c['city'] ?? '-'} · ${c['noo_reason'] ?? '-'}',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.textMuted),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: AppSpacing.md),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
                               '${CurrencyFormatter.formatNumber(volKg)} Kg',
-                              style: GoogleFonts.plusJakartaSans(
+                              style: context.tabularNumStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 13.5,
-                                color: isNoo ? context.semantic.success : Theme.of(context).colorScheme.primary,
+                                color: isNoo ? context.semantic.success : colors.textPrimary,
                               ),
                             ),
                             Text(
-                              isNoo ? 'Dihitung Sell-In & NOO' : 'Dihitung Sell-In',
-                              style: GoogleFonts.plusJakartaSans(
+                              isNoo ? 'Masuk Sell-In & NOO' : 'Masuk Sell-In',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 fontSize: 11,
-                                color: context.colors.textMuted,
+                                color: colors.textMuted,
                               ),
                             ),
                           ],
@@ -1051,84 +1025,37 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= 960;
-
-            final Widget card1 = isAsc
-                ? _buildKpiCard(
-                    title: 'Tim Bawahan Surabaya (TO & SM)',
-                    value: '${subordinates.length} Sales Bawahan',
-                    subValue: '$achievedSubCount dari ${subordinates.length} Bawahan Mencapai Target',
-                    badgeText: 'Koordinator ASC',
-                    badgeColor: context.semantic.secondaryAccent,
-                    icon: LucideIcons.users,
-                    footerText: 'Evaluasi Individu Per Bawahan (TO & SM)',
-                    progress: subordinates.isEmpty ? 0.0 : (achievedSubCount / subordinates.length).clamp(0.0, 1.0),
-                  )
-                : _buildKpiCard(
-                    title: 'Target Penjualan Surabaya ($posCode)',
-                    value: '${CurrencyFormatter.formatNumber(targetKg)} Kg',
-                    subValue: 'Syarat Pencapaian Minimum: ${minAchPct.toStringAsFixed(0)}%',
-                    badgeText: 'Posisi $posCode',
-                    badgeColor: context.semantic.secondaryAccent,
-                    icon: LucideIcons.target,
-                    footerText: 'Koordinator ASC: $ascName',
-                    progress: 1.0,
-                  );
-
-            final Widget card2 = _buildKpiCard(
-              title: isAsc ? 'Total Realisasi vs Target Tim Bawahan' : 'Realisasi Penjualan Langsung Saya',
-              value: '${CurrencyFormatter.formatNumber(actualKg)} Kg',
-              subValue: isAsc
-                  ? 'Target Tim: ${CurrencyFormatter.formatNumber(targetKg)} Kg'
-                  : 'Target Saya: ${CurrencyFormatter.formatNumber(targetKg)} Kg ($gradeName)',
-              badgeText: '${achPct.toStringAsFixed(1)}% (${passed ? "Lolos" : "Tidak Lolos"})',
-              badgeColor: passed ? context.semantic.success : context.semantic.danger,
-              icon: LucideIcons.trendingUp,
-              footerText: isAsc
-                  ? 'Akumulasi Tonase Bawahan TO & SM'
-                  : 'Tarif Grade: Rp ${CurrencyFormatter.formatNumber(rate)}/Kg',
-              progress: (achPct / 100).clamp(0.0, 1.0),
-            );
-
-            final Widget card3 = _buildKpiCard(
-              title: isAsc ? 'Grand Total Insentif ASC' : 'Total Insentif Surabaya Saya',
-              value: CurrencyFormatter.formatRupiah(totalReward),
-              subValue: isAsc
-                  ? 'Akumulasi Kontribusi Bawahan Lolos Target'
-                  : 'Rumus: ${CurrencyFormatter.formatNumber(actualKg)} Kg × Rp ${CurrencyFormatter.formatNumber(rate)} × ${headerWeightPct.toStringAsFixed(0)}%',
-              badgeText: 'Periode ${state.selectedPeriod}',
-              badgeColor: totalReward > 0 ? context.semantic.success : Theme.of(context).colorScheme.onSurfaceVariant,
-              icon: LucideIcons.award,
-              footerText: isAsc ? 'Skema Koordinator ASC Surabaya' : 'Skema Penjualan Langsung ($posCode)',
-              progress: totalReward > 0 ? 1.0 : 0.0,
-            );
-
-            if (isWide) {
-              return Row(
-                children: [
-                  Expanded(child: card1),
-                  const SizedBox(width: 16),
-                  Expanded(child: card2),
-                  const SizedBox(width: 16),
-                  Expanded(child: card3),
-                ],
-              );
-            }
-
-            return Column(
-              children: [
-                card1,
-                const SizedBox(height: 14),
-                card2,
-                const SizedBox(height: 14),
-                card3,
-              ],
-            );
-          },
+        _buildSalesHeroSection(
+          context,
+          heroTitle: isAsc ? 'TOTAL INSENTIF KOORDINATOR ASC' : 'INSENTIF SURABAYA ($posCode)',
+          heroAmount: CurrencyFormatter.formatRupiah(totalReward),
+          heroStatus: totalReward > 0 ? 'Lolos' : 'Rp 0',
+          heroStatusPositive: totalReward > 0,
+          heroFootnote: isAsc
+              ? 'Akumulasi dari $achievedSubCount/${subordinates.length} tim mencapai target'
+              : '${CurrencyFormatter.formatNumber(actualKg)} Kg × ${CurrencyFormatter.formatRate(rate)} × ${headerWeightPct.toStringAsFixed(0)}%',
+          metrics: [
+            if (isAsc)
+              _SalesLedgerMetricData(
+                label: 'Tim bawahan TO & SM',
+                primaryValue: '$achievedSubCount / ${subordinates.length} Lolos',
+                secondaryLine: 'Evaluasi per individu bawahan',
+                pct: subordinates.isEmpty ? 0 : (achievedSubCount / subordinates.length) * 100,
+                footnote: 'Periode ${state.selectedPeriod}',
+              ),
+            _SalesLedgerMetricData(
+              label: isAsc ? 'Total tonase tim' : 'Penjualan langsung ($posCode)',
+              primaryValue: '${CurrencyFormatter.formatNumber(actualKg)} Kg',
+              secondaryLine: 'Target ${CurrencyFormatter.formatNumber(targetKg)} Kg',
+              pct: achPct,
+              footnote: isAsc
+                  ? 'Batas minimum individu ${minAchPct.toStringAsFixed(0)}%'
+                  : 'Tarif ${CurrencyFormatter.formatRate(rate)}/Kg · $gradeName · ASC $ascName',
+              forcePassedColor: passed,
+            ),
+          ],
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: AppSpacing.xl),
 
         if (isAsc)
           _buildSurabayaAscBreakdownCard(context, subordinates, totalReward)
@@ -1151,6 +1078,222 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     );
   }
 
+  Widget _buildSalesHeroSection(
+    BuildContext context, {
+    required String heroTitle,
+    required String heroAmount,
+    required String heroStatus,
+    required bool heroStatusPositive,
+    required String heroFootnote,
+    required List<_SalesLedgerMetricData> metrics,
+  }) {
+    final sem = context.semantic;
+    final colors = context.colors;
+    final cs = Theme.of(context).colorScheme;
+
+    final heroPanel = Container(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      decoration: BoxDecoration(
+        color: sem.heroSurface,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: sem.heroBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  heroTitle,
+                  style: context.monoStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.6,
+                    color: sem.heroMuted,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppRadius.tag),
+                  border: Border.all(color: sem.heroBorder),
+                ),
+                child: Text(
+                  heroStatus,
+                  style: context.monoStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: heroStatusPositive ? sem.heroAccent : sem.heroMuted,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              heroAmount,
+              style: context.tabularNumStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.8,
+                color: sem.heroOnSurface,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Divider(height: 1, color: sem.heroBorder),
+          const SizedBox(height: AppSpacing.sm + 2),
+          Text(
+            heroFootnote,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: sem.heroMuted),
+          ),
+        ],
+      ),
+    );
+
+    Widget buildCol(_SalesLedgerMetricData m) {
+      final Color barColor = m.forcePassedColor != null
+          ? (m.forcePassedColor! ? sem.success : sem.danger)
+          : (m.pct >= 100 ? sem.success : (m.pct >= 80 ? cs.primary : (m.pct > 0 ? sem.warning : colors.textMuted)));
+
+      return Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    m.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(color: colors.textMuted),
+                  ),
+                ),
+                if (!m.hidePercentage) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    '${m.pct.toStringAsFixed(1)}%',
+                    style: context.tabularNumStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: barColor,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                m.primaryValue,
+                style: context.tabularNumStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.4,
+                  color: colors.textPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              m.secondaryLine,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.tag),
+              child: LinearProgressIndicator(
+                value: (m.pct / 100).clamp(0.0, 1.0),
+                minHeight: 3,
+                backgroundColor: colors.bgElevated,
+                valueColor: AlwaysStoppedAnimation<Color>(barColor),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              m.footnote,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 11,
+                color: colors.textFaint,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final ledger = Container(
+          decoration: BoxDecoration(
+            color: colors.bgCard,
+            borderRadius: BorderRadius.circular(AppRadius.card),
+            border: Border.all(color: colors.border),
+          ),
+          child: constraints.maxWidth >= 600
+              ? IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (int i = 0; i < metrics.length; i++) ...[
+                        if (i > 0) VerticalDivider(width: 1, thickness: 1, color: colors.border),
+                        Expanded(child: buildCol(metrics[i])),
+                      ],
+                    ],
+                  ),
+                )
+              : Column(
+                  children: [
+                    for (int i = 0; i < metrics.length; i++) ...[
+                      if (i > 0) Divider(height: 1, color: colors.border),
+                      buildCol(metrics[i]),
+                    ],
+                  ],
+                ),
+        );
+
+        if (constraints.maxWidth >= 960) {
+          return IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(flex: 5, child: heroPanel),
+                const SizedBox(width: AppSpacing.lg),
+                Expanded(flex: 7, child: ledger),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            heroPanel,
+            const SizedBox(height: AppSpacing.md),
+            ledger,
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildFormulaBox(
     BuildContext context, {
     required String title,
@@ -1158,12 +1301,13 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     required bool passed,
     required String grade,
   }) {
+    final colors = context.colors;
     return Container(
       width: 440,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: context.colors.bgSubtle,
-        borderRadius: BorderRadius.circular(12),
+        color: colors.bgSubtle,
+        borderRadius: BorderRadius.circular(AppRadius.control),
         border: Border.all(
           color: (passed ? context.semantic.success : context.semantic.danger).withValues(alpha: 0.35),
         ),
@@ -1172,25 +1316,20 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: Text(
                   title,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: context.colors.textPrimary,
-                  ),
+                  style: Theme.of(context).textTheme.titleSmall,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               Text(
                 grade,
-                style: GoogleFonts.plusJakartaSans(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 11.5,
-                  color: passed ? context.semantic.success : context.colors.textMuted,
+                style: context.monoStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                  color: passed ? context.semantic.success : colors.textMuted,
                 ),
               ),
             ],
@@ -1198,7 +1337,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
           const SizedBox(height: 6),
           Text(
             formula,
-            style: GoogleFonts.plusJakartaSans(
+            style: context.tabularNumStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
               color: passed ? Theme.of(context).colorScheme.primary : context.semantic.danger,
@@ -1214,41 +1353,37 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     List<dynamic> subordinates,
     double totalReward,
   ) {
+    final colors = context.colors;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: context.colors.bgCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
-        boxShadow: context.colors.cardShadows,
+        color: colors.bgCard,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(LucideIcons.table, color: Theme.of(context).colorScheme.primary, size: 20),
-              const SizedBox(width: 10),
+              Icon(LucideIcons.table, color: Theme.of(context).colorScheme.primary, size: 17),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
-                  'Breakdown Evaluasi Bawahan Surabaya (TO & SM) — Koordinator ASC',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 16.5,
-                    fontWeight: FontWeight.w700,
-                    color: context.colors.textPrimary,
-                  ),
+                  'Evaluasi bawahan Surabaya (TO & SM)',
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           if (subordinates.isEmpty)
             Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
               child: Center(
                 child: Text(
-                  'Belum ada bawahan TO / SM yang terhubung pada periode ini',
-                  style: TextStyle(color: context.colors.textMuted),
+                  'Belum ada sales bawahan pada periode ini.',
+                  style: TextStyle(color: colors.textMuted),
                 ),
               ),
             )
@@ -1256,20 +1391,20 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
-                headingRowHeight: 42,
+                headingRowHeight: 40,
                 dataRowMinHeight: 46,
                 dataRowMaxHeight: 58,
-                columnSpacing: 18,
+                columnSpacing: 16,
                 columns: const [
-                  DataColumn(label: Text('Nama Bawahan')),
+                  DataColumn(label: Text('Nama')),
                   DataColumn(label: Text('Posisi')),
                   DataColumn(label: Text('Target (Kg)')),
                   DataColumn(label: Text('Aktual (Kg)')),
                   DataColumn(label: Text('% Capai')),
-                  DataColumn(label: Text('Status Target')),
+                  DataColumn(label: Text('Status')),
                   DataColumn(label: Text('Grade ASC')),
-                  DataColumn(label: Text('Bobot Header')),
-                  DataColumn(label: Text('Kontribusi Insentif ASC')),
+                  DataColumn(label: Text('Bobot')),
+                  DataColumn(label: Text('Kontribusi ASC')),
                 ],
                 rows: [
                   ...subordinates.map((raw) {
@@ -1294,16 +1429,16 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                         DataCell(Text('${ach.toStringAsFixed(1)}%')),
                         DataCell(
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: (passed ? context.semantic.success : context.semantic.danger).withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
+                              color: passed ? context.semantic.successBg : context.semantic.dangerBg,
+                              borderRadius: BorderRadius.circular(AppRadius.tag),
                             ),
                             child: Text(
-                              (s['status_label'] ?? (passed ? 'Mencapai Target' : 'Tidak Mencapai Target')).toString(),
+                              (s['status_label'] ?? (passed ? 'Lolos' : 'Di bawah batas')).toString(),
                               style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w700,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
                                 color: passed ? context.semantic.success : context.semantic.danger,
                               ),
                             ),
@@ -1311,7 +1446,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                         ),
                         DataCell(Text(
                           passed
-                              ? '${s['grade_name'] ?? '-'} (Rp ${CurrencyFormatter.formatNumber(rate)}/Kg)'
+                              ? '${s['grade_name'] ?? '-'} (${CurrencyFormatter.formatRate(rate)}/Kg)'
                               : '-',
                         )),
                         DataCell(Text(passed ? '${wHdr.toStringAsFixed(0)}%' : '-')),
@@ -1319,7 +1454,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                           CurrencyFormatter.formatRupiah(contrib),
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
-                            color: contrib > 0 ? context.semantic.success : context.colors.textMuted,
+                            color: contrib > 0 ? context.semantic.success : colors.textMuted,
                           ),
                         )),
                       ],
@@ -1328,8 +1463,8 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                   DataRow(
                     cells: [
                       const DataCell(Text(
-                        'GRAND TOTAL INSENTIF ASC',
-                        style: TextStyle(fontWeight: FontWeight.w800),
+                        'TOTAL INSENTIF ASC',
+                        style: TextStyle(fontWeight: FontWeight.w700),
                       )),
                       const DataCell(Text('')),
                       const DataCell(Text('')),
@@ -1340,8 +1475,8 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                       const DataCell(Text('')),
                       DataCell(Text(
                         CurrencyFormatter.formatRupiah(totalReward),
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
+                        style: context.tabularNumStyle(
+                          fontWeight: FontWeight.w700,
                           color: Theme.of(context).colorScheme.primary,
                         ),
                       )),
@@ -1369,63 +1504,9 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     required double headerWeightPct,
     required double totalReward,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      decoration: BoxDecoration(
-        color: context.colors.bgCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
-        boxShadow: context.colors.cardShadows,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(LucideIcons.calculator, color: Theme.of(context).colorScheme.primary, size: 20),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Rincian Perhitungan Insentif Individu Surabaya ($posCode)',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 16.5,
-                    fontWeight: FontWeight.w700,
-                    color: context.colors.textPrimary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          _buildFormulaBox(
-            context,
-            title: 'Rumus Perhitungan Insentif Penjualan Langsung ($posCode • Atasan ASC: $ascName)',
-            formula: passed
-                ? '${CurrencyFormatter.formatNumber(actualKg)} Kg (Aktual) × Rp ${CurrencyFormatter.formatNumber(rate)}/Kg ($gradeName) × ${headerWeightPct.toStringAsFixed(0)}% (Bobot Header) = ${CurrencyFormatter.formatRupiah(totalReward)}'
-                : 'Capai ${achPct.toStringAsFixed(1)}% < Min Ach ${minAchPct.toStringAsFixed(0)}% (Tidak Mencapai Target) → Rp 0',
-            passed: passed,
-            grade: gradeName,
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ---------------- WIDGET HELPERS ----------------
-
-  Widget _buildKpiCard({
-    required String title,
-    required String value,
-    required String subValue,
-    required String badgeText,
-    required Color badgeColor,
-    required IconData icon,
-    required String footerText,
-    required double progress,
-  }) {
     final colors = context.colors;
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
         color: colors.bgCard,
         borderRadius: BorderRadius.circular(AppRadius.card),
@@ -1436,81 +1517,32 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
         children: [
           Row(
             children: [
-              Icon(icon, color: colors.textMuted, size: 15),
+              Icon(LucideIcons.calculator, color: Theme.of(context).colorScheme.primary, size: 17),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: colors.textMuted,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                badgeText,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: context.tabularNumStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: badgeColor,
+                  'Ringkasan perhitungan ($posCode)',
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              value,
-              style: context.tabularNumStyle(
-                fontSize: 21,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.4,
-                color: colors.textPrimary,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            subValue,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: context.tabularNumStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: colors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(2),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 3,
-              backgroundColor: colors.bgElevated,
-              valueColor: AlwaysStoppedAnimation<Color>(badgeColor),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            footerText,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontSize: 11,
-              color: colors.textFaint,
-            ),
+          _buildFormulaBox(
+            context,
+            title: 'Penjualan langsung ($posCode · Koordinator ASC: $ascName)',
+            formula: passed
+                ? '${CurrencyFormatter.formatNumber(actualKg)} Kg × ${CurrencyFormatter.formatRate(rate)}/Kg ($gradeName) × ${headerWeightPct.toStringAsFixed(0)}% = ${CurrencyFormatter.formatRupiah(totalReward)}'
+                : 'Capaian ${achPct.toStringAsFixed(1)}% di bawah batas ${minAchPct.toStringAsFixed(0)}% → Rp 0',
+            passed: passed,
+            grade: gradeName,
           ),
         ],
       ),
     );
   }
+
+  // ---------------- WIDGET HELPERS ----------------
 
   void _showMultiPeriodPickerDialog(BuildContext context, WidgetRef ref, DashboardState state) {
     final colors = context.colors;
@@ -1523,21 +1555,17 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
           return AlertDialog(
             backgroundColor: colors.bgDialog,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppRadius.card),
               side: BorderSide(color: colors.border),
             ),
             title: Row(
               children: [
-                Icon(LucideIcons.calendar, size: 19, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: 10),
+                Icon(LucideIcons.calendar, size: 17, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: AppSpacing.sm + 2),
                 Expanded(
                   child: Text(
-                    'Pilih Periode Dashboard',
-                    style: GoogleFonts.plusJakartaSans(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                    'Pilih periode',
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
                 TextButton(
@@ -1555,7 +1583,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                     });
                   },
                   child: Text(
-                    selected.length == state.availablePeriods.length ? 'Reset 1 Bulan' : 'Pilih Semua',
+                    selected.length == state.availablePeriods.length ? 'Reset 1 bulan' : 'Pilih semua',
                     style: const TextStyle(fontSize: 12),
                   ),
                 ),
@@ -1575,10 +1603,10 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                       value: isChecked,
                       title: Text(
                         p,
-                        style: GoogleFonts.plusJakartaSans(
+                        style: context.monoStyle(
                           color: colors.textPrimary,
-                          fontWeight: isChecked ? FontWeight.bold : FontWeight.w500,
-                          fontSize: 13.5,
+                          fontWeight: isChecked ? FontWeight.w600 : FontWeight.w400,
+                          fontSize: 13,
                         ),
                       ),
                       onChanged: (checked) {
@@ -1601,20 +1629,12 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                 child: Text('Batal', style: TextStyle(color: colors.textMuted)),
               ),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
                 onPressed: () {
                   final sorted = selected.toList()..sort();
                   Navigator.pop(ctx);
                   ref.read(dashboardProvider.notifier).changePeriod(sorted.join(','));
                 },
-                child: Text(
-                  'Terapkan (${selected.length} Periode)',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
+                child: Text('Terapkan (${selected.length})'),
               ),
             ],
           );
@@ -1632,12 +1652,10 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
   }) {
     final colors = context.colors;
     if (targetVal <= 0 && realVal <= 0) {
-      return Text('-', style: TextStyle(color: colors.textMuted, fontSize: 12));
+      return Text('—', style: TextStyle(color: colors.textMuted, fontSize: 12));
     }
 
-    final Color badgeColor = pct >= 100
-        ? context.semantic.success
-        : (pct >= 80 ? context.semantic.warning : context.semantic.danger);
+    final Color badgeColor = _achColor(pct);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1651,20 +1669,13 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
             fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(height: 3),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-          decoration: BoxDecoration(
-            color: badgeColor.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(AppRadius.tag),
-          ),
-          child: Text(
-            '${pct.toStringAsFixed(1)}%',
-            style: context.tabularNumStyle(
-              color: badgeColor,
-              fontSize: 10.5,
-              fontWeight: FontWeight.w700,
-            ),
+        const SizedBox(height: 2),
+        Text(
+          '${pct.toStringAsFixed(1)}%',
+          style: context.tabularNumStyle(
+            color: badgeColor,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ],
@@ -1672,63 +1683,80 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
   }
 
   Widget _buildLeaderboardCard(BuildContext context, List<dynamic> leaderboard) {
+    final colors = context.colors;
+    final tt = Theme.of(context).textTheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: context.colors.bgCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
-        boxShadow: context.colors.cardShadows,
+        color: colors.bgCard,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(LucideIcons.trophy, color: Theme.of(context).colorScheme.primary, size: 20),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Leaderboard Personil Sales',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 16.5,
-                      fontWeight: FontWeight.w700,
-                      color: context.colors.textPrimary,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Capaian sales tertinggi', style: tt.titleLarge),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Urut berdasarkan persentase target Sell-In & Sell-Out',
+                      style: tt.bodySmall?.copyWith(color: colors.textMuted),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               Text(
-                'Top ${leaderboard.length} Penugasan',
-                style: GoogleFonts.plusJakartaSans(color: context.colors.textMuted, fontSize: 12),
+                '${leaderboard.length} teratas',
+                style: context.monoStyle(fontSize: 11, color: colors.textMuted),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           if (leaderboard.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Center(
-                child: Text('Belum ada data target sales untuk periode ini', style: TextStyle(color: context.colors.textMuted)),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl, horizontal: AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: colors.bgSubtle,
+                borderRadius: BorderRadius.circular(AppRadius.control),
+                border: Border.all(color: colors.border),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'Belum ada target sales di periode ini.',
+                    style: tt.bodyMedium?.copyWith(color: colors.textMuted),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  OutlinedButton.icon(
+                    icon: const Icon(LucideIcons.target, size: 15),
+                    label: const Text('Buka target kuota'),
+                    onPressed: () => context.go('/master/target'),
+                  ),
+                ],
               ),
             )
           else
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
-                columnSpacing: 12,
+                columnSpacing: 14,
                 horizontalMargin: 6,
-                headingRowHeight: 40,
+                headingRowHeight: 38,
                 dataRowMinHeight: 54,
                 dataRowMaxHeight: 62,
                 columns: const [
-                  DataColumn(label: Text('#', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                  DataColumn(label: Text('Personil & Wilayah', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                  DataColumn(label: Text('Sell-In', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                  DataColumn(label: Text('Sell-Out', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                  DataColumn(label: Text('AO (Toko)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                  DataColumn(label: Text('No')),
+                  DataColumn(label: Text('Personil & wilayah')),
+                  DataColumn(label: Text('Sell-In')),
+                  DataColumn(label: Text('Sell-Out')),
+                  DataColumn(label: Text('AO (Toko)')),
                 ],
                 rows: leaderboard.asMap().entries.map((entry) {
                   final idx = entry.key + 1;
@@ -1751,15 +1779,14 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                   return DataRow(
                     cells: [
                       DataCell(
-                        CircleAvatar(
-                          radius: 12,
-                          backgroundColor: idx <= 3 ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15) : context.colors.bgElevated,
+                        SizedBox(
+                          width: 24,
                           child: Text(
-                            '$idx',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: idx <= 3 ? Theme.of(context).colorScheme.primary : context.colors.textMuted,
+                            idx.toString().padLeft(2, '0'),
+                            style: context.monoStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: idx <= 3 ? Theme.of(context).colorScheme.primary : colors.textMuted,
                             ),
                           ),
                         ),
@@ -1774,21 +1801,24 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                               children: [
                                 Text(
                                   item['name'] ?? '-',
-                                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, color: context.colors.textPrimary, fontSize: 13),
+                                  style: tt.titleSmall,
                                 ),
                                 const SizedBox(width: 6),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                                   decoration: BoxDecoration(
-                                    color: (pos == 'ASM' ? Theme.of(context).colorScheme.primary : context.semantic.secondaryAccent).withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(6),
+                                    color: colors.bgSubtle,
+                                    borderRadius: BorderRadius.circular(AppRadius.tag),
+                                    border: Border.all(color: colors.border),
                                   ),
                                   child: Text(
                                     pos,
-                                    style: GoogleFonts.plusJakartaSans(
-                                      color: pos == 'ASM' ? Theme.of(context).colorScheme.primary : context.semantic.secondaryAccent,
+                                    style: context.monoStyle(
+                                      color: pos == 'ASM'
+                                          ? Theme.of(context).colorScheme.primary
+                                          : colors.textSecondary,
                                       fontSize: 10,
-                                      fontWeight: FontWeight.bold,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ),
@@ -1796,8 +1826,8 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '@${item['username'] ?? '-'} • ${pos == 'ASM' ? '$depoCount Depo' : '$areaCount Area'}',
-                              style: TextStyle(color: context.colors.textMuted, fontSize: 11),
+                              '@${item['username'] ?? '-'} · ${pos == 'ASM' ? '$depoCount depo' : '$areaCount area'}',
+                              style: tt.bodySmall?.copyWith(fontSize: 11, color: colors.textMuted),
                             ),
                           ],
                         ),
@@ -1864,202 +1894,28 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     Color? activeColor,
   }) {
     final color = activeColor ?? Theme.of(context).colorScheme.primary;
+    final colors = context.colors;
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppRadius.control),
+      hoverColor: colors.bgHover,
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        curve: Curves.easeOutCubic,
+        constraints: const BoxConstraints(minHeight: 36),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
         decoration: BoxDecoration(
-          color: isSelected ? color : context.colors.bgElevated,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isSelected ? color : context.colors.border),
+          color: isSelected ? color : colors.bgSubtle,
+          borderRadius: BorderRadius.circular(AppRadius.control),
+          border: Border.all(color: isSelected ? color : colors.border),
         ),
         child: Text(
           label,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 11.5,
-            fontWeight: FontWeight.w600,
-            color: isSelected ? Theme.of(context).colorScheme.onPrimary : context.colors.textSecondary,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            fontSize: 12,
+            color: isSelected ? Theme.of(context).colorScheme.onPrimary : colors.textSecondary,
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildExecutiveHealthStrip(BuildContext context, Map<String, dynamic> kpi) {
-    final realSellIn = (kpi['realisasi_sell_in_kg'] as num?)?.toDouble() ?? 0.0;
-    final realSellOut = (kpi['realisasi_sell_out_kg'] as num?)?.toDouble() ?? 0.0;
-    final sellThroughPct = (kpi['sell_through_pct'] as num?)?.toDouble() ?? 0.0;
-    final totalDppSellIn = (kpi['total_dpp_sell_in'] as num?)?.toDouble() ?? 0.0;
-    final totalDppSellOut = (kpi['total_dpp_sell_out'] as num?)?.toDouble() ?? 0.0;
-    final totalReward = (kpi['total_incentive_pool'] as num?)?.toDouble() ?? 0.0;
-    final incentiveRatioPct = (kpi['incentive_ratio_pct'] as num?)?.toDouble() ?? 0.0;
-
-    final String stBadge;
-    final Color stColor;
-    if (realSellIn <= 0) {
-      stBadge = 'Menunggu Realisasi';
-      stColor = Theme.of(context).colorScheme.onSurfaceVariant;
-    } else if (sellThroughPct >= 85) {
-      stBadge = 'Stok Lancar';
-      stColor = context.semantic.success;
-    } else if (sellThroughPct >= 65) {
-      stBadge = 'Moderat';
-      stColor = context.semantic.warning;
-    } else {
-      stBadge = 'Stok Menumpuk';
-      stColor = context.semantic.danger;
-    }
-
-    final double displayOmzet = totalDppSellOut > 0 ? totalDppSellOut : totalDppSellIn;
-    final String omzetBadge = totalDppSellOut > 0 ? 'DPP Sell-Out' : 'DPP Sell-In';
-
-    final String ratioBadge = incentiveRatioPct <= 0
-        ? 'Belum Dihitung'
-        : (incentiveRatioPct <= 3.0 ? 'Efisien' : 'Perlu Pantau');
-    final Color ratioColor = incentiveRatioPct <= 0
-        ? Theme.of(context).colorScheme.onSurfaceVariant
-        : (incentiveRatioPct <= 3.0 ? context.semantic.success : context.semantic.warning);
-
-    Widget buildStripCell({
-      required Color statusColor,
-      required String label,
-      required String value,
-      required String badge,
-      required String caption,
-    }) {
-      final colors = context.colors;
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: statusColor,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: colors.textMuted,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Text(
-                  badge,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: statusColor,
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Flexible(
-                  child: Text(
-                    value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.tabularNumStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: colors.textPrimary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Text(
-              caption,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontSize: 11,
-                color: colors.textMuted,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final cell1 = buildStripCell(
-      statusColor: stColor,
-      label: 'Sell-Through (SO ÷ SI)',
-      value: '${sellThroughPct.toStringAsFixed(1)}%',
-      badge: stBadge,
-      caption: 'SO ${_formatCompactKg(realSellOut)} vs SI ${_formatCompactKg(realSellIn)}',
-    );
-
-    final cell2 = buildStripCell(
-      statusColor: Theme.of(context).colorScheme.primary,
-      label: 'Total Omzet Penjualan',
-      value: CurrencyFormatter.formatRupiah(displayOmzet),
-      badge: omzetBadge,
-      caption: totalDppSellOut > 0
-          ? 'DPP Sell-In: ${CurrencyFormatter.formatRupiah(totalDppSellIn)}'
-          : 'Akumulasi nominal transaksi periode terpilih',
-    );
-
-    final cell3 = buildStripCell(
-      statusColor: ratioColor,
-      label: 'Rasio Insentif / Omzet',
-      value: '${incentiveRatioPct.toStringAsFixed(2)}%',
-      badge: ratioBadge,
-      caption: 'Budget ${CurrencyFormatter.formatRupiah(totalReward)} dari Omzet Sell-Out',
-    );
-
-    final colors = context.colors;
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.bgCard,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: colors.border),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          if (constraints.maxWidth >= 820) {
-            return IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(child: cell1),
-                  VerticalDivider(width: 1, thickness: 1, color: colors.border),
-                  Expanded(child: cell2),
-                  VerticalDivider(width: 1, thickness: 1, color: colors.border),
-                  Expanded(child: cell3),
-                ],
-              ),
-            );
-          }
-          return Column(
-            children: [
-              cell1,
-              Divider(height: 1, color: colors.border),
-              cell2,
-              Divider(height: 1, color: colors.border),
-              cell3,
-            ],
-          );
-        },
       ),
     );
   }
@@ -2070,14 +1926,15 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     List<dynamic> underperformingDistributors,
   ) {
     final activeList = _showUnderperformingDist ? underperformingDistributors : topDistributors;
+    final colors = context.colors;
+    final tt = Theme.of(context).textTheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: context.colors.bgCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
-        boxShadow: context.colors.cardShadows,
+        color: colors.bgCard,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2088,71 +1945,58 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      _showUnderperformingDist ? 'Distributor Perlu Perhatian' : 'Top Distributor (Sell-In)',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: context.colors.textPrimary,
-                      ),
-                    ),
+                    Text('Capaian distributor', style: tt.titleLarge),
                     const SizedBox(height: 2),
                     Text(
                       _showUnderperformingDist
-                          ? 'Capaian Sell-In < 80% pada periode terpilih'
-                          : 'Pencapaian Sell-In (Real / Target) mengikuti periode terpilih',
-                      style: GoogleFonts.plusJakartaSans(color: context.colors.textMuted, fontSize: 11.5),
+                          ? 'Distributor dengan capaian Sell-In di bawah 80%'
+                          : 'Capaian Sell-In terhadap kuota periode ini',
+                      style: tt.bodySmall?.copyWith(color: colors.textMuted),
                     ),
                   ],
                 ),
               ),
               Icon(
                 _showUnderperformingDist ? LucideIcons.alertTriangle : LucideIcons.building2,
-                size: 18,
-                color: _showUnderperformingDist ? context.semantic.danger : context.colors.textMuted,
+                size: 16,
+                color: _showUnderperformingDist ? context.semantic.danger : colors.textMuted,
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           Wrap(
-            spacing: 8,
+            spacing: AppSpacing.sm,
             runSpacing: 6,
             children: [
               _buildToggleChip(
-                label: 'Top Pencapaian',
+                label: 'Teratas',
                 isSelected: !_showUnderperformingDist,
                 onTap: () => setState(() => _showUnderperformingDist = false),
               ),
               _buildToggleChip(
-                label: 'Perlu Perhatian (<80%)${underperformingDistributors.isNotEmpty ? ' (${underperformingDistributors.length})' : ''}',
+                label: 'Di bawah 80%${underperformingDistributors.isNotEmpty ? ' (${underperformingDistributors.length})' : ''}',
                 isSelected: _showUnderperformingDist,
                 activeColor: context.semantic.danger,
                 onTap: () => setState(() => _showUnderperformingDist = true),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.lg),
           if (activeList.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Center(
-                child: Column(
-                  children: [
-                    Icon(
-                      _showUnderperformingDist ? LucideIcons.checkCircle2 : LucideIcons.inbox,
-                      size: 28,
-                      color: _showUnderperformingDist ? context.semantic.success : context.colors.textMuted,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _showUnderperformingDist
-                          ? 'Tidak ada distributor di bawah 80% untuk periode ini'
-                          : 'Belum ada data distributor untuk periode ini',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: context.colors.textMuted, fontSize: 12.5),
-                    ),
-                  ],
-                ),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl, horizontal: AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: colors.bgSubtle,
+                borderRadius: BorderRadius.circular(AppRadius.control),
+                border: Border.all(color: colors.border),
+              ),
+              child: Text(
+                _showUnderperformingDist
+                    ? 'Semua distributor sudah di atas 80% pada periode ini.'
+                    : 'Belum ada data distributor di periode ini.',
+                textAlign: TextAlign.center,
+                style: tt.bodySmall?.copyWith(color: colors.textMuted),
               ),
             )
           else
@@ -2160,7 +2004,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: activeList.length,
-              separatorBuilder: (_, __) => const Divider(height: 16),
+              separatorBuilder: (_, __) => Divider(height: AppSpacing.lg, color: colors.border),
               itemBuilder: (context, idx) {
                 final d = activeList[idx];
                 final targetSi = (d['target_sell_in_kg'] as num?)?.toDouble() ?? 0.0;
@@ -2171,31 +2015,24 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                 final depoCount = (d['depos_count'] as num?)?.toInt() ?? 0;
                 final regionName = (d['region_name'] ?? '').toString();
                 final pctColor = targetSi > 0 ? _achColor(achSiPct) : Theme.of(context).colorScheme.onSurfaceVariant;
-                final rankColor = _showUnderperformingDist ? context.semantic.danger : context.semantic.secondaryAccent;
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: rankColor.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          alignment: Alignment.center,
+                        SizedBox(
+                          width: 24,
                           child: Text(
-                            '${idx + 1}',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontWeight: FontWeight.bold,
-                              color: rankColor,
+                            (idx + 1).toString().padLeft(2, '0'),
+                            style: context.monoStyle(
+                              fontWeight: FontWeight.w600,
+                              color: _showUnderperformingDist ? context.semantic.danger : colors.textMuted,
                               fontSize: 11.5,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2204,50 +2041,39 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                                 d['name'] ?? '-',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontWeight: FontWeight.w600,
-                                  color: context.colors.textPrimary,
-                                  fontSize: 12.8,
-                                ),
+                                style: tt.titleSmall,
                               ),
                               Text(
-                                '${d['code'] ?? '-'}${regionName.isNotEmpty && regionName != 'Lainnya' ? ' • $regionName' : ''} • $depoCount Depo',
+                                '${d['code'] ?? '-'}${regionName.isNotEmpty && regionName != 'Lainnya' ? ' · $regionName' : ''} · $depoCount depo',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(color: context.colors.textMuted, fontSize: 11),
+                                style: context.monoStyle(color: colors.textMuted, fontSize: 10.5),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: pctColor.withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '${achSiPct.toStringAsFixed(1)}%',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontWeight: FontWeight.w700,
-                              color: pctColor,
-                              fontSize: 11.5,
-                            ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(
+                          '${achSiPct.toStringAsFixed(1)}%',
+                          style: context.tabularNumStyle(
+                            fontWeight: FontWeight.w700,
+                            color: pctColor,
+                            fontSize: 13,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 7),
+                    const SizedBox(height: 6),
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(AppRadius.tag),
                       child: LinearProgressIndicator(
                         value: (achSiPct / 100).clamp(0.0, 1.0),
-                        minHeight: 5,
-                        backgroundColor: context.colors.bgElevated,
+                        minHeight: 3,
+                        backgroundColor: colors.bgElevated,
                         valueColor: AlwaysStoppedAnimation<Color>(pctColor),
                       ),
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 4),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -2256,20 +2082,20 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                             'Sell-In: ${CurrencyFormatter.formatNumber(realSi)} / ${CurrencyFormatter.formatNumber(targetSi)} Kg',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.plusJakartaSans(
+                            style: context.tabularNumStyle(
                               fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: context.colors.textSecondary,
+                              fontWeight: FontWeight.w500,
+                              color: colors.textSecondary,
                             ),
                           ),
                         ),
                         if (targetSo > 0)
                           Text(
                             'SO ${achSoPct.toStringAsFixed(0)}%',
-                            style: GoogleFonts.plusJakartaSans(
+                            style: context.tabularNumStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w600,
-                              color: context.colors.textMuted,
+                              color: colors.textMuted,
                             ),
                           ),
                       ],
@@ -2284,48 +2110,42 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
   }
 
   Widget _buildRegionPerformanceCard(BuildContext context, List<dynamic> regions) {
+    final colors = context.colors;
+    final tt = Theme.of(context).textTheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: context.colors.bgCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
-        boxShadow: context.colors.cardShadows,
+        color: colors.bgCard,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(LucideIcons.map, size: 18, color: context.semantic.secondaryAccent),
-              const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text('Sebaran per wilayah', style: tt.titleLarge),
+                    const SizedBox(height: 2),
                     Text(
-                      'Performa per Region',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: context.colors.textPrimary,
-                      ),
-                    ),
-                    Text(
-                      'Perbandingan Sell-In, Sell-Out, AO (Toko), dan Sell-Through tiap wilayah',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: context.colors.textMuted),
+                      'Perbandingan Sell-In, Sell-Out, dan toko aktif tiap region',
+                      style: tt.bodySmall?.copyWith(color: colors.textMuted),
                     ),
                   ],
                 ),
               ),
+              Icon(LucideIcons.map, size: 16, color: colors.textMuted),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           if (regions.isEmpty)
             Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(AppSpacing.xl),
               child: Center(
-                child: Text('Belum ada data region untuk periode ini', style: TextStyle(color: context.colors.textMuted)),
+                child: Text('Belum ada data wilayah di periode ini.', style: TextStyle(color: colors.textMuted)),
               ),
             )
           else
@@ -2333,7 +2153,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: regions.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
               itemBuilder: (context, idx) {
                 final r = regions[idx];
                 final regName = (r['region_name'] ?? '-').toString();
@@ -2359,29 +2179,21 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                         children: [
                           Text(
                             label,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: context.colors.textMuted,
-                            ),
+                            style: tt.bodySmall?.copyWith(fontSize: 11, fontWeight: FontWeight.w600, color: colors.textMuted),
                           ),
                           Text(
                             '${pct.toStringAsFixed(1)}%',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                              color: color,
-                            ),
+                            style: context.tabularNumStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: color),
                           ),
                         ],
                       ),
                       const SizedBox(height: 4),
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(3),
+                        borderRadius: BorderRadius.circular(AppRadius.tag),
                         child: LinearProgressIndicator(
                           value: (pct / 100).clamp(0.0, 1.0),
-                          minHeight: 5,
-                          backgroundColor: context.colors.bgCard,
+                          minHeight: 3,
+                          backgroundColor: colors.bgCard,
                           valueColor: AlwaysStoppedAnimation<Color>(color),
                         ),
                       ),
@@ -2390,9 +2202,10 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                         detail,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.plusJakartaSans(
+                        style: context.tabularNumStyle(
                           fontSize: 10.5,
-                          color: context.colors.textSecondary,
+                          fontWeight: FontWeight.w500,
+                          color: colors.textSecondary,
                         ),
                       ),
                     ],
@@ -2400,11 +2213,11 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                 }
 
                 return Container(
-                  padding: const EdgeInsets.all(13),
+                  padding: const EdgeInsets.all(AppSpacing.md + 2),
                   decoration: BoxDecoration(
-                    color: context.colors.bgSubtle,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: context.colors.border.withValues(alpha: 0.6)),
+                    color: colors.bgSubtle,
+                    borderRadius: BorderRadius.circular(AppRadius.control),
+                    border: Border.all(color: colors.border),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2419,42 +2232,28 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                                     regName,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 13.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: context.colors.textPrimary,
-                                    ),
+                                    style: tt.titleSmall,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: AppSpacing.sm),
                                 Text(
-                                  '$distCount Dist',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    color: context.colors.textMuted,
-                                  ),
+                                  '$distCount dist',
+                                  style: context.monoStyle(fontSize: 10.5, color: colors.textMuted),
                                 ),
                               ],
                             ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: context.semantic.secondaryAccent.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'Sell-Through ${stPct.toStringAsFixed(1)}%',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: context.semantic.secondaryAccent,
-                              ),
+                          Text(
+                            'Sell-through ${stPct.toStringAsFixed(1)}%',
+                            style: context.tabularNumStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: AppSpacing.md),
                       Row(
                         children: [
                           Expanded(
@@ -2464,7 +2263,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                               '${_formatCompactKg(realSi)} / ${_formatCompactKg(targetSi)}',
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: AppSpacing.md),
                           Expanded(
                             child: miniMetric(
                               'Sell-Out',
@@ -2472,7 +2271,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                               '${_formatCompactKg(realSo)} / ${_formatCompactKg(targetSo)}',
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: AppSpacing.md),
                           Expanded(
                             child: miniMetric(
                               'AO (Toko)',
@@ -2493,48 +2292,42 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
   }
 
   Widget _buildBrandPerformanceCard(BuildContext context, List<dynamic> brands) {
+    final colors = context.colors;
+    final tt = Theme.of(context).textTheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: context.colors.bgCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
-        boxShadow: context.colors.cardShadows,
+        color: colors.bgCard,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(LucideIcons.tag, size: 18, color: Theme.of(context).colorScheme.primary),
-              const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text('Kontribusi per brand', style: tt.titleLarge),
+                    const SizedBox(height: 2),
                     Text(
-                      'Performa & Kontribusi Brand',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: context.colors.textPrimary,
-                      ),
-                    ),
-                    Text(
-                      'Pencapaian Sell-In, Sell-Out & porsi kontribusi (% Share)',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: context.colors.textMuted),
+                      'Porsi volume Sell-In dan serapan Sell-Out tiap merek',
+                      style: tt.bodySmall?.copyWith(color: colors.textMuted),
                     ),
                   ],
                 ),
               ),
+              Icon(LucideIcons.tag, size: 16, color: colors.textMuted),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           if (brands.isEmpty)
             Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(AppSpacing.xl),
               child: Center(
-                child: Text('Belum ada data brand untuk periode ini', style: TextStyle(color: context.colors.textMuted)),
+                child: Text('Belum ada data brand di periode ini.', style: TextStyle(color: colors.textMuted)),
               ),
             )
           else
@@ -2542,7 +2335,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: brands.length,
-              separatorBuilder: (_, __) => const Divider(height: 16),
+              separatorBuilder: (_, __) => Divider(height: AppSpacing.lg, color: colors.border),
               itemBuilder: (context, idx) {
                 final b = brands[idx];
                 final name = (b['brand_name'] ?? '-').toString();
@@ -2565,58 +2358,32 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                             name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: context.colors.textPrimary,
-                            ),
+                            style: tt.titleSmall,
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: context.semantic.secondaryAccent.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'Share ${shareSi.toStringAsFixed(1)}%',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
-                              color: context.semantic.secondaryAccent,
-                            ),
-                          ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(
+                          'Porsi ${shareSi.toStringAsFixed(1)}%',
+                          style: context.monoStyle(fontSize: 10.5, color: colors.textMuted),
                         ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '${achSi.toStringAsFixed(1)}%',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: color,
-                            ),
-                          ),
+                        const SizedBox(width: AppSpacing.md),
+                        Text(
+                          '${achSi.toStringAsFixed(1)}%',
+                          style: context.tabularNumStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: color),
                         ),
                       ],
                     ),
                     const SizedBox(height: 6),
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(AppRadius.tag),
                       child: LinearProgressIndicator(
                         value: (achSi / 100).clamp(0.0, 1.0),
-                        minHeight: 5,
-                        backgroundColor: context.colors.bgElevated,
+                        minHeight: 3,
+                        backgroundColor: colors.bgElevated,
                         valueColor: AlwaysStoppedAnimation<Color>(color),
                       ),
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 4),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -2625,18 +2392,20 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                             'SI: ${_formatCompactKg(realSi)} / ${_formatCompactKg(targetSi)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.plusJakartaSans(
+                            style: context.tabularNumStyle(
                               fontSize: 11,
-                              color: context.colors.textSecondary,
+                              fontWeight: FontWeight.w500,
+                              color: colors.textSecondary,
                             ),
                           ),
                         ),
                         if (targetSo > 0 || realSo > 0)
                           Text(
                             'SO: ${_formatCompactKg(realSo)} (${achSo.toStringAsFixed(0)}%)',
-                            style: GoogleFonts.plusJakartaSans(
+                            style: context.tabularNumStyle(
                               fontSize: 10.5,
-                              color: context.colors.textMuted,
+                              fontWeight: FontWeight.w500,
+                              color: colors.textMuted,
                             ),
                           ),
                       ],
@@ -2652,8 +2421,11 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
 
   Widget _buildMonthlyTrendCard(BuildContext context, List<dynamic> trend) {
     final isSellIn = _trendMetric == 'SELL_IN';
-    final realColor = isSellIn ? Theme.of(context).colorScheme.primary : context.semantic.secondaryAccent;
-    final targetColor = Theme.of(context).colorScheme.outline;
+    final cs = Theme.of(context).colorScheme;
+    final colors = context.colors;
+    final tt = Theme.of(context).textTheme;
+    final realColor = isSellIn ? cs.primary : context.semantic.info;
+    final targetColor = colors.borderStrong;
 
     double maxVal = 0.0;
     for (final item in trend) {
@@ -2662,14 +2434,19 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
       if (t > maxVal) maxVal = t;
       if (r > maxVal) maxVal = r;
     }
+    final double gridInterval = maxVal > 0 ? (maxVal / 3) : 25.0;
+
+    final int? activeIdx = (_touchedTrendIndex != null && _touchedTrendIndex! >= 0 && _touchedTrendIndex! < trend.length)
+        ? _touchedTrendIndex
+        : null;
+    final hoveredItem = activeIdx != null ? trend[activeIdx] : null;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: context.colors.bgCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
-        boxShadow: context.colors.cardShadows,
+        color: colors.bgCard,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2677,90 +2454,130 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
           SizedBox(
             width: double.infinity,
             child: Wrap(
-              spacing: 12,
-              runSpacing: 10,
+              spacing: AppSpacing.md,
+              runSpacing: AppSpacing.sm,
               alignment: WrapAlignment.spaceBetween,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Tren Target vs Realisasi (6 Periode)',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: context.colors.textPrimary,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isSellIn
+                          ? 'Tren 6 periode terakhir — Target vs Realisasi Sell-In (Kg)'
+                          : 'Tren 6 periode terakhir — Target vs Realisasi Sell-Out (Kg)',
+                      style: tt.titleLarge,
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    isSellIn
-                        ? 'Perbandingan Target vs Realisasi Sell-In Depo per Bulan (Kg)'
-                        : 'Perbandingan Target vs Realisasi Sell-Out Area per Bulan (Kg)',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: context.colors.textMuted),
-                  ),
-                ],
-              ),
-              Wrap(
-                spacing: 12,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  _chartLegend('Target (Kg)', targetColor),
-                  _chartLegend('Realisasi (Kg)', realColor),
-                  const SizedBox(width: 4),
-                  _buildToggleChip(
-                    label: 'Sell-In',
-                    isSelected: isSellIn,
-                    activeColor: Theme.of(context).colorScheme.primary,
-                    onTap: () => setState(() => _trendMetric = 'SELL_IN'),
-                  ),
-                  _buildToggleChip(
-                    label: 'Sell-Out',
-                    isSelected: !isSellIn,
-                    activeColor: context.semantic.secondaryAccent,
-                    onTap: () => setState(() => _trendMetric = 'SELL_OUT'),
-                  ),
-                ],
-              ),
-            ],
+                    const SizedBox(height: 3),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(width: 10, height: 3, color: targetColor),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Batang abu: Target',
+                          style: tt.bodySmall?.copyWith(color: colors.textMuted),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Container(width: 10, height: 3, color: realColor),
+                        const SizedBox(width: 5),
+                        Text(
+                          isSellIn ? 'Batang viridian: Realisasi Sell-In' : 'Batang biru: Realisasi Sell-Out',
+                          style: tt.bodySmall?.copyWith(color: colors.textMuted),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.xs,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    _buildToggleChip(
+                      label: 'Sell-In',
+                      isSelected: isSellIn,
+                      activeColor: cs.primary,
+                      onTap: () => setState(() {
+                        _trendMetric = 'SELL_IN';
+                        _touchedTrendIndex = null;
+                      }),
+                    ),
+                    _buildToggleChip(
+                      label: 'Sell-Out',
+                      isSelected: !isSellIn,
+                      activeColor: context.semantic.info,
+                      onTap: () => setState(() {
+                        _trendMetric = 'SELL_OUT';
+                        _touchedTrendIndex = null;
+                      }),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: AppSpacing.md),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 140),
+            child: hoveredItem != null
+                ? Container(
+                    key: ValueKey('trend_focus_$activeIdx'),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: colors.bgSubtle,
+                      borderRadius: BorderRadius.circular(AppRadius.control),
+                      border: Border.all(color: colors.border),
+                    ),
+                    child: Text(
+                      'Periode ${hoveredItem['period']}  ·  Target: ${CurrencyFormatter.formatNumber((hoveredItem[isSellIn ? 'target_sell_in' : 'target_sell_out'] as num?)?.toDouble() ?? 0)} Kg  ·  Realisasi: ${CurrencyFormatter.formatNumber((hoveredItem[isSellIn ? 'real_sell_in' : 'real_sell_out'] as num?)?.toDouble() ?? 0)} Kg (${((hoveredItem[isSellIn ? 'ach_sell_in_pct' : 'ach_sell_out_pct'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}%)',
+                      style: context.monoStyle(fontSize: 11, color: colors.textPrimary),
+                    ),
+                  )
+                : SizedBox(
+                    key: const ValueKey('trend_idle'),
+                    height: 16,
+                    child: Text(
+                      'Sentuh atau arahkan kursor ke batang untuk rincian angka penuh.',
+                      style: tt.bodySmall?.copyWith(fontSize: 11, color: colors.textFaint),
+                    ),
+                  ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
           SizedBox(
-            height: 220,
+            height: 230,
             child: BarChart(
               BarChartData(
                 alignment: BarChartAlignment.spaceAround,
-                maxY: maxVal > 0 ? maxVal * 1.15 : 100,
+                maxY: maxVal > 0 ? maxVal * 1.24 : 100,
                 barTouchData: BarTouchData(
                   enabled: true,
+                  handleBuiltInTouches: false,
+                  touchCallback: (event, response) {
+                    if (!event.isInterestedForInteractions || response == null || response.spot == null) {
+                      if (_touchedTrendIndex != null) {
+                        setState(() => _touchedTrendIndex = null);
+                      }
+                      return;
+                    }
+                    final idx = response.spot!.touchedBarGroupIndex;
+                    if (_touchedTrendIndex != idx) {
+                      setState(() => _touchedTrendIndex = idx);
+                    }
+                  },
                   touchTooltipData: BarTouchTooltipData(
-                    getTooltipColor: (_) => Theme.of(context).colorScheme.inverseSurface,
+                    getTooltipColor: (_) => Colors.transparent,
+                    tooltipPadding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+                    tooltipMargin: 4,
+                    fitInsideHorizontally: true,
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                      final item = trend[groupIndex];
-                      final period = item['period'].toString();
-                      final tVal = (item[isSellIn ? 'target_sell_in' : 'target_sell_out'] as num?)?.toDouble() ?? 0.0;
-                      final rVal = (item[isSellIn ? 'real_sell_in' : 'real_sell_out'] as num?)?.toDouble() ?? 0.0;
-                      final pct = (item[isSellIn ? 'ach_sell_in_pct' : 'ach_sell_out_pct'] as num?)?.toDouble() ?? 0.0;
                       return BarTooltipItem(
-                        '$period (${pct.toStringAsFixed(1)}%)\n',
-                        GoogleFonts.plusJakartaSans(
-                          color: Theme.of(context).colorScheme.onInverseSurface,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
+                        _formatCompactAxis(rod.toY),
+                        context.monoStyle(
+                          color: realColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 10.5,
                         ),
-                        children: [
-                          TextSpan(
-                            text: 'Target: ${CurrencyFormatter.formatNumber(tVal)} Kg\n',
-                            style: GoogleFonts.plusJakartaSans(color: Theme.of(context).colorScheme.onInverseSurface.withValues(alpha: 0.78), fontSize: 11, fontWeight: FontWeight.w500),
-                          ),
-                          TextSpan(
-                            text: 'Real: ${CurrencyFormatter.formatNumber(rVal)} Kg',
-                            style: GoogleFonts.plusJakartaSans(color: Theme.of(context).colorScheme.secondary, fontSize: 11, fontWeight: FontWeight.w600),
-                          ),
-                        ],
                       );
                     },
                   ),
@@ -2770,6 +2587,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
+                      reservedSize: 36,
                       getTitlesWidget: (val, meta) {
                         final i = val.toInt();
                         if (i >= 0 && i < trend.length) {
@@ -2781,17 +2599,17 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                               children: [
                                 Text(
                                   trend[i]['period'].toString(),
-                                  style: GoogleFonts.plusJakartaSans(
-                                    color: context.colors.textPrimary,
-                                    fontSize: 11,
+                                  style: context.monoStyle(
+                                    color: colors.textPrimary,
+                                    fontSize: 10.5,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                                 Text(
                                   '${pct.toStringAsFixed(0)}%',
-                                  style: GoogleFonts.plusJakartaSans(
+                                  style: context.tabularNumStyle(
                                     color: _achColor(pct),
-                                    fontSize: 10,
+                                    fontSize: 10.5,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
@@ -2801,18 +2619,18 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                         }
                         return const SizedBox.shrink();
                       },
-                      reservedSize: 34,
                     ),
                   ),
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
+                      interval: gridInterval,
                       reservedSize: 44,
                       getTitlesWidget: (val, meta) {
                         return Text(
                           _formatCompactAxis(val),
-                          style: GoogleFonts.plusJakartaSans(
-                            color: context.colors.textFaint,
+                          style: context.monoStyle(
+                            color: colors.textFaint,
                             fontSize: 10,
                           ),
                         );
@@ -2825,9 +2643,17 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
-                  getDrawingHorizontalLine: (val) => FlLine(color: context.colors.border, strokeWidth: 1),
+                  horizontalInterval: gridInterval,
+                  getDrawingHorizontalLine: (val) => FlLine(
+                    color: colors.border,
+                    strokeWidth: 1,
+                    dashArray: const [4, 4],
+                  ),
                 ),
-                borderData: FlBorderData(show: false),
+                borderData: FlBorderData(
+                  show: true,
+                  border: Border(bottom: BorderSide(color: colors.borderStrong)),
+                ),
                 barGroups: trend.asMap().entries.map((entry) {
                   final i = entry.key;
                   final item = entry.value;
@@ -2837,18 +2663,19 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                   return BarChartGroupData(
                     x: i,
                     barsSpace: 4,
+                    showingTooltipIndicators: realVal > 0 ? const [1] : const [],
                     barRods: [
                       BarChartRodData(
                         toY: targetVal,
                         color: targetColor,
-                        width: 14,
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                        width: 15,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.tag)),
                       ),
                       BarChartRodData(
                         toY: realVal,
                         color: realColor,
-                        width: 14,
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                        width: 15,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.tag)),
                       ),
                     ],
                   );
@@ -2862,47 +2689,49 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
   }
 
   Widget _buildSalesBreakdownCard(BuildContext context, List<dynamic> breakdown, bool isAsm) {
+    final colors = context.colors;
+    final tt = Theme.of(context).textTheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: context.colors.bgCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.colors.border.withValues(alpha: 0.7)),
-        boxShadow: context.colors.cardShadows,
+        color: colors.bgCard,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(isAsm ? LucideIcons.building2 : LucideIcons.mapPin, color: Theme.of(context).colorScheme.primary, size: 20),
-                  const SizedBox(width: 10),
-                  Text(
-                    isAsm ? 'Rincian Target Depo Penugasan' : 'Rincian Target Area & Toko Penugasan',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 16.5,
-                      fontWeight: FontWeight.w700,
-                      color: context.colors.textPrimary,
-                    ),
-                  ),
-                ],
+              Icon(isAsm ? LucideIcons.building2 : LucideIcons.mapPin,
+                  color: Theme.of(context).colorScheme.primary, size: 17),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  isAsm ? 'Target depo penugasan' : 'Target area & toko penugasan',
+                  style: tt.titleLarge,
+                ),
               ),
               Text(
-                '${breakdown.length} Lokasi Terdaftar',
-                style: GoogleFonts.plusJakartaSans(color: context.colors.textMuted, fontSize: 12),
+                '${breakdown.length} lokasi',
+                style: context.monoStyle(color: colors.textMuted, fontSize: 11),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           if (breakdown.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Center(
-                child: Text('Belum ada target penugasan yang tercatat untuk akun Anda pada periode ini',
-                    style: TextStyle(color: context.colors.textMuted)),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl, horizontal: AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: colors.bgSubtle,
+                borderRadius: BorderRadius.circular(AppRadius.control),
+                border: Border.all(color: colors.border),
+              ),
+              child: Text(
+                'Belum ada target penugasan di periode ini.',
+                textAlign: TextAlign.center,
+                style: tt.bodyMedium?.copyWith(color: colors.textMuted),
               ),
             )
           else
@@ -2910,7 +2739,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: breakdown.length,
-              separatorBuilder: (_, __) => const Divider(height: 18),
+              separatorBuilder: (_, __) => Divider(height: AppSpacing.md, color: colors.border),
               itemBuilder: (context, idx) {
                 final loc = breakdown[idx];
                 final targetKg = (loc['target_quota_kg'] as num?)?.toDouble() ?? 0.0;
@@ -2922,41 +2751,38 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
 
                 return ExpansionTile(
                   tilePadding: EdgeInsets.zero,
-                  collapsedIconColor: context.colors.textMuted,
+                  collapsedIconColor: colors.textMuted,
                   iconColor: Theme.of(context).colorScheme.primary,
                   title: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: (isAsm ? Theme.of(context).colorScheme.primary : context.semantic.secondaryAccent).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(6),
+                          color: colors.bgSubtle,
+                          borderRadius: BorderRadius.circular(AppRadius.tag),
+                          border: Border.all(color: colors.border),
                         ),
                         child: Text(
                           isAsm ? 'DEPO' : 'AREA',
-                          style: GoogleFonts.plusJakartaSans(
-                            color: isAsm ? Theme.of(context).colorScheme.primary : context.semantic.secondaryAccent,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
+                          style: context.monoStyle(
+                            color: isAsm ? Theme.of(context).colorScheme.primary : colors.textSecondary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               '${loc['location_name']} (${loc['location_code']})',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13.5,
-                                color: context.colors.textPrimary,
-                              ),
+                              style: tt.titleSmall,
                             ),
                             Text(
                               loc['distributor_name'] ?? '-',
-                              style: TextStyle(color: context.colors.textMuted, fontSize: 11.5),
+                              style: tt.bodySmall?.copyWith(color: colors.textMuted, fontSize: 11.5),
                             ),
                           ],
                         ),
@@ -2967,18 +2793,20 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                           if (targetKg > 0)
                             Text(
                               '${CurrencyFormatter.formatNumber(realKg)} / ${CurrencyFormatter.formatNumber(targetKg)} Kg (${achPct.toStringAsFixed(1)}%)',
-                              style: GoogleFonts.plusJakartaSans(
+                              style: context.tabularNumStyle(
                                 fontWeight: FontWeight.w700,
-                                color: achPct >= 100 ? context.semantic.success : Theme.of(context).colorScheme.primary,
-                                fontSize: 13,
+                                color: achPct >= 100
+                                    ? context.semantic.success
+                                    : Theme.of(context).colorScheme.primary,
+                                fontSize: 12.5,
                               ),
                             ),
                           if (targetOutlet > 0)
                             Text(
                               'AO: $realOutlet / ${CurrencyFormatter.formatNumber(targetOutlet)} Toko',
-                              style: GoogleFonts.plusJakartaSans(
+                              style: context.tabularNumStyle(
                                 fontWeight: FontWeight.w600,
-                                color: context.semantic.secondaryAccent,
+                                color: colors.textSecondary,
                                 fontSize: 12,
                               ),
                             ),
@@ -2988,37 +2816,42 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
                   ),
                   children: [
                     Padding(
-                      padding: const EdgeInsets.only(top: 8, bottom: 8),
+                      padding: const EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.sm),
                       child: Column(
                         children: brands.map((b) {
                           final bQuota = (b['target_quota'] as num?)?.toDouble() ?? 0.0;
                           final bOutlet = (b['target_outlet'] as num?)?.toInt() ?? 0;
                           return Container(
                             margin: const EdgeInsets.only(bottom: 6),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8),
                             decoration: BoxDecoration(
-                              color: context.colors.bgSubtle,
-                              borderRadius: BorderRadius.circular(8),
+                              color: colors.bgSubtle,
+                              borderRadius: BorderRadius.circular(AppRadius.control),
+                              border: Border.all(color: colors.border),
                             ),
                             child: Row(
                               children: [
-                                Icon(LucideIcons.tag, size: 14, color: context.semantic.secondaryAccent),
-                                const SizedBox(width: 8),
+                                Icon(LucideIcons.tag, size: 13, color: colors.textMuted),
+                                const SizedBox(width: AppSpacing.sm),
                                 Text(
                                   b['brand_name'] ?? '-',
-                                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 12.5),
+                                  style: tt.titleSmall?.copyWith(fontSize: 12.5),
                                 ),
                                 const Spacer(),
                                 if (bQuota > 0)
                                   Text(
                                     '${CurrencyFormatter.formatNumber(bQuota)} Kg',
-                                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 12),
+                                    style: context.tabularNumStyle(fontWeight: FontWeight.w600, fontSize: 12),
                                   ),
-                                if (bQuota > 0 && bOutlet > 0) const Text(' • '),
+                                if (bQuota > 0 && bOutlet > 0) const Text(' · '),
                                 if (bOutlet > 0)
                                   Text(
                                     '$bOutlet Toko',
-                                    style: GoogleFonts.plusJakartaSans(color: Theme.of(context).colorScheme.primary, fontSize: 12, fontWeight: FontWeight.w600),
+                                    style: context.tabularNumStyle(
+                                      color: Theme.of(context).colorScheme.primary,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                               ],
                             ),
@@ -3035,101 +2868,234 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     );
   }
 
-  Widget _chartLegend(String label, Color color) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3)),
+  // ---------------- STRUCTURED LEDGER LOADING & ERROR STATES ----------------
+
+  Widget _buildLoadingState(BuildContext context) {
+    final colors = context.colors;
+    final cs = Theme.of(context).colorScheme;
+    final sem = context.semantic;
+
+    Widget skeletonBar({double? width, double height = 12}) {
+      return Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: colors.bgElevated,
+          borderRadius: BorderRadius.circular(AppRadius.tag),
         ),
-        const SizedBox(width: 6),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.tag),
+          child: LinearProgressIndicator(
+            minHeight: 2,
+            backgroundColor: colors.border,
+            valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
         Text(
-          label,
-          style: GoogleFonts.plusJakartaSans(color: context.colors.textMuted, fontSize: 12),
+          'Menyiapkan buku ringkasan...',
+          style: context.monoStyle(fontSize: 11, color: colors.textMuted),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= 960;
+            final heroSkeleton = Container(
+              height: 170,
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              decoration: BoxDecoration(
+                color: sem.heroSurface.withValues(alpha: 0.9),
+                borderRadius: BorderRadius.circular(AppRadius.card),
+                border: Border.all(color: sem.heroBorder),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(width: 140, height: 10, color: sem.heroBorder),
+                  Container(width: 220, height: 28, color: sem.heroBorder),
+                  Container(width: 180, height: 10, color: sem.heroBorder),
+                ],
+              ),
+            );
+
+            final ledgerSkeleton = Container(
+              height: 170,
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              decoration: BoxDecoration(
+                color: colors.bgCard,
+                borderRadius: BorderRadius.circular(AppRadius.card),
+                border: Border.all(color: colors.border),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [skeletonBar(width: 90), skeletonBar(width: 130, height: 22), skeletonBar()],
+                    ),
+                  ),
+                  VerticalDivider(width: AppSpacing.xl, color: colors.border),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [skeletonBar(width: 90), skeletonBar(width: 130, height: 22), skeletonBar()],
+                    ),
+                  ),
+                  VerticalDivider(width: AppSpacing.xl, color: colors.border),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [skeletonBar(width: 90), skeletonBar(width: 110, height: 22), skeletonBar()],
+                    ),
+                  ),
+                ],
+              ),
+            );
+
+            if (isWide) {
+              return Row(
+                children: [
+                  Expanded(flex: 5, child: heroSkeleton),
+                  const SizedBox(width: AppSpacing.lg),
+                  Expanded(flex: 7, child: ledgerSkeleton),
+                ],
+              );
+            }
+            return Column(
+              children: [
+                heroSkeleton,
+                const SizedBox(height: AppSpacing.md),
+                ledgerSkeleton,
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        Container(
+          height: 240,
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          decoration: BoxDecoration(
+            color: colors.bgCard,
+            borderRadius: BorderRadius.circular(AppRadius.card),
+            border: Border.all(color: colors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              skeletonBar(width: 210, height: 16),
+              const SizedBox(height: AppSpacing.xl),
+              skeletonBar(height: 14),
+              Divider(height: AppSpacing.xl, color: colors.border),
+              skeletonBar(height: 14),
+              Divider(height: AppSpacing.xl, color: colors.border),
+              skeletonBar(height: 14),
+            ],
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildLoadingState(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(48),
-        child: Column(
-          children: [
-            CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 16),
-            Text(
-              'Memuat ringkasan dashboard...',
-              style: GoogleFonts.plusJakartaSans(color: context.colors.textMuted),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildErrorState(BuildContext context, String message) {
+    final colors = context.colors;
+    final sem = context.semantic;
+    final tt = Theme.of(context).textTheme;
+
     final isAuthError = message.contains('401') ||
         message.toLowerCase().contains('sesi') ||
         message.toLowerCase().contains('unauthorized');
 
-    final isNetworkOrCorsError = message.contains('XMLHttpRequest') ||
-        message.contains('cross-origin') ||
-        message.toLowerCase().contains('connection errored');
-
-    String displayMsg = message;
-    if (isAuthError) {
-      displayMsg = 'Sesi login Anda telah berakhir atau belum terotentikasi di server. Silakan masuk kembali.';
-    } else if (isNetworkOrCorsError) {
-      displayMsg = 'Koneksi ke backend (http://127.0.0.1:8000) sempat terputus saat request dikirim (Server Down / Reconnecting). Silakan klik tombol di bawah untuk memuat ulang data.';
-    }
+    final String title = isAuthError ? 'Sesi kerja berakhir' : 'Data ringkasan belum bisa dimuat';
+    final String body = isAuthError
+        ? 'Masuk ulang dengan akun kerja untuk membuka data terbaru.'
+        : 'Koneksi ke server terputus atau respons terlambat. Coba muat ulang halaman.';
 
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(48),
-        child: Column(
-          children: [
-            Icon(LucideIcons.alertTriangle, size: 36, color: context.semantic.danger),
-            const SizedBox(height: 12),
-            Text(
-              displayMsg,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.plusJakartaSans(color: context.semantic.danger, fontSize: 13.5),
-            ),
-            const SizedBox(height: 16),
-            if (isAuthError)
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+          decoration: BoxDecoration(
+            color: colors.bgCard,
+            borderRadius: BorderRadius.circular(AppRadius.card),
+            border: Border.all(color: colors.border),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(height: 3, color: sem.danger),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(LucideIcons.alertTriangle, size: 18, color: sem.danger),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(title, style: tt.titleLarge),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      body,
+                      style: tt.bodyMedium?.copyWith(color: colors.textSecondary),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    if (isAuthError)
+                      ElevatedButton.icon(
+                        icon: const Icon(LucideIcons.logIn, size: 15),
+                        label: const Text('Masuk ulang'),
+                        onPressed: () {
+                          ref.read(authProvider.notifier).logout();
+                          context.go('/login');
+                        },
+                      )
+                    else
+                      ElevatedButton.icon(
+                        icon: const Icon(LucideIcons.refreshCw, size: 15),
+                        label: const Text('Muat ulang'),
+                        onPressed: () => ref.read(dashboardProvider.notifier).fetchSummary(),
+                      ),
+                  ],
                 ),
-                icon: const Icon(LucideIcons.logIn, size: 16),
-                label: const Text('Masuk Kembali (Login)'),
-                onPressed: () {
-                  ref.read(authProvider.notifier).logout();
-                  context.go('/login');
-                },
-              )
-            else
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                icon: const Icon(LucideIcons.refreshCw, size: 16),
-                label: const Text('Coba Lagi'),
-                onPressed: () => ref.read(dashboardProvider.notifier).fetchSummary(),
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+class _SalesLedgerMetricData {
+  final String label;
+  final String primaryValue;
+  final String secondaryLine;
+  final double pct;
+  final String footnote;
+  final bool? forcePassedColor;
+  final bool hidePercentage;
+
+  const _SalesLedgerMetricData({
+    required this.label,
+    required this.primaryValue,
+    required this.secondaryLine,
+    required this.pct,
+    required this.footnote,
+    this.forcePassedColor,
+    this.hidePercentage = false,
+  });
 }

@@ -13,11 +13,11 @@ class AppSpacing {
   static const double xxxl = 48.0;
 }
 
-/// Consistent crisp border-radius tokens for Utilitarian / Precision UI.
+/// Consistent sharp border-radius tokens for Maritime Trade Ledger.
 class AppRadius {
-  static const double tag = 4.0;
-  static const double control = 6.0;
-  static const double card = 10.0;
+  static const double tag = 2.0;
+  static const double control = 4.0;
+  static const double card = 6.0;
 }
 
 /// Shared tabular figure font feature for aligned KPIs, currency, tonnage, and tables.
@@ -51,6 +51,11 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
   final Color textMuted;
   final Color textFaint;
   final Color cardShadowColor;
+  final Color heroSurface;
+  final Color heroOnSurface;
+  final Color heroMuted;
+  final Color heroBorder;
+  final Color heroAccent;
 
   const AppSemanticColors({
     required this.success,
@@ -78,63 +83,77 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     required this.textMuted,
     required this.textFaint,
     required this.cardShadowColor,
+    required this.heroSurface,
+    required this.heroOnSurface,
+    required this.heroMuted,
+    required this.heroBorder,
+    required this.heroAccent,
   });
 
   static const AppSemanticColors light = AppSemanticColors(
     success: AppColors.successLightMode,
     successBg: AppColors.successBgLight,
-    successSolid: AppColors.successLightMode, // #15803D
+    successSolid: AppColors.successLightMode,
     warning: AppColors.warningLightMode,
     warningBg: AppColors.warningBgLight,
-    warningSolid: AppColors.warningLightMode, // #B45309
+    warningSolid: AppColors.warningLightMode,
     danger: AppColors.dangerLightMode,
     dangerBg: AppColors.dangerBgLight,
-    dangerSolid: AppColors.dangerLightMode, // #DC2626
+    dangerSolid: AppColors.dangerLightMode,
     info: AppColors.infoLightMode,
     infoBg: AppColors.infoBgLight,
-    infoSolid: AppColors.infoLightMode, // #0369A1
-    // Restrained architectural steel slate (never competes with primary accent)
-    secondaryAccent: Color(0xFF334155),
-    secondaryAccentBg: Color(0xFFF1F5F9),
-    tableHeaderBg: AppColors.slate100,
-    hoverBg: AppColors.slate150,
-    subtleBg: AppColors.slate100,
-    elevatedBg: AppColors.slate150,
-    border: AppColors.slate200,
-    borderStrong: AppColors.slate300,
+    infoSolid: AppColors.infoLightMode,
+    secondaryAccent: AppColors.pewterSecondary,
+    secondaryAccentBg: AppColors.pewterBgLight,
+    tableHeaderBg: AppColors.paperInset,
+    hoverBg: AppColors.paperHover,
+    subtleBg: AppColors.paperInset,
+    elevatedBg: AppColors.paperHover,
+    border: AppColors.paperBorder,
+    borderStrong: AppColors.paperBorderStrong,
     textPrimary: AppColors.inkPrimary,
     textSecondary: AppColors.inkSecondary,
-    textMuted: AppColors.slate500,
-    textFaint: AppColors.slate400,
+    textMuted: AppColors.inkMuted,
+    textFaint: AppColors.inkFaint,
     cardShadowColor: Color(0x00000000),
+    heroSurface: AppColors.brineHeroLight,
+    heroOnSurface: AppColors.paperCanvas,
+    heroMuted: Color(0xFFA7BAB5),
+    heroBorder: AppColors.brineHeroBorder,
+    heroAccent: AppColors.brandBright,
   );
 
   static const AppSemanticColors dark = AppSemanticColors(
     success: AppColors.successDarkMode,
-    successBg: Color(0x2610B981),
-    successSolid: AppColors.successLightMode, // #15803D (AA contrast with white)
+    successBg: AppColors.successBgDark,
+    successSolid: AppColors.successLightMode,
     warning: AppColors.warningDarkMode,
-    warningBg: Color(0x26F59E0B),
-    warningSolid: AppColors.warningLightMode, // #B45309 (AA contrast with white)
+    warningBg: AppColors.warningBgDark,
+    warningSolid: AppColors.warningLightMode,
     danger: AppColors.dangerDarkMode,
-    dangerBg: Color(0x26EF4444),
-    dangerSolid: AppColors.dangerLightMode, // #DC2626 (AA contrast with white)
+    dangerBg: AppColors.dangerBgDark,
+    dangerSolid: AppColors.dangerLightMode,
     info: AppColors.infoDarkMode,
-    infoBg: Color(0x2638BDF8),
-    infoSolid: AppColors.infoLightMode, // #0369A1 (AA contrast with white)
-    secondaryAccent: Color(0xFF94A3B8),
-    secondaryAccentBg: Color(0x2664748B),
-    tableHeaderBg: AppColors.slate850,
-    hoverBg: AppColors.slate875,
-    subtleBg: AppColors.slate850,
-    elevatedBg: AppColors.slate875,
-    border: AppColors.slate700,
-    borderStrong: AppColors.slate600,
-    textPrimary: Color(0xFFF8FAFC),
-    textSecondary: Color(0xFFCBD5E1),
-    textMuted: AppColors.slate400,
-    textFaint: AppColors.slate500,
+    infoBg: AppColors.infoBgDark,
+    infoSolid: AppColors.infoLightMode,
+    secondaryAccent: AppColors.cargoInkSecondary,
+    secondaryAccentBg: Color(0x268C948E),
+    tableHeaderBg: AppColors.cargoInset,
+    hoverBg: AppColors.cargoHover,
+    subtleBg: AppColors.cargoInset,
+    elevatedBg: AppColors.cargoHover,
+    border: AppColors.cargoBorder,
+    borderStrong: AppColors.cargoBorderStrong,
+    textPrimary: AppColors.cargoInkPrimary,
+    textSecondary: AppColors.cargoInkSecondary,
+    textMuted: AppColors.cargoInkMuted,
+    textFaint: AppColors.cargoInkFaint,
     cardShadowColor: Color(0x00000000),
+    heroSurface: AppColors.brineHeroDark,
+    heroOnSurface: AppColors.cargoInkPrimary,
+    heroMuted: Color(0xFF9EB5AE),
+    heroBorder: AppColors.brineHeroBorder,
+    heroAccent: AppColors.brandBright,
   );
 
   @override
@@ -164,6 +183,11 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     Color? textMuted,
     Color? textFaint,
     Color? cardShadowColor,
+    Color? heroSurface,
+    Color? heroOnSurface,
+    Color? heroMuted,
+    Color? heroBorder,
+    Color? heroAccent,
   }) {
     return AppSemanticColors(
       success: success ?? this.success,
@@ -191,6 +215,11 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       textMuted: textMuted ?? this.textMuted,
       textFaint: textFaint ?? this.textFaint,
       cardShadowColor: cardShadowColor ?? this.cardShadowColor,
+      heroSurface: heroSurface ?? this.heroSurface,
+      heroOnSurface: heroOnSurface ?? this.heroOnSurface,
+      heroMuted: heroMuted ?? this.heroMuted,
+      heroBorder: heroBorder ?? this.heroBorder,
+      heroAccent: heroAccent ?? this.heroAccent,
     );
   }
 
@@ -223,6 +252,11 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       textMuted: Color.lerp(textMuted, other.textMuted, t)!,
       textFaint: Color.lerp(textFaint, other.textFaint, t)!,
       cardShadowColor: Color.lerp(cardShadowColor, other.cardShadowColor, t)!,
+      heroSurface: Color.lerp(heroSurface, other.heroSurface, t)!,
+      heroOnSurface: Color.lerp(heroOnSurface, other.heroOnSurface, t)!,
+      heroMuted: Color.lerp(heroMuted, other.heroMuted, t)!,
+      heroBorder: Color.lerp(heroBorder, other.heroBorder, t)!,
+      heroAccent: Color.lerp(heroAccent, other.heroAccent, t)!,
     );
   }
 }
@@ -278,7 +312,6 @@ class AppThemeColors {
   Color get secondaryAccent => _semantic.secondaryAccent;
   Color get secondaryAccentBg => _semantic.secondaryAccentBg;
 
-  /// Precision hairline surfaces use 1px borders + surface tonal contrast — zero blurry card shadows.
   BoxShadow get cardShadow => const BoxShadow(color: Colors.transparent);
   List<BoxShadow> get cardShadows => const [];
 }
@@ -293,7 +326,7 @@ extension AppThemeExtension on BuildContext {
       (isDarkMode ? AppSemanticColors.dark : AppSemanticColors.light);
   AppThemeColors get colors => AppThemeColors(Theme.of(this));
 
-  /// Tabular numeric TextStyle for financial figures, tonnage (Kg), outlets (Toko), and percentages.
+  /// Display numeric style using Space Grotesk + tabular figures for KPIs and dashboard totals.
   TextStyle tabularNumStyle({
     double fontSize = 14,
     FontWeight fontWeight = FontWeight.w700,
@@ -301,11 +334,29 @@ extension AppThemeExtension on BuildContext {
     double? letterSpacing,
     double? height,
   }) {
-    return GoogleFonts.plusJakartaSans(
+    return GoogleFonts.spaceGrotesk(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color ?? colorScheme.onSurface,
-      letterSpacing: letterSpacing ?? (fontSize >= 20 ? -0.4 : -0.1),
+      letterSpacing: letterSpacing ?? (fontSize >= 20 ? -0.5 : -0.15),
+      height: height,
+      fontFeatures: kTabularFigures,
+    );
+  }
+
+  /// Monospace ledger style using IBM Plex Mono + tabular figures for codes and period IDs.
+  TextStyle monoStyle({
+    double fontSize = 11.5,
+    FontWeight fontWeight = FontWeight.w500,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return GoogleFonts.ibmPlexMono(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color ?? semantic.textMuted,
+      letterSpacing: letterSpacing ?? 0.2,
       height: height,
       fontFeatures: kTabularFigures,
     );
@@ -313,43 +364,43 @@ extension AppThemeExtension on BuildContext {
 }
 
 class AppTheme {
-  static const double radiusCard = AppRadius.card; // 10px
-  static const double radiusControl = AppRadius.control; // 6px
-  static const double radiusTag = AppRadius.tag; // 4px
+  static const double radiusCard = AppRadius.card; // 6px
+  static const double radiusControl = AppRadius.control; // 4px
+  static const double radiusTag = AppRadius.tag; // 2px
 
   static TextTheme _buildTextTheme(TextTheme base, Color primary, Color secondary, Color muted) {
     final jakarta = GoogleFonts.plusJakartaSansTextTheme(base);
     return jakarta.copyWith(
-      displayLarge: GoogleFonts.plusJakartaSans(
-        fontSize: 30,
+      displayLarge: GoogleFonts.spaceGrotesk(
+        fontSize: 32,
         fontWeight: FontWeight.w700,
-        letterSpacing: -0.6,
+        letterSpacing: -0.7,
         color: primary,
         height: 1.15,
         fontFeatures: kTabularFigures,
       ),
-      headlineMedium: GoogleFonts.plusJakartaSans(
-        fontSize: 22,
+      headlineMedium: GoogleFonts.spaceGrotesk(
+        fontSize: 23,
         fontWeight: FontWeight.w700,
-        letterSpacing: -0.45,
+        letterSpacing: -0.5,
         color: primary,
-        height: 1.25,
+        height: 1.22,
         fontFeatures: kTabularFigures,
       ),
-      headlineSmall: GoogleFonts.plusJakartaSans(
-        fontSize: 18,
+      headlineSmall: GoogleFonts.spaceGrotesk(
+        fontSize: 18.5,
         fontWeight: FontWeight.w700,
-        letterSpacing: -0.3,
+        letterSpacing: -0.35,
         color: primary,
-        height: 1.3,
+        height: 1.28,
         fontFeatures: kTabularFigures,
       ),
-      titleLarge: GoogleFonts.plusJakartaSans(
+      titleLarge: GoogleFonts.spaceGrotesk(
         fontSize: 16,
         fontWeight: FontWeight.w700,
         letterSpacing: -0.25,
         color: primary,
-        height: 1.35,
+        height: 1.32,
         fontFeatures: kTabularFigures,
       ),
       titleMedium: GoogleFonts.plusJakartaSans(
@@ -358,14 +409,12 @@ class AppTheme {
         letterSpacing: -0.15,
         color: primary,
         height: 1.35,
-        fontFeatures: kTabularFigures,
       ),
       titleSmall: GoogleFonts.plusJakartaSans(
         fontSize: 13,
         fontWeight: FontWeight.w600,
         color: primary,
         height: 1.35,
-        fontFeatures: kTabularFigures,
       ),
       bodyLarge: GoogleFonts.plusJakartaSans(
         fontSize: 14,
@@ -400,7 +449,7 @@ class AppTheme {
       labelSmall: GoogleFonts.plusJakartaSans(
         fontSize: 11,
         fontWeight: FontWeight.w600,
-        letterSpacing: 0.4,
+        letterSpacing: 0.35,
         color: muted,
         fontFeatures: kTabularFigures,
       ),
@@ -478,8 +527,8 @@ class AppTheme {
           disabledForegroundColor: semantic.textFaint,
           elevation: 0,
           shadowColor: Colors.transparent,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-          minimumSize: const Size(0, 38),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          minimumSize: const Size(0, 44),
           shape: controlShape,
           textStyle: GoogleFonts.plusJakartaSans(
             fontWeight: FontWeight.w600,
@@ -492,8 +541,8 @@ class AppTheme {
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-          minimumSize: const Size(0, 38),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          minimumSize: const Size(0, 44),
           shape: controlShape,
           textStyle: GoogleFonts.plusJakartaSans(
             fontWeight: FontWeight.w600,
@@ -507,8 +556,8 @@ class AppTheme {
           backgroundColor: colorScheme.surface,
           side: BorderSide(color: semantic.borderStrong),
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-          minimumSize: const Size(0, 38),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          minimumSize: const Size(0, 44),
           shape: controlShape,
           textStyle: GoogleFonts.plusJakartaSans(
             fontWeight: FontWeight.w600,
@@ -520,7 +569,7 @@ class AppTheme {
         style: TextButton.styleFrom(
           foregroundColor: colorScheme.primary,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          minimumSize: const Size(0, 36),
+          minimumSize: const Size(0, 40),
           shape: controlShape,
           textStyle: GoogleFonts.plusJakartaSans(
             fontWeight: FontWeight.w600,
@@ -532,7 +581,7 @@ class AppTheme {
         filled: true,
         fillColor: colorScheme.surface,
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusControl),
           borderSide: BorderSide(color: semantic.borderStrong),
@@ -594,7 +643,7 @@ class AppTheme {
         headingTextStyle: GoogleFonts.plusJakartaSans(
           fontSize: 11.5,
           fontWeight: FontWeight.w700,
-          letterSpacing: 0.3,
+          letterSpacing: 0.25,
           color: colorScheme.onSurfaceVariant,
         ),
         dataTextStyle: GoogleFonts.plusJakartaSans(
@@ -660,9 +709,9 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         elevation: 0,
-        backgroundColor: isDark ? AppColors.slate850 : AppColors.inkPrimary,
+        backgroundColor: isDark ? AppColors.cargoInset : AppColors.inkPrimary,
         contentTextStyle: GoogleFonts.plusJakartaSans(
-          color: const Color(0xFFF8FAFC),
+          color: AppColors.paperCanvas,
           fontSize: 13,
           fontWeight: FontWeight.w500,
         ),
@@ -707,12 +756,12 @@ class AppTheme {
       ),
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
-          color: isDark ? AppColors.slate875 : AppColors.inkPrimary,
+          color: isDark ? AppColors.cargoHover : AppColors.inkPrimary,
           borderRadius: BorderRadius.circular(radiusTag),
           border: isDark ? Border.all(color: semantic.borderStrong) : null,
         ),
         textStyle: GoogleFonts.plusJakartaSans(
-          color: const Color(0xFFF8FAFC),
+          color: AppColors.paperCanvas,
           fontSize: 11.5,
           fontWeight: FontWeight.w500,
         ),
@@ -729,30 +778,30 @@ class AppTheme {
 
   static ThemeData get lightTheme {
     const colorScheme = ColorScheme.light(
-      primary: AppColors.brandLight, // #0F766E Deep Maritime Teal
+      primary: AppColors.brandLight, // #0B5D51 Deep Maritime Viridian
       onPrimary: Color(0xFFFFFFFF),
-      primaryContainer: AppColors.brandSoftLight, // #F0FDFA
-      onPrimaryContainer: AppColors.brandDeep, // #115E59
-      secondary: Color(0xFF334155), // Architectural Slate 700
+      primaryContainer: AppColors.brandSoftLight, // #DFECE8
+      onPrimaryContainer: AppColors.brandDeep, // #084239
+      secondary: AppColors.pewterSecondary, // #525B56
       onSecondary: Color(0xFFFFFFFF),
-      secondaryContainer: Color(0xFFF1F5F9),
-      onSecondaryContainer: Color(0xFF1E293B),
-      tertiary: AppColors.infoLightMode, // #0369A1
+      secondaryContainer: AppColors.pewterBgLight,
+      onSecondaryContainer: AppColors.inkPrimary,
+      tertiary: AppColors.infoLightMode, // #185A7A
       onTertiary: Color(0xFFFFFFFF),
-      surface: Color(0xFFFFFFFF),
-      onSurface: AppColors.inkPrimary, // #111827
-      onSurfaceVariant: AppColors.slate500, // #64748B
-      surfaceContainerLowest: AppColors.slate50, // #F6F7F9
-      surfaceContainerLow: AppColors.slate100, // #F1F3F6
-      surfaceContainer: AppColors.slate150, // #EAECEF
-      surfaceContainerHigh: AppColors.slate200, // #E2E6EC
-      surfaceContainerHighest: AppColors.slate200,
-      outline: AppColors.slate300, // #CBD2DC
-      outlineVariant: AppColors.slate200, // #E2E6EC
-      error: AppColors.dangerLightMode, // #DC2626
+      surface: AppColors.paperCard, // #FCFBF7 Warm Ivory Paper
+      onSurface: AppColors.inkPrimary, // #161816 Deep Brine Charcoal
+      onSurfaceVariant: AppColors.inkMuted, // #6E736D
+      surfaceContainerLowest: AppColors.paperCanvas, // #F6F4EE
+      surfaceContainerLow: AppColors.paperInset, // #EFECE4
+      surfaceContainer: AppColors.paperHover, // #E6E2D8
+      surfaceContainerHigh: AppColors.paperBorder, // #DDD8CE
+      surfaceContainerHighest: AppColors.paperBorderStrong, // #C5BEB0
+      outline: AppColors.paperBorderStrong, // #C5BEB0
+      outlineVariant: AppColors.paperBorder, // #DDD8CE
+      error: AppColors.dangerLightMode, // #B93829 Brick Vermilion
       onError: Color(0xFFFFFFFF),
       errorContainer: AppColors.dangerBgLight,
-      onErrorContainer: Color(0xFF991B1B),
+      onErrorContainer: Color(0xFF7F2318),
       shadow: AppColors.inkPrimary,
     );
 
@@ -760,44 +809,44 @@ class AppTheme {
       brightness: Brightness.light,
       colorScheme: colorScheme,
       semantic: AppSemanticColors.light,
-      scaffoldBg: AppColors.slate50, // #F6F7F9
+      scaffoldBg: AppColors.paperCanvas, // #F6F4EE Warm Alabaster
     );
   }
 
   static ThemeData get darkTheme {
     const colorScheme = ColorScheme.dark(
-      primary: AppColors.brandDark, // #0D9488 Maritime Teal (AA white text + crisp on dark)
+      primary: AppColors.brandDark, // #1F9E8B Night Cargo Viridian
       onPrimary: Color(0xFFFFFFFF),
-      primaryContainer: Color(0x2E14B8A6),
-      onPrimaryContainer: AppColors.brandBright, // #5EEAD4
-      secondary: Color(0xFF94A3B8), // Architectural Slate 400
-      onSecondary: AppColors.slate900,
-      secondaryContainer: Color(0x2664748B),
-      onSecondaryContainer: Color(0xFFCBD5E1),
-      tertiary: AppColors.infoDarkMode, // #38BDF8
-      onTertiary: AppColors.slate900,
-      surface: AppColors.slate800, // #111827
-      onSurface: Color(0xFFF8FAFC),
-      onSurfaceVariant: AppColors.slate400, // #94A3B8
-      surfaceContainerLowest: AppColors.slate900, // #090D16
-      surfaceContainerLow: AppColors.slate850, // #161F30
-      surfaceContainer: AppColors.slate875, // #1F2A3E
-      surfaceContainerHigh: AppColors.slate700, // #243044
-      surfaceContainerHighest: AppColors.slate700,
-      outline: AppColors.slate600, // #36455E
-      outlineVariant: AppColors.slate700, // #243044
-      error: AppColors.dangerLightMode, // #DC2626 (AA contrast with white text on error buttons)
+      primaryContainer: AppColors.brandSoftDark, // #173832
+      onPrimaryContainer: AppColors.brandBright, // #6CE0CE
+      secondary: AppColors.cargoInkSecondary, // #C7C4BC
+      onSecondary: AppColors.cargoCanvas,
+      secondaryContainer: AppColors.cargoInset,
+      onSecondaryContainer: AppColors.cargoInkPrimary,
+      tertiary: AppColors.infoDarkMode, // #58B0DA
+      onTertiary: AppColors.cargoCanvas,
+      surface: AppColors.cargoSurface, // #151B19
+      onSurface: AppColors.cargoInkPrimary, // #F2EFE9
+      onSurfaceVariant: AppColors.cargoInkMuted, // #8C948E
+      surfaceContainerLowest: AppColors.cargoCanvas, // #0E1211
+      surfaceContainerLow: AppColors.cargoInset, // #1C2421
+      surfaceContainer: AppColors.cargoHover, // #232D29
+      surfaceContainerHigh: AppColors.cargoBorder, // #28332F
+      surfaceContainerHighest: AppColors.cargoBorderStrong, // #394742
+      outline: AppColors.cargoBorderStrong, // #394742
+      outlineVariant: AppColors.cargoBorder, // #28332F
+      error: AppColors.dangerLightMode, // #B93829 (AA contrast with white button text)
       onError: Color(0xFFFFFFFF),
-      errorContainer: Color(0x26EF4444),
-      onErrorContainer: Color(0xFFFCA5A5),
-      shadow: AppColors.slate950,
+      errorContainer: AppColors.dangerBgDark,
+      onErrorContainer: AppColors.dangerDarkMode,
+      shadow: AppColors.cargoCanvas,
     );
 
     return _buildTheme(
       brightness: Brightness.dark,
       colorScheme: colorScheme,
       semantic: AppSemanticColors.dark,
-      scaffoldBg: AppColors.slate900, // #090D16
+      scaffoldBg: AppColors.cargoCanvas, // #0E1211 Night Cargo Deck
     );
   }
 }

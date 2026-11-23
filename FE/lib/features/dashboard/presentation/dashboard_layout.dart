@@ -41,67 +41,67 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
       title: 'Dashboard',
       route: '/dashboard',
       icon: LucideIcons.layoutGrid,
-      group: 'MENU',
+      group: 'OPERASIONAL',
     ),
     NavItemData(
       title: 'Master Distributor',
       route: '/master/distributor',
       icon: LucideIcons.building2,
-      group: 'MENU',
+      group: 'OPERASIONAL',
     ),
     NavItemData(
       title: 'Master Target Kuota',
       route: '/master/target',
       icon: LucideIcons.target,
-      group: 'MENU',
+      group: 'OPERASIONAL',
     ),
     NavItemData(
       title: 'Realisasi Penjualan',
       route: '/master/realisasi',
       icon: LucideIcons.shoppingBag,
-      group: 'MENU',
+      group: 'OPERASIONAL',
     ),
     NavItemData(
       title: 'Tim & Area Sales',
       route: '/master/surabaya',
       icon: LucideIcons.users,
-      group: 'MENU',
+      group: 'OPERASIONAL',
     ),
     NavItemData(
       title: 'Insentif Distributor',
       route: '/incentives/distributor',
       icon: LucideIcons.coins,
-      group: 'KALKULASI',
+      group: 'PERHITUNGAN',
     ),
     NavItemData(
       title: 'Insentif Industri',
       route: '/incentives/industri',
       icon: LucideIcons.factory,
-      group: 'KALKULASI',
+      group: 'PERHITUNGAN',
     ),
     NavItemData(
       title: 'Insentif Surabaya',
       route: '/incentives/surabaya',
       icon: LucideIcons.landmark,
-      group: 'KALKULASI',
+      group: 'PERHITUNGAN',
     ),
     NavItemData(
       title: 'Skema & Bobot',
       route: '/settings/incentives',
       icon: LucideIcons.sliders,
-      group: 'UMUM',
+      group: 'PENGATURAN',
     ),
     NavItemData(
       title: 'Bulk Upload Data',
       route: '/bulk-upload',
       icon: LucideIcons.uploadCloud,
-      group: 'UMUM',
+      group: 'PENGATURAN',
     ),
     NavItemData(
       title: 'Pengguna & Akses',
       route: '/users',
       icon: LucideIcons.shield,
-      group: 'UMUM',
+      group: 'PENGATURAN',
     ),
   ];
 
@@ -188,11 +188,11 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                         },
                         style: tt.bodyLarge?.copyWith(color: cs.onSurface),
                         decoration: InputDecoration(
-                          hintText: 'Ketik nama menu lalu tekan Enter...',
+                          hintText: 'Ketik nama halaman...',
                           prefixIcon: const Icon(LucideIcons.search, size: 16),
                           prefixIconConstraints: const BoxConstraints(
-                            minWidth: 36,
-                            minHeight: 36,
+                            minWidth: 38,
+                            minHeight: 44,
                           ),
                           filled: true,
                           fillColor: sem.subtleBg,
@@ -204,7 +204,7 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                       child: filtered.isEmpty
                           ? Center(
                               child: Text(
-                                'Menu tidak ditemukan',
+                                'Halaman tidak ditemukan.',
                                 style: tt.bodySmall,
                               ),
                             )
@@ -224,30 +224,30 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                                       Navigator.pop(ctx);
                                       context.go(item.route);
                                     },
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: AppSpacing.md,
-                                        vertical: 10,
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Icon(item.icon, size: 16, color: cs.primary),
-                                          const SizedBox(width: AppSpacing.md),
-                                          Expanded(
-                                            child: Text(
-                                              item.title,
-                                              style: tt.titleSmall,
-                                              overflow: TextOverflow.ellipsis,
+                                    child: SizedBox(
+                                      height: 44,
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                                        child: Row(
+                                          children: [
+                                            Icon(item.icon, size: 16, color: cs.primary),
+                                            const SizedBox(width: AppSpacing.md),
+                                            Expanded(
+                                              child: Text(
+                                                item.title,
+                                                style: tt.titleSmall,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
                                             ),
-                                          ),
-                                          Text(
-                                            item.group,
-                                            style: tt.labelSmall?.copyWith(
-                                              fontSize: 10,
-                                              letterSpacing: 0.6,
+                                            Text(
+                                              item.group,
+                                              style: ctx.monoStyle(
+                                                fontSize: 10,
+                                                color: sem.textMuted,
+                                              ),
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -294,7 +294,7 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                 Icon(LucideIcons.key, color: cs.primary, size: 18),
                 const SizedBox(width: AppSpacing.md),
                 Text(
-                  'Ganti Kata Sandi Saya',
+                  'Ubah kata sandi',
                   style: tt.titleLarge,
                 ),
               ],
@@ -320,7 +320,7 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                           Expanded(
                             child: Text(
                               errorText!,
-                              style: tt.bodySmall?.copyWith(color: sem.danger, fontWeight: FontWeight.w500),
+                              style: tt.bodySmall?.copyWith(color: sem.danger, fontWeight: FontWeight.w600),
                             ),
                           ),
                         ],
@@ -333,7 +333,7 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                     obscureText: obscureCurrent,
                     style: tt.bodyLarge?.copyWith(color: cs.onSurface),
                     decoration: InputDecoration(
-                      labelText: 'Kata Sandi Saat Ini',
+                      labelText: 'Kata sandi lama',
                       suffixIcon: IconButton(
                         icon: Icon(obscureCurrent ? LucideIcons.eyeOff : LucideIcons.eye, size: 17),
                         onPressed: () => setDialogState(() => obscureCurrent = !obscureCurrent),
@@ -346,7 +346,7 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                     obscureText: obscureNew,
                     style: tt.bodyLarge?.copyWith(color: cs.onSurface),
                     decoration: InputDecoration(
-                      labelText: 'Kata Sandi Baru',
+                      labelText: 'Kata sandi baru',
                       hintText: 'Minimal 6 karakter',
                       suffixIcon: IconButton(
                         icon: Icon(obscureNew ? LucideIcons.eyeOff : LucideIcons.eye, size: 17),
@@ -360,7 +360,7 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                     obscureText: obscureConfirm,
                     style: tt.bodyLarge?.copyWith(color: cs.onSurface),
                     decoration: InputDecoration(
-                      labelText: 'Konfirmasi Kata Sandi Baru',
+                      labelText: 'Ulangi kata sandi baru',
                       suffixIcon: IconButton(
                         icon: Icon(obscureConfirm ? LucideIcons.eyeOff : LucideIcons.eye, size: 17),
                         onPressed: () => setDialogState(() => obscureConfirm = !obscureConfirm),
@@ -382,15 +382,15 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                   final conf = confirmPassCtrl.text.trim();
 
                   if (curr.isEmpty) {
-                    setDialogState(() => errorText = 'Masukkan kata sandi saat ini');
+                    setDialogState(() => errorText = 'Isi kata sandi lama.');
                     return;
                   }
                   if (nw.length < 6) {
-                    setDialogState(() => errorText = 'Kata sandi baru minimal 6 karakter');
+                    setDialogState(() => errorText = 'Kata sandi baru minimal 6 karakter.');
                     return;
                   }
                   if (nw != conf) {
-                    setDialogState(() => errorText = 'Konfirmasi kata sandi tidak cocok');
+                    setDialogState(() => errorText = 'Konfirmasi kata sandi tidak sama.');
                     return;
                   }
 
@@ -403,15 +403,15 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                     nav.pop();
                     scaffoldMessenger.showSnackBar(
                       SnackBar(
-                        content: Text(msg ?? 'Kata sandi berhasil diubah'),
+                        content: const Text('Kata sandi tersimpan.'),
                         backgroundColor: sem.successSolid,
                       ),
                     );
                   } else {
-                    setDialogState(() => errorText = msg ?? 'Gagal memperbarui kata sandi');
+                    setDialogState(() => errorText = msg ?? 'Gagal menyimpan kata sandi.');
                   }
                 },
-                child: const Text('Simpan Sandi'),
+                child: const Text('Simpan'),
               ),
             ],
           );
@@ -466,7 +466,7 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                       style: tt.titleMedium,
                     ),
                     Text(
-                      '@${user?.username ?? '-'} • ${user?.role?.displayName ?? 'User'}',
+                      '@${user?.username ?? '-'} · ${user?.role?.displayName ?? 'User'}',
                       style: tt.bodySmall,
                     ),
                   ],
@@ -490,11 +490,11 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                   ),
                   child: Column(
                     children: [
-                      _buildProfileRow(ctx, 'Posisi', user?.position?.name ?? 'Tanpa Posisi'),
+                      _buildProfileRow(ctx, 'Posisi', user?.position?.name ?? 'Tanpa posisi'),
                       const SizedBox(height: AppSpacing.sm),
                       _buildProfileRow(ctx, 'Email', user?.email ?? '-'),
                       const SizedBox(height: AppSpacing.sm),
-                      _buildProfileRow(ctx, 'Role Akses', user?.role?.displayName ?? '-'),
+                      _buildProfileRow(ctx, 'Role akses', user?.role?.displayName ?? '-'),
                     ],
                   ),
                 ),
@@ -503,10 +503,9 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: cs.primary,
                     side: BorderSide(color: cs.primary.withValues(alpha: 0.45)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                   icon: const Icon(LucideIcons.key, size: 15),
-                  label: const Text('Ganti Kata Sandi Saya'),
+                  label: const Text('Ubah kata sandi'),
                   onPressed: () {
                     Navigator.pop(ctx);
                     _showChangeOwnPasswordDialog();
@@ -518,10 +517,9 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                     backgroundColor: sem.dangerBg,
                     foregroundColor: sem.danger,
                     elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                   icon: const Icon(LucideIcons.logOut, size: 15),
-                  label: const Text('Keluar dari Akun'),
+                  label: const Text('Keluar akun'),
                   onPressed: () {
                     Navigator.pop(ctx);
                     _showLogoutDialog();
@@ -573,11 +571,11 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
             children: [
               Icon(LucideIcons.logOut, color: sem.danger, size: 18),
               const SizedBox(width: AppSpacing.md),
-              Text('Keluar dari Sesi', style: tt.titleLarge),
+              Text('Keluar dari akun?', style: tt.titleLarge),
             ],
           ),
           content: Text(
-            'Apakah Anda yakin ingin keluar dari aplikasi?',
+            'Sesi kerja saat ini akan ditutup.',
             style: tt.bodyMedium,
           ),
           actions: [
@@ -637,10 +635,10 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
           body: SafeArea(
             child: Row(
               children: [
-                // Precision Left Navigation Rail / Sidebar
+                // Left Navigation Ledger Sidebar
                 if (isDesktop)
                   AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
+                    duration: const Duration(milliseconds: 180),
                     width: showExpandedSidebar ? 240 : 68,
                     curve: Curves.easeOutCubic,
                     decoration: BoxDecoration(
@@ -652,7 +650,7 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                       children: [
                         // Brand Header
                         Container(
-                          height: 56,
+                          height: 58,
                           padding: EdgeInsets.symmetric(
                             horizontal: showExpandedSidebar ? AppSpacing.lg : AppSpacing.md,
                           ),
@@ -665,8 +663,8 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                                 : MainAxisAlignment.center,
                             children: [
                               Container(
-                                width: 30,
-                                height: 30,
+                                width: 28,
+                                height: 28,
                                 decoration: BoxDecoration(
                                   color: cs.primary,
                                   borderRadius: BorderRadius.circular(AppRadius.control),
@@ -675,7 +673,7 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                                 child: Icon(
                                   LucideIcons.barChart2,
                                   color: cs.onPrimary,
-                                  size: 16,
+                                  size: 15,
                                 ),
                               ),
                               if (showExpandedSidebar) ...[
@@ -696,8 +694,8 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                                     size: 16,
                                     color: cs.onSurfaceVariant,
                                   ),
-                                  tooltip: 'Ringkas Sidebar',
-                                  visualDensity: VisualDensity.compact,
+                                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                                  tooltip: 'Tutup sidebar',
                                   onPressed: () => setState(() => _sidebarExpanded = false),
                                 ),
                               ],
@@ -736,7 +734,8 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                                     size: 16,
                                     color: cs.onSurfaceVariant,
                                   ),
-                                  tooltip: 'Perlebar Sidebar',
+                                  constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                                  tooltip: 'Buka sidebar',
                                   onPressed: () => setState(() => _sidebarExpanded = true),
                                 ),
                                 const SizedBox(height: AppSpacing.xs),
@@ -757,13 +756,13 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                     ),
                   ),
 
-                // Right Area: Compact Precision Topbar + Main Canvas
+                // Right Area: Topbar + Main Canvas
                 Expanded(
                   child: Column(
                     children: [
-                      // Top Header Strip (56px)
+                      // Top Header Strip (58px)
                       Container(
-                        height: 56,
+                        height: 58,
                         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
                         decoration: BoxDecoration(
                           color: cs.surface,
@@ -774,7 +773,8 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                             if (!isDesktop) ...[
                               IconButton(
                                 icon: Icon(LucideIcons.menu, color: cs.onSurface, size: 18),
-                                tooltip: 'Buka Menu',
+                                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                                tooltip: 'Buka menu',
                                 onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                               ),
                               const SizedBox(width: AppSpacing.sm),
@@ -784,9 +784,8 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                             if (activeNav != null && screenWidth >= 820) ...[
                               Text(
                                 activeNav.group,
-                                style: tt.labelSmall?.copyWith(
+                                style: context.monoStyle(
                                   fontSize: 10.5,
-                                  letterSpacing: 0.7,
                                   color: sem.textFaint,
                                 ),
                               ),
@@ -809,9 +808,10 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                               InkWell(
                                 onTap: () => _showQuickJumpDialog(visibleNavItems),
                                 borderRadius: BorderRadius.circular(AppRadius.control),
+                                hoverColor: sem.hoverBg,
                                 child: Container(
-                                  width: screenWidth >= 1100 ? 260 : 200,
-                                  height: 34,
+                                  width: screenWidth >= 1100 ? 250 : 196,
+                                  height: 40,
                                   padding: const EdgeInsets.symmetric(horizontal: 10),
                                   decoration: BoxDecoration(
                                     color: sem.subtleBg,
@@ -828,7 +828,7 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                                       const SizedBox(width: AppSpacing.sm),
                                       Expanded(
                                         child: Text(
-                                          'Pindah menu...',
+                                          'Loncat ke menu...',
                                           style: tt.bodySmall?.copyWith(fontSize: 12),
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -836,7 +836,7 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                                       Container(
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 5,
-                                          vertical: 1.5,
+                                          vertical: 2,
                                         ),
                                         decoration: BoxDecoration(
                                           color: cs.surface,
@@ -845,9 +845,9 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                                         ),
                                         child: Text(
                                           'Ctrl K',
-                                          style: tt.labelSmall?.copyWith(
+                                          style: context.monoStyle(
                                             fontSize: 10,
-                                            letterSpacing: 0.2,
+                                            color: sem.textMuted,
                                           ),
                                         ),
                                       ),
@@ -871,7 +871,7 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                             _buildTopActionButton(
                               context: context,
                               icon: isDark ? LucideIcons.sun : LucideIcons.moon,
-                              tooltip: isDark ? 'Mode Terang' : 'Mode Gelap',
+                              tooltip: isDark ? 'Tema terang' : 'Tema gelap',
                               iconColor: isDark ? sem.warning : cs.onSurfaceVariant,
                               onTap: () => ref.read(themeProvider.notifier).toggleTheme(),
                             ),
@@ -888,56 +888,60 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                             InkWell(
                               onTap: _showProfileDialog,
                               borderRadius: BorderRadius.circular(AppRadius.control),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      width: 30,
-                                      height: 30,
-                                      decoration: BoxDecoration(
-                                        color: cs.primaryContainer,
-                                        borderRadius: BorderRadius.circular(AppRadius.control),
-                                        border: Border.all(
-                                          color: cs.primary.withValues(alpha: 0.25),
+                              hoverColor: sem.hoverBg,
+                              child: SizedBox(
+                                height: 44,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 30,
+                                        height: 30,
+                                        decoration: BoxDecoration(
+                                          color: cs.primaryContainer,
+                                          borderRadius: BorderRadius.circular(AppRadius.control),
+                                          border: Border.all(
+                                            color: cs.primary.withValues(alpha: 0.25),
+                                          ),
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          (user?.name.isNotEmpty == true ? user!.name[0] : 'A')
+                                              .toUpperCase(),
+                                          style: tt.labelLarge?.copyWith(
+                                            color: cs.onPrimaryContainer,
+                                            fontSize: 12,
+                                          ),
                                         ),
                                       ),
-                                      alignment: Alignment.center,
-                                      child: Text(
-                                        (user?.name.isNotEmpty == true ? user!.name[0] : 'A')
-                                            .toUpperCase(),
-                                        style: tt.labelLarge?.copyWith(
-                                          color: cs.onPrimaryContainer,
-                                          fontSize: 12,
+                                      if (screenWidth >= 520) ...[
+                                        const SizedBox(width: 9),
+                                        ConstrainedBox(
+                                          constraints: BoxConstraints(
+                                            maxWidth: screenWidth < 800 ? 110 : 160,
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                user?.name ?? 'Administrator',
+                                                overflow: TextOverflow.ellipsis,
+                                                style: tt.labelLarge?.copyWith(fontSize: 12.5),
+                                              ),
+                                              Text(
+                                                user?.role?.displayName ?? user?.email ?? 'User',
+                                                overflow: TextOverflow.ellipsis,
+                                                style: tt.bodySmall?.copyWith(fontSize: 10.5),
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                    ),
-                                    if (screenWidth >= 520) ...[
-                                      const SizedBox(width: 9),
-                                      ConstrainedBox(
-                                        constraints: BoxConstraints(
-                                          maxWidth: screenWidth < 800 ? 110 : 160,
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              user?.name ?? 'Administrator',
-                                              overflow: TextOverflow.ellipsis,
-                                              style: tt.labelLarge?.copyWith(fontSize: 12.5),
-                                            ),
-                                            Text(
-                                              user?.role?.displayName ?? user?.email ?? 'User',
-                                              overflow: TextOverflow.ellipsis,
-                                              style: tt.bodySmall?.copyWith(fontSize: 10.5),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
+                                      ],
                                     ],
-                                  ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -979,8 +983,8 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
         borderRadius: BorderRadius.circular(AppRadius.control),
         hoverColor: sem.hoverBg,
         child: Container(
-          width: 34,
-          height: 34,
+          width: 44,
+          height: 40,
           decoration: BoxDecoration(
             color: sem.subtleBg,
             borderRadius: BorderRadius.circular(AppRadius.control),
@@ -1003,7 +1007,6 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
     String currentRoute,
     bool showExpanded,
   ) {
-    final tt = Theme.of(context).textTheme;
     final sem = context.semantic;
     final List<Widget> widgets = [];
     String? lastGroup;
@@ -1019,9 +1022,10 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
               padding: const EdgeInsets.fromLTRB(10, 2, 10, 6),
               child: Text(
                 item.group,
-                style: tt.labelSmall?.copyWith(
+                style: context.monoStyle(
                   fontSize: 10,
-                  letterSpacing: 0.9,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.7,
                   color: sem.textFaint,
                 ),
               ),
@@ -1061,11 +1065,8 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final sem = context.semantic;
-    final isDark = context.isDarkMode;
 
-    final Color activeBg = isSelected
-        ? (isDark ? cs.primaryContainer : cs.primaryContainer)
-        : Colors.transparent;
+    final Color activeBg = isSelected ? cs.primaryContainer : Colors.transparent;
     final Color iconColor = isDanger
         ? sem.danger
         : (isSelected ? cs.onPrimaryContainer : cs.onSurfaceVariant);
@@ -1083,9 +1084,9 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
           borderRadius: BorderRadius.circular(AppRadius.control),
           hoverColor: isSelected ? activeBg : sem.hoverBg,
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
+            duration: const Duration(milliseconds: 160),
             curve: Curves.easeOutCubic,
-            height: 38,
+            height: 44,
             decoration: BoxDecoration(
               color: activeBg,
               borderRadius: BorderRadius.circular(AppRadius.control),
@@ -1096,14 +1097,14 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
               children: [
                 if (showExpanded)
                   AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
+                    duration: const Duration(milliseconds: 160),
                     curve: Curves.easeOutCubic,
-                    width: 2.5,
-                    height: isSelected ? 18 : 0,
+                    width: 3,
+                    height: isSelected ? 20 : 0,
                     margin: const EdgeInsets.only(left: 2, right: 9),
                     decoration: BoxDecoration(
                       color: isSelected ? cs.primary : Colors.transparent,
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(AppRadius.tag),
                     ),
                   ),
                 Icon(icon, size: 17, color: iconColor),
@@ -1151,7 +1152,7 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              height: 56,
+              height: 58,
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               decoration: BoxDecoration(
                 border: Border(bottom: BorderSide(color: cs.outlineVariant)),
@@ -1159,14 +1160,14 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
               child: Row(
                 children: [
                   Container(
-                    width: 30,
-                    height: 30,
+                    width: 28,
+                    height: 28,
                     decoration: BoxDecoration(
                       color: cs.primary,
                       borderRadius: BorderRadius.circular(AppRadius.control),
                     ),
                     alignment: Alignment.center,
-                    child: Icon(LucideIcons.barChart2, color: cs.onPrimary, size: 16),
+                    child: Icon(LucideIcons.barChart2, color: cs.onPrimary, size: 15),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -1177,6 +1178,7 @@ class _DashboardLayoutState extends ConsumerState<DashboardLayout> {
                   ),
                   IconButton(
                     icon: Icon(LucideIcons.x, size: 17, color: cs.onSurfaceVariant),
+                    constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],

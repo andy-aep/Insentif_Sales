@@ -135,19 +135,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
         );
         return true;
       } else {
-        throw ApiException(message: 'Respons otentikasi tidak mengandung token yang valid.');
+        throw ApiException(message: 'Respons server tidak sesuai.');
       }
     } on DioException catch (dioErr) {
       final apiErr = ApiException.fromDioException(dioErr);
+      final status = dioErr.response?.statusCode;
+      final lower = apiErr.message.toLowerCase();
+      final String userMessage = (status == 401 ||
+              status == 422 ||
+              lower.contains('credential') ||
+              lower.contains('unauthorized') ||
+              lower.contains('password'))
+          ? 'Username atau kata sandi salah.'
+          : apiErr.message;
       state = state.copyWith(
         isLoading: false,
-        errorMessage: apiErr.message,
+        errorMessage: userMessage,
       );
       return false;
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: e.toString(),
+        errorMessage: 'Gagal masuk. Periksa koneksi lalu coba lagi.',
       );
       return false;
     }

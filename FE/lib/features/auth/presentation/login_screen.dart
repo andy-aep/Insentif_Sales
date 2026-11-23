@@ -52,16 +52,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final isDesktop = constraints.maxWidth >= 960;
+            final isDesktop = constraints.maxWidth >= 920;
 
             final themeToggle = Tooltip(
-              message: isDark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap',
+              message: isDark ? 'Tema terang' : 'Tema gelap',
               child: InkWell(
                 onTap: () => ref.read(themeProvider.notifier).toggleTheme(),
                 borderRadius: BorderRadius.circular(AppRadius.control),
+                hoverColor: sem.hoverBg,
                 child: Container(
-                  width: 36,
-                  height: 36,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                     color: cs.surface,
                     borderRadius: BorderRadius.circular(AppRadius.control),
@@ -71,210 +72,245 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: Icon(
                     isDark ? LucideIcons.sun : LucideIcons.moon,
                     color: isDark ? sem.warning : cs.onSurfaceVariant,
-                    size: 16,
+                    size: 17,
                   ),
                 ),
               ),
             );
 
-            final signInForm = ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 380),
-              child: Form(
-                key: _formKey,
+            final signInCard = ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: cs.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.card),
+                  border: Border.all(color: cs.outlineVariant),
+                ),
+                clipBehavior: Clip.antiAlias,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (!isDesktop) ...[
-                      Row(
-                        children: [
-                          Container(
-                            width: 30,
-                            height: 30,
-                            decoration: BoxDecoration(
-                              color: cs.primary,
-                              borderRadius: BorderRadius.circular(AppRadius.control),
-                            ),
-                            alignment: Alignment.center,
-                            child: Icon(
-                              LucideIcons.barChart2,
-                              color: cs.onPrimary,
-                              size: 16,
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.md),
-                          Text(
-                            'SALES INSENTIF',
-                            style: tt.labelMedium?.copyWith(
-                              letterSpacing: 1.1,
-                              color: cs.onSurface,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.xxl),
-                    ],
-
-                    Text(
-                      'Masuk ke Panel Kerja',
-                      style: tt.headlineMedium,
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Gunakan kredensial internal untuk mengelola target, realisasi, dan perhitungan insentif.',
-                      style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
-                      switchInCurve: Curves.easeOutCubic,
-                      child: authState.errorMessage != null
-                          ? Padding(
-                              key: ValueKey(authState.errorMessage),
-                              padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.md,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: sem.dangerBg,
-                                  borderRadius: BorderRadius.circular(AppRadius.control),
-                                  border: Border.all(
-                                    color: sem.danger.withValues(alpha: 0.35),
+                    // Sharp 3px Viridian ledger rule
+                    Container(height: 3, color: cs.primary),
+                    Padding(
+                      padding: const EdgeInsets.all(AppSpacing.xxl),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (!isDesktop) ...[
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 28,
+                                    height: 28,
+                                    decoration: BoxDecoration(
+                                      color: cs.primary,
+                                      borderRadius: BorderRadius.circular(AppRadius.control),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Icon(
+                                      LucideIcons.barChart2,
+                                      color: cs.onPrimary,
+                                      size: 15,
+                                    ),
                                   ),
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 1),
-                                      child: Icon(
-                                        LucideIcons.alertCircle,
-                                        color: sem.danger,
-                                        size: 15,
+                                  const SizedBox(width: AppSpacing.md),
+                                  Expanded(
+                                    child: Text(
+                                      'PT SUSANTI MEGAH · INSENTIF',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: context.monoStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: cs.onSurfaceVariant,
                                       ),
                                     ),
-                                    const SizedBox(width: AppSpacing.sm),
-                                    Expanded(
-                                      child: Text(
-                                        authState.errorMessage!,
-                                        style: tt.bodySmall?.copyWith(
-                                          color: sem.danger,
-                                          fontWeight: FontWeight.w500,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: AppSpacing.xl),
+                            ],
+
+                            Text(
+                              'Masuk',
+                              style: tt.headlineMedium,
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              'Masukkan akun kerja untuk membuka data periode aktif.',
+                              style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                            ),
+                            const SizedBox(height: AppSpacing.xl),
+
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 160),
+                              switchInCurve: Curves.easeOutCubic,
+                              child: authState.errorMessage != null
+                                  ? Padding(
+                                      key: ValueKey(authState.errorMessage),
+                                      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: AppSpacing.md,
+                                          vertical: 10,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: sem.dangerBg,
+                                          borderRadius: BorderRadius.circular(AppRadius.control),
+                                          border: Border.all(
+                                            color: sem.danger.withValues(alpha: 0.4),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 1),
+                                              child: Icon(
+                                                LucideIcons.alertCircle,
+                                                color: sem.danger,
+                                                size: 15,
+                                              ),
+                                            ),
+                                            const SizedBox(width: AppSpacing.sm),
+                                            Expanded(
+                                              child: Text(
+                                                authState.errorMessage!,
+                                                style: tt.bodySmall?.copyWith(
+                                                  color: sem.danger,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
+
+                            Text(
+                              'Username atau email',
+                              style: tt.labelMedium?.copyWith(color: sem.textSecondary),
+                            ),
+                            const SizedBox(height: AppSpacing.xs + 2),
+                            TextFormField(
+                              controller: _usernameController,
+                              style: tt.bodyLarge?.copyWith(color: cs.onSurface),
+                              textInputAction: TextInputAction.next,
+                              decoration: InputDecoration(
+                                prefixIcon: Icon(
+                                  LucideIcons.user,
+                                  color: cs.onSurfaceVariant,
+                                  size: 16,
+                                ),
+                                prefixIconConstraints: const BoxConstraints(
+                                  minWidth: 40,
+                                  minHeight: 44,
+                                ),
+                                hintText: 'mis. bayu_spv',
+                                filled: true,
+                                fillColor: cs.surface,
+                              ),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Isi username atau email.';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+
+                            Text(
+                              'Kata sandi',
+                              style: tt.labelMedium?.copyWith(color: sem.textSecondary),
+                            ),
+                            const SizedBox(height: AppSpacing.xs + 2),
+                            TextFormField(
+                              controller: _passwordController,
+                              obscureText: _obscurePassword,
+                              style: tt.bodyLarge?.copyWith(color: cs.onSurface),
+                              textInputAction: TextInputAction.done,
+                              decoration: InputDecoration(
+                                prefixIcon: Icon(
+                                  LucideIcons.lock,
+                                  color: cs.onSurfaceVariant,
+                                  size: 16,
+                                ),
+                                prefixIconConstraints: const BoxConstraints(
+                                  minWidth: 40,
+                                  minHeight: 44,
+                                ),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscurePassword ? LucideIcons.eyeOff : LucideIcons.eye,
+                                    color: cs.onSurfaceVariant,
+                                    size: 16,
+                                  ),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 44,
+                                    minHeight: 44,
+                                  ),
+                                  tooltip: _obscurePassword ? 'Tampilkan sandi' : 'Sembunyikan sandi',
+                                  onPressed: () {
+                                    setState(() => _obscurePassword = !_obscurePassword);
+                                  },
+                                ),
+                                hintText: 'Kata sandi akun',
+                                filled: true,
+                                fillColor: cs.surface,
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Isi kata sandi.';
+                                }
+                                return null;
+                              },
+                              onFieldSubmitted: (_) => _handleLogin(),
+                            ),
+                            const SizedBox(height: AppSpacing.xl),
+
+                            SizedBox(
+                              height: 46,
+                              child: ElevatedButton(
+                                onPressed: authState.isLoading ? null : _handleLogin,
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 160),
+                                  child: authState.isLoading
+                                      ? Row(
+                                          key: const ValueKey('loading'),
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            SizedBox(
+                                              height: 15,
+                                              width: 15,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: sem.textMuted,
+                                              ),
+                                            ),
+                                            const SizedBox(width: AppSpacing.sm),
+                                            const Text('Memeriksa akun...'),
+                                          ],
+                                        )
+                                      : const Row(
+                                          key: ValueKey('idle'),
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Text('Masuk'),
+                                            SizedBox(width: AppSpacing.sm),
+                                            Icon(LucideIcons.arrowRight, size: 16),
+                                          ],
+                                        ),
                                 ),
                               ),
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-
-                    Text(
-                      'Username atau Email',
-                      style: tt.labelMedium?.copyWith(color: sem.textSecondary),
-                    ),
-                    const SizedBox(height: AppSpacing.xs + 2),
-                    TextFormField(
-                      controller: _usernameController,
-                      style: tt.bodyLarge?.copyWith(color: cs.onSurface),
-                      textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(
-                        prefixIcon: Icon(
-                          LucideIcons.user,
-                          color: cs.onSurfaceVariant,
-                          size: 16,
-                        ),
-                        prefixIconConstraints: const BoxConstraints(
-                          minWidth: 38,
-                          minHeight: 38,
-                        ),
-                        hintText: 'nama.user atau email@company.com',
-                        filled: true,
-                        fillColor: cs.surface,
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Username wajib diisi';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-
-                    Text(
-                      'Kata Sandi',
-                      style: tt.labelMedium?.copyWith(color: sem.textSecondary),
-                    ),
-                    const SizedBox(height: AppSpacing.xs + 2),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      style: tt.bodyLarge?.copyWith(color: cs.onSurface),
-                      textInputAction: TextInputAction.done,
-                      decoration: InputDecoration(
-                        prefixIcon: Icon(
-                          LucideIcons.lock,
-                          color: cs.onSurfaceVariant,
-                          size: 16,
-                        ),
-                        prefixIconConstraints: const BoxConstraints(
-                          minWidth: 38,
-                          minHeight: 38,
-                        ),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword ? LucideIcons.eyeOff : LucideIcons.eye,
-                            color: cs.onSurfaceVariant,
-                            size: 16,
-                          ),
-                          tooltip: _obscurePassword ? 'Tampilkan sandi' : 'Sembunyikan sandi',
-                          onPressed: () {
-                            setState(() => _obscurePassword = !_obscurePassword);
-                          },
-                        ),
-                        hintText: 'Masukkan kata sandi',
-                        filled: true,
-                        fillColor: cs.surface,
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Kata sandi wajib diisi';
-                        }
-                        return null;
-                      },
-                      onFieldSubmitted: (_) => _handleLogin(),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-
-                    SizedBox(
-                      height: 42,
-                      child: ElevatedButton(
-                        onPressed: authState.isLoading ? null : _handleLogin,
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 180),
-                          child: authState.isLoading
-                              ? SizedBox(
-                                  key: const ValueKey('loading'),
-                                  height: 16,
-                                  width: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: cs.onPrimary,
-                                  ),
-                                )
-                              : const Row(
-                                  key: ValueKey('idle'),
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text('Masuk'),
-                                    SizedBox(width: AppSpacing.sm),
-                                    Icon(LucideIcons.arrowRight, size: 16),
-                                  ],
-                                ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -290,7 +326,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Center(
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.all(AppSpacing.xl),
-                      child: signInForm,
+                      child: signInCard,
                     ),
                   ),
                 ],
@@ -299,13 +335,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
             return Row(
               children: [
-                // Left Editorial / Utilitarian Brand Panel
+                // Left Editorial Deep Brine Ledger Panel
                 Expanded(
                   flex: 5,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: cs.surface,
-                      border: Border(right: BorderSide(color: cs.outlineVariant)),
+                      color: sem.heroSurface,
+                      border: Border(right: BorderSide(color: sem.heroBorder)),
                     ),
                     padding: const EdgeInsets.all(AppSpacing.xxxl),
                     child: Column(
@@ -314,81 +350,96 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         Row(
                           children: [
                             Container(
-                              width: 30,
-                              height: 30,
+                              width: 28,
+                              height: 28,
                               decoration: BoxDecoration(
-                                color: cs.primary,
+                                color: sem.heroAccent,
                                 borderRadius: BorderRadius.circular(AppRadius.control),
                               ),
                               alignment: Alignment.center,
                               child: Icon(
                                 LucideIcons.barChart2,
-                                color: cs.onPrimary,
-                                size: 16,
+                                color: sem.heroSurface,
+                                size: 15,
                               ),
                             ),
                             const SizedBox(width: AppSpacing.md),
-                            Text(
-                              'PT SUSANTI MEGAH  /  SALES INSENTIF',
-                              style: tt.labelSmall?.copyWith(
-                                letterSpacing: 1.0,
-                                color: cs.onSurfaceVariant,
+                            Expanded(
+                              child: Text(
+                                'PT SUSANTI MEGAH · DISTRIBUSI & INSENTIF',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: context.monoStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.7,
+                                  color: sem.heroMuted,
+                                ),
                               ),
                             ),
                           ],
                         ),
                         const Spacer(),
                         ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 440),
+                          constraints: const BoxConstraints(maxWidth: 460),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Kontrol Target &\nInsentif Distribusi.',
+                                'Rekap kuota, tonase, dan insentif sales dalam satu buku kerja.',
                                 style: tt.displayLarge?.copyWith(
-                                  fontSize: 34,
-                                  height: 1.15,
-                                  letterSpacing: -0.8,
+                                  fontSize: 32,
+                                  height: 1.18,
+                                  letterSpacing: -0.75,
+                                  color: sem.heroOnSurface,
                                 ),
                               ),
-                              const SizedBox(height: AppSpacing.lg),
-                              Text(
-                                'Satu buku besar terpadu untuk target kuota distributor, realisasi SAP, cakupan Active Outlet, dan kalkulasi komisi multi-tier.',
-                                style: tt.bodyLarge?.copyWith(
-                                  color: cs.onSurfaceVariant,
-                                  height: 1.55,
+                              const SizedBox(height: AppSpacing.xl),
+                              Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(AppRadius.card),
+                                  border: Border.all(color: sem.heroBorder),
+                                ),
+                                child: Column(
+                                  children: [
+                                    _buildSchemeNoteRow(
+                                      context,
+                                      scheme: 'Konsumsi',
+                                      detail: 'Sell-In Depo (ASM), Sell-Out Area (SPV), Active Outlet (Toko)',
+                                    ),
+                                    Divider(height: 1, color: sem.heroBorder),
+                                    _buildSchemeNoteRow(
+                                      context,
+                                      scheme: 'Industri',
+                                      detail: 'Tonase kontrak (Kg) & pembukaan toko baru (NOO)',
+                                    ),
+                                    Divider(height: 1, color: sem.heroBorder),
+                                    _buildSchemeNoteRow(
+                                      context,
+                                      scheme: 'Surabaya',
+                                      detail: 'Evaluasi kuota langsung TO, SM, dan koordinasi ASC',
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
                         const Spacer(),
-                        _buildCapabilityRow(
-                          context,
-                          index: '01',
-                          title: 'Hierarki Distributor → Depo → Area',
-                          detail: 'Sell-In Depo (ASM), Sell-Out Area (SPV), dan Active Outlet (Toko)',
-                        ),
-                        Divider(height: 1, color: cs.outlineVariant),
-                        _buildCapabilityRow(
-                          context,
-                          index: '02',
-                          title: 'Mesin Kalkulasi Multi-Skema',
-                          detail: 'Evaluasi otomatis Konsumsi, Industri (NOO), dan Cabang Surabaya',
-                        ),
-                        Divider(height: 1, color: cs.outlineVariant),
-                        _buildCapabilityRow(
-                          context,
-                          index: '03',
-                          title: 'Audit Batch & Sinkronisasi SAP',
-                          detail: 'Validasi impor Excel, rollback batch, dan rekap siap ekspor',
+                        Divider(height: 1, color: sem.heroBorder),
+                        const SizedBox(height: AppSpacing.md),
+                        Text(
+                          'Data realisasi tersinkron dengan faktur SAP & upload batch bulanan.',
+                          style: tt.bodySmall?.copyWith(
+                            color: sem.heroMuted,
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
 
-                // Right Precision Sign-In Workspace
+                // Right Warm Alabaster Sign-In Workspace
                 Expanded(
                   flex: 6,
                   child: Stack(
@@ -397,7 +448,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Center(
                         child: SingleChildScrollView(
                           padding: const EdgeInsets.all(AppSpacing.xxxl),
-                          child: signInForm,
+                          child: signInCard,
                         ),
                       ),
                     ],
@@ -411,44 +462,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Widget _buildCapabilityRow(
+  Widget _buildSchemeNoteRow(
     BuildContext context, {
-    required String index,
-    required String title,
+    required String scheme,
     required String detail,
   }) {
-    final cs = Theme.of(context).colorScheme;
+    final sem = context.semantic;
     final tt = Theme.of(context).textTheme;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 30,
+            width: 82,
             child: Text(
-              index,
-              style: context.tabularNumStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: cs.primary,
+              scheme,
+              style: context.monoStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: sem.heroAccent,
               ),
             ),
           ),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: tt.titleSmall?.copyWith(color: cs.onSurface),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  detail,
-                  style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                ),
-              ],
+            child: Text(
+              detail,
+              style: tt.bodySmall?.copyWith(
+                color: sem.heroOnSurface,
+                height: 1.4,
+              ),
             ),
           ),
         ],

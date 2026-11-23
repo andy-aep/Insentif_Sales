@@ -160,21 +160,21 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
           user: user,
         );
       } else {
-        state = state.copyWith(isLoading: false, errorMessage: 'Format data tidak sesuai');
+        state = state.copyWith(isLoading: false, errorMessage: 'Format data tidak sesuai.');
       }
     } on DioException catch (dioErr) {
       final statusCode = dioErr.response?.statusCode;
       final msg = statusCode == 401
-          ? 'Sesi login telah berakhir (401). Silakan login kembali.'
-          : 'Gagal memuat dashboard: ${dioErr.message}';
+          ? 'Sesi berakhir. Masuk ulang ke akun kerja.'
+          : 'Gagal memuat data ringkasan.';
       state = state.copyWith(
         isLoading: false,
         errorMessage: msg,
       );
-    } catch (e) {
+    } catch (_) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Terjadi kesalahan: $e',
+        errorMessage: 'Gagal memuat data ringkasan.',
       );
     }
   }
