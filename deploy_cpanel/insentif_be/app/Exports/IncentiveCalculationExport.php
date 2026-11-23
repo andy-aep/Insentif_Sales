@@ -19,11 +19,19 @@ class IncentiveCalculationExport implements FromCollection, WithHeadings, WithMa
 
     public function collection(): Enumerable
     {
+        $periods = collect(explode(',', (string) $this->period))
+            ->map(fn ($p) => preg_replace('/[^0-9]/', '', $p))
+            ->filter(fn ($p) => strlen($p) === 6)
+            ->unique()
+            ->values()
+            ->all();
+
         return IncentiveCalculation::with(['user.position', 'targetHeader', 'grade', 'gradeBobot', 'calculatedBy'])
             ->when($this->kategoriSkema, fn ($q) => $q->where('kategori_skema', $this->kategoriSkema))
-            ->when($this->period, fn ($q) => $q->where('period', $this->period))
+            ->when(! empty($periods), fn ($q) => $q->whereIn('period', $periods), fn ($q) => $q->when($this->period, fn ($sq) => $sq->where('period', $this->period)))
             ->when($this->positionId, fn ($q) => $q->whereHas('user', fn ($u) => $u->where('position_id', $this->positionId)))
             ->when($this->userId, fn ($q) => $q->where('user_id', $this->userId))
+            ->orderBy('period')
             ->orderBy('user_id')
             ->orderBy('target_header_id')
             ->get();

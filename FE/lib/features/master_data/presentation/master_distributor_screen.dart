@@ -237,20 +237,25 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                                           final mState = ref.watch(masterDataProvider);
                                           return DropdownButtonFormField<int?>(
                                             initialValue: selectedRegionId,
+                                            isExpanded: true,
                                             dropdownColor: colors.bgElevated,
                                             style: TextStyle(color: colors.textPrimary),
                                             decoration: const InputDecoration(
                                               labelText: 'Wilayah / Region',
                                               prefixIcon: Icon(LucideIcons.globe, size: 16),
+                                              prefixIconConstraints: BoxConstraints(minWidth: 36, minHeight: 36),
                                             ),
                                             items: [
                                               const DropdownMenuItem<int?>(
                                                 value: null,
-                                                child: Text('Tanpa Region (Nasional)'),
+                                                child: Text('Tanpa Region (Nasional)', overflow: TextOverflow.ellipsis),
                                               ),
                                               ...mState.regions.map((reg) => DropdownMenuItem<int?>(
                                                 value: reg.id,
-                                                child: Text('${reg.code} - ${reg.name}'),
+                                                child: Text(
+                                                  reg.code == reg.name ? reg.name : '${reg.code} - ${reg.name}',
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
                                               )),
                                             ],
                                             onChanged: (val) {
@@ -607,7 +612,8 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
     if (dist.depos.isNotEmpty && dist.depos.first.areas.isEmpty) {
       try {
         final res = await DioClient.instance.get('${ApiEndpoints.distributors}/${dist.id}');
-        final data = res.data['data'] ?? res.data;
+        final rawData = res.data;
+        final data = rawData is Map ? (rawData['data'] ?? rawData) : rawData;
         if (data is Map<String, dynamic>) {
           currentDist = DistributorModel.fromJson(data);
         }
@@ -825,13 +831,14 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                     // Induk Distributor Selector
                     DropdownButtonFormField<int>(
                       initialValue: selectedDistId,
+                      isExpanded: true,
                       dropdownColor: colors.bgElevated,
                       style: TextStyle(color: colors.textPrimary),
                       decoration: const InputDecoration(labelText: 'Induk Distributor *'),
                       items: state.distributors.map((dist) {
                         return DropdownMenuItem<int>(
                           value: dist.id,
-                          child: Text('${dist.name} (${dist.code})'),
+                          child: Text('${dist.name} (${dist.code})', overflow: TextOverflow.ellipsis),
                         );
                       }).toList(),
                       onChanged: (val) {
@@ -1011,6 +1018,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                 children: [
                   DropdownButtonFormField<int>(
                     initialValue: selectedDepoId,
+                    isExpanded: true,
                     dropdownColor: colors.bgElevated,
                     style: TextStyle(color: colors.textPrimary),
                     decoration: const InputDecoration(labelText: 'Pilih Induk Depo *'),
@@ -1018,7 +1026,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                       final distName = depo.distributor?.name ?? 'Distributor';
                       return DropdownMenuItem<int>(
                         value: depo.id,
-                        child: Text('${depo.name} ($distName)'),
+                        child: Text('${depo.name} ($distName)', overflow: TextOverflow.ellipsis),
                       );
                     }).toList(),
                     onChanged: (val) {
@@ -1504,7 +1512,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
               DataColumn(label: Text('Jaringan Depo & Area', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
               DataColumn(label: Text('Aksi', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
             ],
-            rows: filtered.take(50).map((d) {
+            rows: filtered.map((d) {
               final totalAreas = d.totalAreasCount;
               final totalDepos = d.totalDeposCount;
 
@@ -1571,7 +1579,9 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                           ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 160),
                             child: Text(
-                              d.region != null ? '${d.region!.code} - ${d.region!.name}' : 'Belum Diatur',
+                              d.region != null
+                                  ? (d.region!.code == d.region!.name ? d.region!.name : '${d.region!.code} - ${d.region!.name}')
+                                  : 'Belum Diatur',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -1746,7 +1756,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
               DataColumn(label: Text('Area Tercover', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
               DataColumn(label: Text('Aksi', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
             ],
-            rows: filtered.take(50).map((depo) {
+            rows: filtered.map((depo) {
               final distName = depo.distributor?.name ?? '—';
 
               return DataRow(
@@ -1924,7 +1934,7 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
               DataColumn(label: Text('Distributor Rekanan', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
               DataColumn(label: Text('Aksi', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
             ],
-            rows: filtered.take(50).map((area) {
+            rows: filtered.map((area) {
               final depoName = area.depo?.name ?? '—';
               final distName = area.depo?.distributor?.name ?? '—';
 

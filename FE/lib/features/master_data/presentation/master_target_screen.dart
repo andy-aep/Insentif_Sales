@@ -50,6 +50,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _fetchActiveTabTargets(force: true);
       if (ref.read(masterDataProvider).distributors.isEmpty) {
         ref.read(masterDataProvider.notifier).fetchAllMasterData();
@@ -363,7 +364,11 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
       }
     }
 
-    Future<void> loadDeposForDistributor(int? distId, StateSetter setDialogState) async {
+    Future<void> loadDeposForDistributor(
+      int? distId,
+      StateSetter setDialogState, {
+      bool preserveSelection = false,
+    }) async {
       if (distId == null) {
         setDialogState(() {
           dialogDepos = [];
@@ -373,13 +378,16 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
         });
         return;
       }
+      final prevDepoId = preserveSelection ? selectedDepoId : null;
       setDialogState(() {
         isLoadingDepos = true;
-        dialogDepos = [];
-        selectedDepoId = null;
-        currentDepo = null;
-        dialogAreas = [];
-        selectedAreaId = null;
+        if (!preserveSelection) {
+          dialogDepos = [];
+          selectedDepoId = null;
+          currentDepo = null;
+          dialogAreas = [];
+          selectedAreaId = null;
+        }
       });
       try {
         final res = await DioClient.instance.get(
@@ -389,7 +397,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
         final List raw = extractList(res.data);
         final fetched = raw.map((e) => DepoModel.fromJson(e)).toList()
           ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-        int? nextDepoId = selectedDepoId;
+        int? nextDepoId = prevDepoId;
         if (nextDepoId == null || !fetched.any((d) => d.id == nextDepoId)) {
           nextDepoId = fetched.isNotEmpty ? fetched.first.id : null;
         }
@@ -412,7 +420,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
         builder: (dialogCtx, setDialogState) {
           if (!didInitialFetch && selectedDistributorId != null) {
             didInitialFetch = true;
-            Future.microtask(() => loadDeposForDistributor(selectedDistributorId, setDialogState));
+            Future.microtask(() => loadDeposForDistributor(selectedDistributorId, setDialogState, preserveSelection: true));
           }
 
           final isDistributorBundle = !isEdit && selectedScheme == 'DISTRIBUTOR_TERPADU';
@@ -1438,8 +1446,8 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                   foregroundColor: context.colors.textPrimary,
                   backgroundColor: context.colors.bgCard,
                   side: BorderSide(color: context.colors.border),
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
-                  shape: const StadiumBorder(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 icon: const Icon(LucideIcons.download, size: 16),
                 label: Text(
@@ -1449,12 +1457,14 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                 onPressed: () {
                   final activePeriod = ref.read(masterTargetProvider).selectedPeriod;
                   final activeDistId = _hierarchyKey.currentState?.activeDistributorId;
+                  final activeDepoId = _hierarchyKey.currentState?.activeDepoId;
                   final activeBrandId = _hierarchyKey.currentState?.activeBrandId;
                   ref.read(bulkUploadProvider.notifier).downloadTemplate(
                     entity: 'master_target_distributor',
                     withData: true,
                     period: activePeriod,
                     distributorId: activeDistId,
+                    depoId: activeDepoId,
                     brandId: activeBrandId,
                   );
                 },
@@ -1465,8 +1475,8 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
-                  shape: const StadiumBorder(),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 icon: Icon(LucideIcons.plus, size: 17, color: Theme.of(context).colorScheme.onPrimary),
                 label: Text(
@@ -2218,33 +2228,41 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
           child: Row(
             children: [
               SizedBox(
-                width: 220,
-                child: DropdownButtonFormField<String>(
-                  key: ValueKey('period_gen_${targetState.selectedPeriod}'),
-                  initialValue: targetState.availablePeriods.contains(targetState.selectedPeriod) || targetState.selectedPeriod == 'ALL'
-                      ? targetState.selectedPeriod
-                      : (targetState.availablePeriods.isNotEmpty ? targetState.availablePeriods.first : '202610'),
-                  dropdownColor: colors.bgElevated,
-                  style: TextStyle(color: colors.textPrimary, fontSize: 13),
-                  decoration: InputDecoration(
-                    labelText: 'Filter Periode',
-                    labelStyle: TextStyle(color: colors.textMuted, fontSize: 12),
-                    prefixIcon: const Icon(LucideIcons.calendar, size: 16),
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  items: [
-                    const DropdownMenuItem(value: 'ALL', child: Text('Semua Periode')),
-                    ...targetState.availablePeriods.map((p) => DropdownMenuItem(
-                      value: p,
-                      child: Text(p),
-                    )),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) {
-                      ref.read(masterTargetProvider.notifier).setPeriod(val);
-                    }
+                width: 240,
+                child: Builder(
+                  builder: (context) {
+                    final sel = targetState.selectedPeriod.trim();
+                    final isMultiOrCustom = sel.isNotEmpty && sel != 'ALL' && !targetState.availablePeriods.contains(sel);
+                    return DropdownButtonFormField<String>(
+                      key: ValueKey('period_gen_$sel'),
+                      initialValue: sel.isEmpty ? 'ALL' : sel,
+                      isExpanded: true,
+                      dropdownColor: colors.bgElevated,
+                      style: TextStyle(color: colors.textPrimary, fontSize: 13),
+                      decoration: InputDecoration(
+                        labelText: 'Filter Periode',
+                        labelStyle: TextStyle(color: colors.textMuted, fontSize: 12),
+                        prefixIcon: const Icon(LucideIcons.calendar, size: 16),
+                        prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      items: [
+                        const DropdownMenuItem(value: 'ALL', child: Text('Semua Periode', overflow: TextOverflow.ellipsis)),
+                        if (isMultiOrCustom)
+                          DropdownMenuItem(value: sel, child: Text('Periode: $sel', overflow: TextOverflow.ellipsis)),
+                        ...targetState.availablePeriods.map((p) => DropdownMenuItem(
+                          value: p,
+                          child: Text(p, overflow: TextOverflow.ellipsis),
+                        )),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          ref.read(masterTargetProvider.notifier).setPeriod(val);
+                        }
+                      },
+                    );
                   },
                 ),
               ),

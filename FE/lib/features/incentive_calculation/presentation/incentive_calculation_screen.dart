@@ -74,11 +74,11 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
     switch (kat.toUpperCase()) {
       case 'DISTRIBUTOR':
       case 'KONSUMSI':
-        return 'Kalkulasi insentif sales distributor berbasis Sell-In, Sell-Out & Active Outlet (Bagi user is_eligible_konsumsi = true)';
+        return 'Kalkulasi insentif sales distributor berbasis Sell-In, Sell-Out & Active Outlet (AO)';
       case 'INDUSTRI':
-        return 'Kalkulasi insentif tim sales industri berbasis kuota volume dan New Open Outlet (NOO) (Bagi user is_eligible_industri = true)';
+        return 'Kalkulasi insentif tim sales industri berbasis kuota volume (Kg) dan New Open Outlet (NOO)';
       case 'SURABAYA':
-        return 'Kalkulasi insentif tim sales Surabaya (SM, TO, & ASC berbasis evaluasi bawahan) (Bagi user is_eligible_surabaya = true)';
+        return 'Kalkulasi insentif tim sales cabang Surabaya (SM, TO, dan ASC berbasis evaluasi tim)';
       default:
         return 'Eksekusi kalkulasi multi-tier berjenjang dan laporan insentif';
     }
@@ -1435,9 +1435,11 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
 
   Widget _buildSummaryTable(BuildContext context, List<IncentiveCalculationModel> filteredResults, AppThemeColors colors) {
     return ResponsiveTableCard(
-      minWidth: 1000,
+      minWidth: 900,
       child: DataTable(
         headingRowColor: WidgetStateProperty.all(colors.bgSubtle),
+        columnSpacing: 12,
+        horizontalMargin: 10,
         headingTextStyle: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: colors.textSecondary),
         columns: const [
           DataColumn(label: Text('Sales Personil')),
@@ -1530,7 +1532,7 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    item.isRateBased ? 'Rate (${CurrencyFormatter.formatRupiah(item.unitRate)}/$unitLabel)' : 'Lump Sum',
+                    item.isRateBased ? 'Rate (${CurrencyFormatter.formatRate(item.unitRate)}/$unitLabel)' : 'Lump Sum',
                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: item.isRateBased ? context.semantic.info : context.semantic.warning),
                   ),
                 ),
@@ -2008,7 +2010,9 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                       child: Text(
                         methodData.isPassed
                             ? 'LOLOS >= ${methodData.minAchievementPct.toStringAsFixed(0)}%'
-                            : 'TIDAK LOLOS (< ${methodData.minAchievementPct.toStringAsFixed(0)}%)',
+                            : (methodData.minAchievementPct > 0
+                                ? 'TIDAK LOLOS (< ${methodData.minAchievementPct.toStringAsFixed(0)}%)'
+                                : 'BELUM TERCAPAI'),
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -2055,14 +2059,16 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Grade ${methodData.gradeName ?? '-'} • Rate ${CurrencyFormatter.formatRupiah(methodData.multiplierRate)}/Kg • Bobot ${methodData.headerWeightPct.toStringAsFixed(0)}%',
+                        'Grade ${methodData.gradeName ?? '-'} • Rate ${CurrencyFormatter.formatRate(methodData.multiplierRate)}/Kg • Bobot ${methodData.headerWeightPct.toStringAsFixed(0)}%',
                         style: TextStyle(fontSize: 11.5, color: colors.textSecondary, fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         methodData.isPassed
-                            ? 'Tanpa Cap: ${CurrencyFormatter.formatNumber(methodData.actualVolumeKg)} Kg × ${CurrencyFormatter.formatRupiah(methodData.multiplierRate)} × ${methodData.headerWeightPct.toStringAsFixed(0)}% = ${CurrencyFormatter.formatRupiah(methodData.finalReward)}'
-                            : 'Reward: Rp 0 (Achievement belum memenuhi batas minimal ${methodData.minAchievementPct.toStringAsFixed(0)}%)',
+                            ? 'Tanpa Cap: ${CurrencyFormatter.formatNumber(methodData.actualVolumeKg)} Kg × ${CurrencyFormatter.formatRate(methodData.multiplierRate)} × ${methodData.headerWeightPct.toStringAsFixed(0)}% = ${CurrencyFormatter.formatRupiah(methodData.finalReward)}'
+                            : (methodData.minAchievementPct > 0
+                                ? 'Reward: Rp 0 (Achievement belum memenuhi batas minimal ${methodData.minAchievementPct.toStringAsFixed(0)}%)'
+                                : 'Reward: Rp 0 (Target belum tercapai atau skema belum dikonfigurasi)'),
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -2444,7 +2450,9 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                           child: Text(
                             card.isPassed
                                 ? 'LOLOS >= ${card.minAchievementPct.toStringAsFixed(0)}%'
-                                : 'TIDAK LOLOS (< ${card.minAchievementPct.toStringAsFixed(0)}%)',
+                                : (card.minAchievementPct > 0
+                                    ? 'TIDAK LOLOS (< ${card.minAchievementPct.toStringAsFixed(0)}%)'
+                                    : 'BELUM TERCAPAI'),
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
@@ -2490,7 +2498,9 @@ class _IncentiveCalculationScreenState extends ConsumerState<IncentiveCalculatio
                           Text(
                             card.isPassed
                                 ? '${CurrencyFormatter.formatNumber(card.actualKg)} Kg × ${_formatRateRupiah(card.multiplierRate)} × ${card.headerWeightPct.toStringAsFixed(0)}% = ${CurrencyFormatter.formatRupiah(card.totalReward)}'
-                                : 'Reward: Rp 0 (Achievement belum memenuhi batas minimal ${card.minAchievementPct.toStringAsFixed(0)}%)',
+                                : (card.minAchievementPct > 0
+                                    ? 'Reward: Rp 0 (Achievement belum memenuhi batas minimal ${card.minAchievementPct.toStringAsFixed(0)}%)'
+                                    : 'Reward: Rp 0 (Target belum tercapai atau skema belum dikonfigurasi)'),
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,

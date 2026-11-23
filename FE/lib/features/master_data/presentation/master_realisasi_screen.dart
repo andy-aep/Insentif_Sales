@@ -11,7 +11,6 @@ import '../../../core/network/dio_client.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../../../core/widgets/responsive_table.dart';
-import '../../../data/models/master_model.dart';
 import '../../users_management/providers/user_management_provider.dart';
 import '../providers/sales_assignment_provider.dart';
 
@@ -65,6 +64,11 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
   bool _isLoadingIndustri = false;
   String? _industriError;
 
+  // Live backend state untuk Tab 3: Sell-Out Sales Surabaya
+  List<Map<String, dynamic>> _surabayaRealisasi = [];
+  bool _isLoadingSurabaya = false;
+  String? _surabayaError;
+
   @override
   void initState() {
     super.initState();
@@ -81,13 +85,18 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
         if (_tabController.index == 2 && _industriRealisasi.isEmpty && !_isLoadingIndustri) {
           _fetchIndustriRealisasi();
         }
+        if (_tabController.index == 3 && _surabayaRealisasi.isEmpty && !_isLoadingSurabaya) {
+          _fetchSurabayaRealisasi();
+        }
       }
     });
     Future.microtask(() {
+      if (!mounted) return;
       _fetchAvailablePeriods();
       _fetchSellinDistributorRealisasi();
       _fetchSelloutDistributorRealisasi();
       _fetchIndustriRealisasi();
+      _fetchSurabayaRealisasi();
       ref.read(salesAssignmentProvider.notifier).fetchIndustriDataOnly();
       ref.read(userManagementProvider.notifier).fetchAll();
     });
@@ -161,10 +170,44 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
     );
   }
 
-  final List<RealisasiSalesModel> _selloutSurabaya = [
-    RealisasiSalesModel(id: 9, entityType: 'sellout_surabaya', period: '202610', customerCode: 'SBY-01', customerName: 'Depo Rungkut - Canvasing Team 1', volume: 18500, amount: 277500000, activeOutlet: 88),
-    RealisasiSalesModel(id: 10, entityType: 'sellout_surabaya', period: '202610', customerCode: 'SBY-02', customerName: 'Depo Tandes - Taking Order Team 2', volume: 23300, amount: 349500000, activeOutlet: 112),
-  ];
+  Future<void> _fetchSurabayaRealisasi() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingSurabaya = true;
+      _surabayaError = null;
+    });
+    try {
+      final res = await DioClient.instance.get(
+        ApiEndpoints.selloutSurabayas,
+        queryParameters: {
+          if (_selectedPeriod.isNotEmpty) 'period': _selectedPeriod,
+          if (_searchQuery.isNotEmpty) 'search': _searchQuery,
+          'per_page': 200,
+        },
+      );
+      final list = res.data is List
+          ? res.data as List
+          : (res.data is Map && res.data['data'] is List ? res.data['data'] as List : []);
+      if (!mounted) return;
+      setState(() {
+        _surabayaRealisasi = list.whereType<Map<String, dynamic>>().toList();
+        _isLoadingSurabaya = false;
+      });
+    } on DioException catch (e) {
+      if (!mounted) return;
+      final msg = e.response?.data is Map ? (e.response?.data['message']?.toString() ?? e.message) : e.message;
+      setState(() {
+        _isLoadingSurabaya = false;
+        _surabayaError = 'Gagal memuat Sell-Out Surabaya: $msg';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingSurabaya = false;
+        _surabayaError = 'Gagal memuat Sell-Out Surabaya: $e';
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -976,20 +1019,29 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                     label: const Text('Bulk Upload File'),
                     onPressed: () => context.go('/bulk-upload'),
                   ),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
-                    icon: _isSyncing || (_activeTabIndex == 2 && _isLoadingIndustri)
-                        ? SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
-                        : const Icon(LucideIcons.refreshCw, size: 16),
-                    label: Text(
-                      _activeTabIndex == 2
-                          ? (_isLoadingIndustri ? 'Memuat...' : 'Muat Ulang Industri')
-                          : (_isSyncing ? 'Menghubungkan...' : 'Tarik Data SAP'),
+                  if (_activeTabIndex != 0)
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
+                      icon: _isSyncing || (_activeTabIndex == 2 && _isLoadingIndustri) || (_activeTabIndex == 3 && _isLoadingSurabaya)
+                          ? SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
+                          : const Icon(LucideIcons.refreshCw, size: 16),
+                      label: Text(
+                        _activeTabIndex == 2
+                            ? (_isLoadingIndustri ? 'Memuat...' : 'Muat Ulang Industri')
+                            : (_activeTabIndex == 3
+                                ? (_isLoadingSurabaya ? 'Memuat...' : 'Muat Ulang Surabaya')
+                                : (_isSyncing ? 'Menghubungkan...' : 'Muat Ulang Data')),
+                      ),
+                      onPressed: (_isSyncing || (_activeTabIndex == 2 && _isLoadingIndustri) || (_activeTabIndex == 3 && _isLoadingSurabaya))
+                          ? null
+                          : () {
+                              if (_activeTabIndex == 3) {
+                                _fetchSurabayaRealisasi();
+                              } else {
+                                _triggerSapSync('Penjualan');
+                              }
+                            },
                     ),
-                    onPressed: (_isSyncing || (_activeTabIndex == 2 && _isLoadingIndustri))
-                        ? null
-                        : () => _triggerSapSync('Penjualan'),
-                  ),
                 ],
               );
 
@@ -1039,10 +1091,10 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                       labelColor: context.colors.textPrimary,
                       unselectedLabelColor: context.colors.textMuted,
                       tabs: const [
-                        Tab(text: 'Sell-In Distributor (SAP)'),
-                        Tab(text: 'Sell-Out Distributor (Upload)'),
-                        Tab(text: 'Sell-In Industri (SAP)'),
-                        Tab(text: 'Sell-Out Sales Surabaya (SAP)'),
+                        Tab(text: 'Sell-In Distributor'),
+                        Tab(text: 'Sell-Out Distributor'),
+                        Tab(text: 'Sell-In Industri'),
+                        Tab(text: 'Sell-Out Surabaya'),
                       ],
                     );
 
@@ -1060,7 +1112,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                         ),
                         onChanged: (val) {
                           setState(() => _searchQuery = val.toLowerCase().trim());
-                          if (_activeTabIndex == 0 || _activeTabIndex == 1) {
+                          if (_activeTabIndex == 0 || _activeTabIndex == 1 || _activeTabIndex == 3) {
                             _searchDebounce?.cancel();
                             _searchDebounce = Timer(const Duration(milliseconds: 350), () {
                               if (!mounted) return;
@@ -1068,6 +1120,8 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
                                 _fetchSellinDistributorRealisasi(page: 1);
                               } else if (_activeTabIndex == 1) {
                                 _fetchSelloutDistributorRealisasi(page: 1);
+                              } else if (_activeTabIndex == 3) {
+                                _fetchSurabayaRealisasi();
                               }
                             });
                           }
@@ -1119,7 +1173,7 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
       case 2:
         return _buildIndustriRealisasiView();
       case 3:
-        return _buildRealisasiTable(_selloutSurabaya, isOutlet: true);
+        return _buildSurabayaRealisasiView();
       default:
         return _buildSellinDistributorView();
     }
@@ -1943,64 +1997,124 @@ class _MasterRealisasiScreenState extends ConsumerState<MasterRealisasiScreen> w
     );
   }
 
-  Widget _buildRealisasiTable(List<RealisasiSalesModel> list, {bool isOutlet = false, bool isNoo = false}) {
-    final filtered = list.where((item) {
-      if (_searchQuery.isEmpty) return true;
-      final name = item.customerName?.toLowerCase() ?? '';
-      final code = item.customerCode?.toLowerCase() ?? '';
-      return name.contains(_searchQuery) || code.contains(_searchQuery);
-    }).toList();
+  Widget _buildSurabayaRealisasiView() {
+    final colors = context.colors;
+    final rows = _surabayaRealisasi;
+    final totalVol = rows.fold<double>(0.0, (s, r) => s + _toDouble(r['volume']));
+    final totalAo = rows.fold<int>(0, (s, r) => s + _toInt(r['active_outlet_count']));
 
-    return ResponsiveTableCard(
-      minWidth: 880,
-      child: DataTable(
-        headingRowColor: WidgetStateProperty.all(context.colors.bgTableHead),
-        dataRowMinHeight: 52,
-        dataRowMaxHeight: 68,
-        columns: [
-          DataColumn(label: Text('Periode', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Kode / Doc No', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Nama Customer / Entitas', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Volume (Kg / Box)', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Total Nilai (Rp)', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-          if (isOutlet)
-            DataColumn(label: Text('Active Outlet (AO)', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-          if (isNoo)
-            DataColumn(label: Text('New Open Outlet (NOO)', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Status Sinkron', style: TextStyle(color: context.colors.textMuted, fontWeight: FontWeight.bold))),
-        ],
-        rows: filtered.map((row) {
-          return DataRow(
-            cells: [
-              DataCell(Text(row.period, style: TextStyle(color: context.semantic.warning, fontWeight: FontWeight.bold))),
-              DataCell(Text(row.customerCode ?? '-', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600))),
-              DataCell(
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 220),
-                  child: Text(
-                    row.customerName ?? '-',
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.w500),
-                  ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                _buildPeriodDropdown(context, _fetchSurabayaRealisasi),
+                OutlinedButton.icon(
+                  onPressed: _isLoadingSurabaya ? null : _fetchSurabayaRealisasi,
+                  icon: const Icon(LucideIcons.refreshCw, size: 14),
+                  label: const Text('Muat Ulang'),
                 ),
-              ),
-              DataCell(Text(CurrencyFormatter.formatNumber(row.volume), style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.bold))),
-              DataCell(Text(CurrencyFormatter.formatRupiah(row.amount), style: TextStyle(color: context.semantic.success, fontWeight: FontWeight.w600))),
-              if (isOutlet)
-                DataCell(Text('${row.activeOutlet ?? 0} Toko', style: TextStyle(color: context.semantic.info))),
-              if (isNoo)
-                DataCell(Text('${row.newOpenOutlet ?? 0} NOO', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold))),
-              DataCell(
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(color: context.semantic.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
-                  child: Text('SAP Synced', style: TextStyle(color: context.semantic.success, fontSize: 11, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                _buildIndustriStatBadge('Transaksi', '${rows.length} Baris', context.semantic.info),
+                _buildIndustriStatBadge('Total Volume', '${CurrencyFormatter.formatNumber(totalVol)} Kg', Theme.of(context).colorScheme.primary),
+                _buildIndustriStatBadge('Active Outlet', '${CurrencyFormatter.formatNumber(totalAo)} Toko', context.semantic.success),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        if (_surabayaError != null)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: context.semantic.dangerBg,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: context.semantic.danger.withValues(alpha: 0.4)),
+            ),
+            child: Text(_surabayaError!, style: TextStyle(color: context.semantic.danger, fontSize: 13)),
+          ),
+        if (_isLoadingSurabaya)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 48),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (rows.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 42, horizontal: 20),
+            decoration: BoxDecoration(
+              color: colors.bgSubtle,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: colors.border),
+            ),
+            child: Column(
+              children: [
+                Icon(LucideIcons.inbox, size: 32, color: colors.textMuted),
+                const SizedBox(height: 10),
+                Text(
+                  'Belum ada data realisasi Sell-Out Sales Surabaya untuk periode ini.',
+                  style: TextStyle(color: colors.textMuted, fontSize: 13),
                 ),
-              ),
-            ],
-          );
-        }).toList(),
-      ),
+                const SizedBox(height: 4),
+                Text(
+                  'Unggah data melalui Bulk Upload Data (entitas Sell-Out Sales Surabaya).',
+                  style: TextStyle(color: colors.textFaint, fontSize: 12),
+                ),
+              ],
+            ),
+          )
+        else
+          ResponsiveTableCard(
+            minWidth: 780,
+            child: DataTable(
+              headingRowColor: WidgetStateProperty.all(colors.bgTableHead),
+              dataRowMinHeight: 50,
+              dataRowMaxHeight: 64,
+              columns: [
+                DataColumn(label: Text('Periode', style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Sales Surabaya', style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Posisi', style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Koordinator (ASC)', style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Volume (Kg)', style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Active Outlet (Toko)', style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold))),
+              ],
+              rows: rows.map((row) {
+                final sales = row['sales'] is Map ? row['sales'] as Map : null;
+                final coord = row['coordinator'] is Map ? row['coordinator'] as Map : null;
+                final pos = sales?['position'] is Map ? sales!['position'] as Map : null;
+                final vol = _toDouble(row['volume']);
+                final ao = _toInt(row['active_outlet_count']);
+
+                return DataRow(
+                  cells: [
+                    DataCell(Text('${row['period'] ?? '-'}', style: TextStyle(color: context.semantic.warning, fontWeight: FontWeight.bold))),
+                    DataCell(Text('${sales?['name'] ?? '-'}', style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600))),
+                    DataCell(Text('${pos?['code'] ?? '-'}', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600))),
+                    DataCell(Text('${coord?['name'] ?? '-'}', style: TextStyle(color: colors.textSecondary))),
+                    DataCell(Text('${CurrencyFormatter.formatNumber(vol)} Kg', style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold))),
+                    DataCell(Text('${CurrencyFormatter.formatNumber(ao)} Toko', style: TextStyle(color: context.semantic.info, fontWeight: FontWeight.w600))),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+      ],
     );
   }
 }

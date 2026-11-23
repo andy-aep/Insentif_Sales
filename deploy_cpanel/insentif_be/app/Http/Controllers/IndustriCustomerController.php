@@ -16,11 +16,11 @@ class IndustriCustomerController extends Controller
             ->when($request->filled('customer_type'), fn ($q) => $q->where('customer_type', strtoupper($request->customer_type)))
             ->when($request->has('is_active'), fn ($q) => $q->where('is_active', filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN)))
             ->when($request->filled('q'), function ($q) use ($request) {
-                $term = trim($request->q);
+                $term = '%' . strtolower(trim((string) $request->q)) . '%';
                 $q->where(function ($sub) use ($term) {
-                    $sub->where('customer_name', 'like', "%{$term}%")
-                        ->orWhere('customer_code', 'like', "%{$term}%")
-                        ->orWhere('city', 'like', "%{$term}%");
+                    $sub->whereRaw('LOWER(COALESCE(customer_name, \'\')) LIKE ?', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(customer_code, \'\')) LIKE ?', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(city, \'\')) LIKE ?', [$term]);
                 });
             })
             ->orderBy('customer_name');

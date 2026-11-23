@@ -1202,13 +1202,14 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                   const SizedBox(height: 14),
                   DropdownButtonFormField<String>(
                     initialValue: selectedType,
+                    isExpanded: true,
                     dropdownColor: colors.bgElevated,
                     style: TextStyle(color: colors.textPrimary),
                     decoration: const InputDecoration(labelText: 'Tipe Penugasan Khusus'),
                     items: const [
-                      DropdownMenuItem(value: 'Taking Order', child: Text('Sales Taking Order (TO)')),
-                      DropdownMenuItem(value: 'Sales Motoris', child: Text('Sales Motoris (SM)')),
-                      DropdownMenuItem(value: 'Canvasing', child: Text('Sales Canvasing')),
+                      DropdownMenuItem(value: 'Taking Order', child: Text('Sales Taking Order (TO)', overflow: TextOverflow.ellipsis)),
+                      DropdownMenuItem(value: 'Sales Motoris', child: Text('Sales Motoris (SM)', overflow: TextOverflow.ellipsis)),
+                      DropdownMenuItem(value: 'Canvasing', child: Text('Sales Canvasing', overflow: TextOverflow.ellipsis)),
                     ],
                     onChanged: (val) {
                       if (val != null) setDialogState(() => selectedType = val);
@@ -1524,6 +1525,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
     int lsmCount = 0;
     int asmCount = 0;
     int spvCount = 0;
+    int ascCount = 0;
     final Set<String> periodSet = {};
     final Map<int, SalesDistributorAssignmentModel> nsmAssignByUserId = {};
 
@@ -1538,6 +1540,8 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
         asmCount++;
       } else if (code == 'SPV') {
         spvCount++;
+      } else if (code == 'ASC') {
+        ascCount++;
       }
       if (i.period.isNotEmpty) {
         periodSet.add(i.period);
@@ -1619,6 +1623,13 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
               icon: LucideIcons.target,
               color: context.semantic.info,
             ),
+            if (ascCount > 0)
+              _buildMiniKpiCard(
+                title: 'ASC (Area)',
+                value: '$ascCount Baris',
+                icon: LucideIcons.userCheck,
+                color: context.semantic.secondaryAccent,
+              ),
           ],
         ),
         const SizedBox(height: 16),
@@ -1732,9 +1743,11 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
           )
         else ...[
           ResponsiveTableCard(
-            minWidth: 1040,
+            minWidth: 960,
             child: DataTable(
               headingRowColor: WidgetStateProperty.all(context.colors.bgTableHead),
+              columnSpacing: 12,
+              horizontalMargin: 10,
               dataRowMinHeight: 60,
               dataRowMaxHeight: 76,
               columns: [

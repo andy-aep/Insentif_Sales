@@ -64,9 +64,9 @@ class MasterDataNotifier extends StateNotifier<MasterDataState> {
     try {
       final responses = await Future.wait([
         DioClient.instance.get(ApiEndpoints.regions).catchError((_) => Response(requestOptions: RequestOptions())),
-        DioClient.instance.get(ApiEndpoints.distributors).catchError((_) => Response(requestOptions: RequestOptions())),
-        DioClient.instance.get(ApiEndpoints.depos).catchError((_) => Response(requestOptions: RequestOptions())),
-        DioClient.instance.get(ApiEndpoints.areas).catchError((_) => Response(requestOptions: RequestOptions())),
+        DioClient.instance.get(ApiEndpoints.distributors, queryParameters: {'limit': 1000}).catchError((_) => Response(requestOptions: RequestOptions())),
+        DioClient.instance.get(ApiEndpoints.depos, queryParameters: {'limit': 1000}).catchError((_) => Response(requestOptions: RequestOptions())),
+        DioClient.instance.get(ApiEndpoints.areas, queryParameters: {'limit': 1000}).catchError((_) => Response(requestOptions: RequestOptions())),
         DioClient.instance.get(ApiEndpoints.brands).catchError((_) => Response(requestOptions: RequestOptions())),
       ]);
 

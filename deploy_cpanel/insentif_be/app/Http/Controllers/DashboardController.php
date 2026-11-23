@@ -90,7 +90,7 @@ class DashboardController extends Controller
             ));
         }
 
-        return response()->json($this->getSalesDashboard($user, $periodList[0], $availablePeriods));
+        return response()->json($this->getSalesDashboard($user, $period, $periodList, $availablePeriods));
     }
 
     private function getAdminDashboard(
@@ -424,7 +424,12 @@ class DashboardController extends Controller
             ->filter(fn ($d) => $d['target_sell_in_kg'] > 0 || $d['target_sell_out_kg'] > 0 || $d['real_sell_in_kg'] > 0);
 
         $distributorBreakdown = $allDistMetrics
-            ->sortByDesc(fn ($d) => $d['real_sell_in_kg'] > 0 ? $d['real_sell_in_kg'] : $d['target_sell_in_kg'])
+            ->sortBy([
+                fn ($a, $b) => ($b['target_sell_in_kg'] > 0 ? 1 : 0) <=> ($a['target_sell_in_kg'] > 0 ? 1 : 0),
+                fn ($a, $b) => $b['ach_sell_in_pct'] <=> $a['ach_sell_in_pct'],
+                fn ($a, $b) => $b['real_sell_in_kg'] <=> $a['real_sell_in_kg'],
+                fn ($a, $b) => $b['target_sell_in_kg'] <=> $a['target_sell_in_kg'],
+            ])
             ->values()
             ->take(10);
 
@@ -600,8 +605,9 @@ class DashboardController extends Controller
         ];
     }
 
-    private function getSalesDashboard(User $user, string $period, $availablePeriods): array
+    private function getSalesDashboard(User $user, string $period, array $periodList, $availablePeriods): array
     {
+        $primaryPeriod = $periodList[0] ?? $period;
         $posCode = strtoupper($user->position?->code ?? 'SALES');
         $salesScheme = 'KONSUMSI';
         if ($user->is_eligible_industri) {
@@ -626,7 +632,7 @@ class DashboardController extends Controller
         $assignedDepoIdsFromMap = $assignments->whereNotNull('depo_id')->pluck('depo_id')->unique();
         $assignedAreaIdsFromMap = $assignments->whereNotNull('area_id')->pluck('area_id')->unique();
 
-        $myTargetsQuery = MasterTarget::where('period', $period)
+        $myTargetsQuery = MasterTarget::whereIn('period', $periodList)
             ->with(['distributor', 'depo', 'area', 'brand']);
 
         if ($salesScheme === 'KONSUMSI') {
@@ -665,8 +671,8 @@ class DashboardController extends Controller
             ->merge($assignments->whereNotNull('distributor_id')->pluck('distributor_id'))
             ->unique();
 
-        if ($assignedDepoIds->isNotEmpty() && SellinDistributor::where('period', $period)->whereIn('depo_id', $assignedDepoIds)->exists()) {
-            $siQuery = SellinDistributor::where('period', $period)->whereIn('depo_id', $assignedDepoIds);
+        if ($assignedDepoIds->isNotEmpty() && SellinDistributor::whereIn('period', $periodList)->whereIn('depo_id', $assignedDepoIds)->exists()) {
+            $siQuery = SellinDistributor::whereIn('period', $periodList)->whereIn('depo_id', $assignedDepoIds);
             $from = $user->aktif_from ? $user->aktif_from->format('Y-m-d') : null;
             $to = $user->aktif_to ? $user->aktif_to->format('Y-m-d') : null;
             if ($from || $to) {
@@ -685,29 +691,33 @@ class DashboardController extends Controller
             }
             $realisasiSellInKg = (float) $siQuery->sum('volume_kg');
         } elseif ($assignedDistributorIds->isNotEmpty()) {
-            $realisasiSellInKg = (float) SellinDistributor::where('period', $period)
+            $realisasiSellInKg = (float) SellinDistributor::whereIn('period', $periodList)
                 ->whereIn('distributor_id', $assignedDistributorIds)
                 ->sum('volume_kg');
         }
 
-        if ($assignedAreaIds->isNotEmpty() && SelloutDistributor::where('period', $period)->whereIn('area_id', $assignedAreaIds)->exists()) {
-            $realisasiSellOutKg = (float) SelloutDistributor::where('period', $period)
+        if ($assignedAreaIds->isNotEmpty() && SelloutDistributor::whereIn('period', $periodList)->where('is_out_of_area', false)->whereIn('area_id', $assignedAreaIds)->exists()) {
+            $realisasiSellOutKg = (float) SelloutDistributor::whereIn('period', $periodList)
+                ->where('is_out_of_area', false)
                 ->whereIn('area_id', $assignedAreaIds)
                 ->sum('volume_kg');
-            $realisasiOutlet = (int) SelloutDistributor::where('period', $period)
+            $realisasiOutlet = (int) SelloutDistributor::whereIn('period', $periodList)
+                ->where('is_out_of_area', false)
                 ->whereIn('area_id', $assignedAreaIds)
                 ->sum('active_outlet_count');
         } elseif ($assignedDepoIds->isNotEmpty()) {
-            $realisasiSellOutKg = (float) SelloutDistributor::where('period', $period)
+            $realisasiSellOutKg = (float) SelloutDistributor::whereIn('period', $periodList)
+                ->where('is_out_of_area', false)
                 ->whereIn('depo_id', $assignedDepoIds)
                 ->sum('volume_kg');
-            $realisasiOutlet = (int) SelloutDistributor::where('period', $period)
+            $realisasiOutlet = (int) SelloutDistributor::whereIn('period', $periodList)
+                ->where('is_out_of_area', false)
                 ->whereIn('depo_id', $assignedDepoIds)
                 ->sum('active_outlet_count');
         }
 
         // Ambil kalkulasi insentif pribadi jika sudah dihitung di tabel incentive_calculations
-        $myIncentives = IncentiveCalculation::where('period', $period)
+        $myIncentives = IncentiveCalculation::whereIn('period', $periodList)
             ->where('user_id', $user->id)
             ->with(['grade'])
             ->get();
@@ -723,7 +733,7 @@ class DashboardController extends Controller
 
         // Evaluasi spesifik untuk Sales Industri
         if ($salesScheme === 'INDUSTRI') {
-            $indEval = app(IncentiveCalculationService::class)->evaluateIndustriForPeriod($period, null, $user->id, null, true);
+            $indEval = app(IncentiveCalculationService::class)->evaluateIndustriForPeriod($primaryPeriod, null, $user->id, null, true);
             $industriCard = $indEval['cards'][0] ?? null;
             if ($industriCard) {
                 $sellIn = $industriCard['sell_in'] ?? [];
@@ -744,7 +754,7 @@ class DashboardController extends Controller
 
         // Evaluasi spesifik untuk Sales Surabaya
         if ($salesScheme === 'SURABAYA') {
-            $sbyEval = app(IncentiveCalculationService::class)->evaluateSurabayaForPeriod($period, null, $user->id, null, true);
+            $sbyEval = app(IncentiveCalculationService::class)->evaluateSurabayaForPeriod($primaryPeriod, null, $user->id, null, true);
             $surabayaCard = $sbyEval['cards'][0] ?? null;
             if ($surabayaCard) {
                 $myTargetSellOutKg = (float) ($surabayaCard['target_kg'] ?? 0);

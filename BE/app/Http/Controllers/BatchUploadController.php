@@ -46,6 +46,7 @@ class BatchUploadController extends Controller
         $withData = filter_var($request->query('with_data'), FILTER_VALIDATE_BOOLEAN);
         $period = $request->query('period');
         $distributorId = $request->query('distributor_id') ? (int) $request->query('distributor_id') : null;
+        $depoId = $request->query('depo_id') ? (int) $request->query('depo_id') : null;
         $brandId = $request->query('brand_id') ? (int) $request->query('brand_id') : null;
 
         $prefix = $withData ? 'data_export' : 'template';
@@ -56,7 +57,7 @@ class BatchUploadController extends Controller
         $fileName = "{$prefix}_{$normalized}{$periodSuffix}.xlsx";
 
         return Excel::download(
-            new BulkUploadTemplateExport($normalized, $withData, $period, $distributorId, $brandId),
+            new BulkUploadTemplateExport($normalized, $withData, $period, $distributorId, $brandId, $depoId),
             $fileName
         );
     }

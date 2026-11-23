@@ -17,10 +17,10 @@ class SelloutSalesSurabayaController extends Controller
             ->when($request->filled('coordinator_id'), fn ($q) => $q->where('coordinator_id', $request->coordinator_id));
 
         if ($request->filled('search')) {
-            $term = '%' . trim($request->search) . '%';
+            $term = '%' . strtolower(trim((string) $request->search)) . '%';
             $query->where(function ($sub) use ($term) {
-                $sub->whereHas('sales', fn ($u) => $u->where('name', 'like', $term)->orWhere('username', 'like', $term))
-                    ->orWhereHas('coordinator', fn ($u) => $u->where('name', 'like', $term));
+                $sub->whereHas('sales', fn ($u) => $u->whereRaw('LOWER(name) LIKE ?', [$term])->orWhereRaw('LOWER(username) LIKE ?', [$term]))
+                    ->orWhereHas('coordinator', fn ($u) => $u->whereRaw('LOWER(name) LIKE ?', [$term]));
             });
         }
 

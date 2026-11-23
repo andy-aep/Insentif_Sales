@@ -15,7 +15,11 @@ class TargetHeaderController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $headers = TargetHeader::with(['position', 'grades.bobots'])
+        $headers = TargetHeader::with([
+            'position',
+            'grades' => fn ($q) => $q->orderBy('target_from')->orderBy('id'),
+            'grades.bobots' => fn ($q) => $q->orderBy('percent_from')->orderBy('id'),
+        ])
             ->when($request->kategori_skema, fn ($q) => $q->where('kategori_skema', $request->kategori_skema))
             ->when($request->sales_type, fn ($q) => $q->where('sales_type', $request->sales_type))
             ->when($request->has('aktif'), fn ($q) => $q->where('aktif', $request->boolean('aktif')))
@@ -28,7 +32,10 @@ class TargetHeaderController extends Controller
     public function store(Request $request): JsonResponse
     {
         if ($request->filled('sales_type') && !is_numeric($request->sales_type)) {
-            $pos = Position::where('code', $request->sales_type)->orWhere('name', 'like', "%{$request->sales_type}%")->first();
+            $term = strtolower(trim((string) $request->sales_type));
+            $pos = Position::whereRaw('LOWER(code) = ?', [$term])
+                ->orWhereRaw('LOWER(name) LIKE ?', ["%{$term}%"])
+                ->first();
             if ($pos) {
                 $request->merge(['sales_type' => $pos->id]);
             }
@@ -81,7 +88,10 @@ class TargetHeaderController extends Controller
     public function update(Request $request, TargetHeader $targetHeader): JsonResponse
     {
         if ($request->filled('sales_type') && !is_numeric($request->sales_type)) {
-            $pos = Position::where('code', $request->sales_type)->orWhere('name', 'like', "%{$request->sales_type}%")->first();
+            $term = strtolower(trim((string) $request->sales_type));
+            $pos = Position::whereRaw('LOWER(code) = ?', [$term])
+                ->orWhereRaw('LOWER(name) LIKE ?', ["%{$term}%"])
+                ->first();
             if ($pos) {
                 $request->merge(['sales_type' => $pos->id]);
             }

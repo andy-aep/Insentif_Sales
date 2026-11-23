@@ -77,6 +77,7 @@ class IncentiveCalculationState {
     String? successMessage,
     bool clearPosition = false,
     bool clearUser = false,
+    bool clearData = false,
     bool clearError = false,
     bool clearSuccess = false,
   }) {
@@ -84,14 +85,22 @@ class IncentiveCalculationState {
       isLoading: isLoading ?? this.isLoading,
       isCalculating: isCalculating ?? this.isCalculating,
       isExporting: isExporting ?? this.isExporting,
-      results: results ?? this.results,
-      breakdownCards: breakdownCards ?? this.breakdownCards,
-      industriCards: industriCards ?? this.industriCards,
-      industriSummary: industriSummary ?? this.industriSummary,
-      surabayaCards: surabayaCards ?? this.surabayaCards,
-      surabayaSummary: surabayaSummary ?? this.surabayaSummary,
+      results: clearData ? const [] : (results ?? this.results),
+      breakdownCards: clearData ? const [] : (breakdownCards ?? this.breakdownCards),
+      industriCards: clearData ? const [] : (industriCards ?? this.industriCards),
+      industriSummary: clearData ? null : (industriSummary ?? this.industriSummary),
+      surabayaCards: clearData ? const [] : (surabayaCards ?? this.surabayaCards),
+      surabayaSummary: clearData ? null : (surabayaSummary ?? this.surabayaSummary),
       isBreakdownView: isBreakdownView ?? this.isBreakdownView,
-      summary: summary ?? this.summary,
+      summary: clearData
+          ? IncentiveSummaryMeta(
+              totalPersonil: 0,
+              totalQuota: 0,
+              totalRealization: 0,
+              totalReward: 0,
+              avgAchievement: 0,
+            )
+          : (summary ?? this.summary),
       selectedKategori: selectedKategori ?? this.selectedKategori,
       selectedPeriod: selectedPeriod ?? this.selectedPeriod,
       availablePeriods: availablePeriods ?? this.availablePeriods,
@@ -149,8 +158,12 @@ class IncentiveCalculationNotifier extends StateNotifier<IncentiveCalculationSta
     }
     state = state.copyWith(
       selectedKategori: normalized,
+      isLoading: false,
       clearPosition: true,
       clearUser: true,
+      clearData: true,
+      clearError: true,
+      clearSuccess: true,
     );
     fetchResults();
   }

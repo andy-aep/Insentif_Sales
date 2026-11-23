@@ -54,14 +54,14 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
 
   final Map<String, List<Map<String, String>>> _entityColumnGuides = {
     'sellout_distributor': [
-      {'col': 'Faktur', 'req': 'WAJIB', 'ex': '1983-07-26', 'desc': 'Nomor faktur penjualan/retur (tidak boleh kosong)'},
+      {'col': 'Faktur', 'req': 'WAJIB', 'ex': 'INV/07/26/0001', 'desc': 'Nomor faktur penjualan/retur (tidak boleh kosong)'},
       {'col': 'Tanggal', 'req': 'WAJIB', 'ex': '2026-07-01', 'desc': 'Tanggal faktur valid (YYYY-MM-DD / DD/MM/YYYY)'},
       {'col': 'Bulan', 'req': 'WAJIB', 'ex': '7', 'desc': 'Bulan 1-12 (wajib sinkron dengan bulan pada Tanggal)'},
       {'col': 'KodeDistributor', 'req': 'WAJIB', 'ex': 'C110003678', 'desc': 'Kode SAP Depo/Distributor sesuai Master Distributor'},
       {'col': 'NamaDistributor', 'req': 'WAJIB', 'ex': 'INDO PRIMA, CV', 'desc': 'Nama Distributor sesuai Master Distributor'},
       {'col': 'Depo', 'req': 'WAJIB', 'ex': 'PONTIANAK', 'desc': 'Nama atau kode Depo sesuai Master Depo'},
       {'col': 'AreaCode', 'req': 'WAJIB', 'ex': 'AR00100 / LUAR', 'desc': 'Kode Area (ARxxxxx) sesuai Master, atau isi LUAR / OUT_AREA untuk penjualan luar area (non-insentif)'},
-      {'col': 'KodeCustomer', 'req': 'WAJIB', 'ex': '1932-03-01', 'desc': 'Kode toko/outlet pembeli (perhitungan Active Outlet / AO)'},
+      {'col': 'KodeCustomer', 'req': 'WAJIB', 'ex': 'CUST-0001', 'desc': 'Kode toko/outlet pembeli (perhitungan Active Outlet / AO)'},
       {'col': 'NamaCustomer', 'req': 'WAJIB', 'ex': 'MARI MART', 'desc': 'Nama toko/outlet pembeli'},
       {'col': 'Alamat', 'req': 'WAJIB', 'ex': 'JL. DR. WAHIDIN', 'desc': 'Alamat toko/outlet pembeli'},
       {'col': 'JenisBarang', 'req': 'WAJIB', 'ex': 'KAPAL', 'desc': 'Kode/nama Brand sesuai Master Brand'},
@@ -532,7 +532,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                           runSpacing: 12,
                           children: [
                             SizedBox(
-                              width: 190,
+                              width: 225,
                               child: TextField(
                                 controller: _selloutPeriodCtrl,
                                 maxLength: 6,
@@ -974,7 +974,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                   ),
                                   // Dropdown Status
                                   SizedBox(
-                                    width: 145,
+                                    width: 175,
                                     child: DropdownButtonFormField<String>(
                                       initialValue: _historyStatusFilter,
                                       isExpanded: true,
@@ -1005,7 +1005,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                   ),
                                   // Filter Periode
                                   SizedBox(
-                                    width: 130,
+                                    width: 165,
                                     child: TextField(
                                       controller: _historyPeriodCtrl,
                                       maxLength: 6,
@@ -1025,7 +1025,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                   ),
                                   // Live Search
                                   SizedBox(
-                                    width: 215,
+                                    width: 250,
                                     child: TextField(
                                       controller: _historySearchCtrl,
                                       onChanged: (_) => setState(() => _historyPage = 1),
@@ -1177,7 +1177,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          '${batch.createdAt} • #$shortId',
+                                          '${_formatBatchTimestamp(batch.createdAt)} • #$shortId',
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: GoogleFonts.sourceCodePro(color: colors.textMuted, fontSize: 11),
@@ -1319,5 +1319,16 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
         ],
       ),
     );
+  }
+
+  String _formatBatchTimestamp(String raw) {
+    final dt = DateTime.tryParse(raw)?.toLocal();
+    if (dt == null) return raw;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    final d = dt.day.toString().padLeft(2, '0');
+    final m = months[dt.month - 1];
+    final h = dt.hour.toString().padLeft(2, '0');
+    final min = dt.minute.toString().padLeft(2, '0');
+    return '$d $m ${dt.year} $h:$min';
   }
 }

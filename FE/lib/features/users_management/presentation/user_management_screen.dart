@@ -992,18 +992,18 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
     }
 
     return ResponsiveTableCard(
-      minWidth: 800,
+      minWidth: 740,
       child: DataTable(
         headingRowColor: WidgetStateProperty.all(colors.bgTableHead),
-        columnSpacing: 16,
-        horizontalMargin: 12,
+        columnSpacing: 12,
+        horizontalMargin: 10,
         dataRowMinHeight: 56,
         dataRowMaxHeight: 74,
         columns: [
           DataColumn(label: Text('Nama & Username', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
           DataColumn(label: Text('Role', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
           DataColumn(label: Text('Posisi Sales', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Kode Sales SAP', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('Kode SAP', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
           DataColumn(label: Text('Masa Aktif', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
           DataColumn(label: Text('Eligibility Skema', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
           DataColumn(label: Text('Aksi', style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.bold))),
@@ -1023,9 +1023,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                         style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 11, fontWeight: FontWeight.bold),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 160),
+                      constraints: const BoxConstraints(maxWidth: 145),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -1151,18 +1151,6 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Theme.of(context).colorScheme.onPrimary),
-              icon: const Icon(LucideIcons.plus, size: 15),
-              label: const Text('Tambah Role'),
-              onPressed: _showAddRoleDialog,
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -1218,18 +1206,6 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Theme.of(context).colorScheme.onPrimary),
-              icon: const Icon(LucideIcons.plus, size: 15),
-              label: const Text('Tambah Posisi Sales'),
-              onPressed: _showAddPositionDialog,
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),

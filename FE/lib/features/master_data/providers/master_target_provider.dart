@@ -118,7 +118,9 @@ class MasterTargetNotifier extends StateNotifier<MasterTargetState> {
   Future<void> fetchPeriods() async {
     try {
       final res = await DioClient.instance.get(ApiEndpoints.masterTargetPeriods);
-      final raw = res.data['data'] ?? res.data;
+      final raw = res.data is List
+          ? res.data
+          : (res.data is Map ? res.data['data'] : null);
       if (raw is List) {
         final periods = raw.map((e) => e.toString()).toList();
         if (!periods.contains('202610')) {

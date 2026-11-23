@@ -18,12 +18,52 @@ import 'features/master_data/presentation/master_surabaya_screen.dart';
 import 'features/master_data/presentation/master_target_screen.dart';
 import 'features/users_management/presentation/user_management_screen.dart';
 
+class _RouterRefreshNotifier extends ChangeNotifier {
+  void refresh() => notifyListeners();
+}
+
+bool _isRouteAllowedForRole(String location, dynamic role) {
+  if (location == '/dashboard' || location == '/login') return true;
+  if (role == null) return false;
+  final roleName = (role.name ?? '').toString().trim().toLowerCase();
+  if (roleName == 'administrator' || roleName == 'superadmin' || roleName == 'admin') {
+    return true;
+  }
+
+  final perms = role.menuPermissions as List?;
+  if (perms == null || perms.isEmpty) {
+    return location == '/dashboard';
+  }
+
+  final routeLower = location.toLowerCase();
+  for (final perm in perms) {
+    final menuRoute = (perm.menu?.route ?? '').toString().trim().toLowerCase();
+    if (menuRoute.isNotEmpty && routeLower == menuRoute) {
+      return perm.canView == true;
+    }
+  }
+  for (final perm in perms) {
+    final menuRoute = (perm.menu?.route ?? '').toString().trim().toLowerCase();
+    if (menuRoute == '/master' && routeLower.startsWith('/master')) {
+      return perm.canView == true;
+    }
+    if (menuRoute == '/incentives/calculate' && routeLower.startsWith('/incentives')) {
+      return perm.canView == true;
+    }
+  }
+  return false;
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
+  final refreshNotifier = _RouterRefreshNotifier();
+  ref.listen<AuthState>(authProvider, (_, __) => refreshNotifier.refresh());
+  ref.onDispose(refreshNotifier.dispose);
 
   return GoRouter(
     initialLocation: '/dashboard',
+    refreshListenable: refreshNotifier,
     redirect: (context, state) {
+      final authState = ref.read(authProvider);
       if (authState.isLoading) return null;
 
       final isLoggingIn = state.matchedLocation == '/login';
@@ -37,11 +77,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/dashboard';
       }
 
-      if (isLoggedIn) {
-        final roleName = (authState.user?.role?.name ?? '').trim().toLowerCase();
-        if (roleName == 'sales' && state.matchedLocation != '/dashboard') {
-          return '/dashboard';
-        }
+      if (isLoggedIn && !_isRouteAllowedForRole(state.matchedLocation, authState.user?.role)) {
+        return '/dashboard';
       }
 
       return null;

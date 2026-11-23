@@ -192,6 +192,7 @@ class BulkUploadNotifier extends StateNotifier<BulkUploadState> {
     bool withData = false,
     String? period,
     int? distributorId,
+    int? depoId,
     int? brandId,
   }) async {
     final targetEntity = entity ?? state.selectedEntity;
@@ -208,6 +209,7 @@ class BulkUploadNotifier extends StateNotifier<BulkUploadState> {
         fileName,
         queryParameters: {
           if (distributorId != null) 'distributor_id': distributorId.toString(),
+          if (depoId != null) 'depo_id': depoId.toString(),
           if (brandId != null) 'brand_id': brandId.toString(),
         },
       );

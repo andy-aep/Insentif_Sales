@@ -77,11 +77,11 @@ class MasterTargetController extends Controller
             ->when($request->metrik_target, fn ($q) => $q->where('metrik_target', $request->metrik_target));
 
         if ($request->filled('search')) {
-            $search = '%' . trim($request->search) . '%';
+            $search = '%' . strtolower(trim((string) $request->search)) . '%';
             $base->where(function ($sub) use ($search) {
-                $sub->whereHas('distributor', fn ($d) => $d->where('name', 'like', $search)->orWhere('code', 'like', $search))
-                    ->orWhereHas('depo', fn ($d) => $d->where('name', 'like', $search)->orWhere('code', 'like', $search))
-                    ->orWhereHas('area', fn ($a) => $a->where('name', 'like', $search)->orWhere('code', 'like', $search));
+                $sub->whereHas('distributor', fn ($d) => $d->whereRaw('LOWER(name) LIKE ?', [$search])->orWhereRaw('LOWER(code) LIKE ?', [$search]))
+                    ->orWhereHas('depo', fn ($d) => $d->whereRaw('LOWER(name) LIKE ?', [$search])->orWhereRaw('LOWER(code) LIKE ?', [$search]))
+                    ->orWhereHas('area', fn ($a) => $a->whereRaw('LOWER(name) LIKE ?', [$search])->orWhereRaw('LOWER(code) LIKE ?', [$search]));
             });
         }
 
@@ -218,13 +218,13 @@ class MasterTargetController extends Controller
             ->when($request->metrik_target, fn ($q) => $q->where('metrik_target', $request->metrik_target));
 
         if ($request->filled('search')) {
-            $search = '%' . trim($request->search) . '%';
+            $search = '%' . strtolower(trim((string) $request->search)) . '%';
             $query->where(function ($sub) use ($search) {
-                $sub->whereHas('distributor', fn ($d) => $d->where('name', 'like', $search)->orWhere('code', 'like', $search))
-                    ->orWhereHas('depo', fn ($d) => $d->where('name', 'like', $search))
-                    ->orWhereHas('area', fn ($a) => $a->where('name', 'like', $search))
-                    ->orWhereHas('brand', fn ($b) => $b->where('name', 'like', $search))
-                    ->orWhereHas('user', fn ($u) => $u->where('name', 'like', $search));
+                $sub->whereHas('distributor', fn ($d) => $d->whereRaw('LOWER(name) LIKE ?', [$search])->orWhereRaw('LOWER(code) LIKE ?', [$search]))
+                    ->orWhereHas('depo', fn ($d) => $d->whereRaw('LOWER(name) LIKE ?', [$search])->orWhereRaw('LOWER(code) LIKE ?', [$search]))
+                    ->orWhereHas('area', fn ($a) => $a->whereRaw('LOWER(name) LIKE ?', [$search])->orWhereRaw('LOWER(code) LIKE ?', [$search]))
+                    ->orWhereHas('brand', fn ($b) => $b->whereRaw('LOWER(name) LIKE ?', [$search]))
+                    ->orWhereHas('user', fn ($u) => $u->whereRaw('LOWER(name) LIKE ?', [$search]));
             });
         }
 

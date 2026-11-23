@@ -600,7 +600,7 @@ class _DistributorAssignmentHierarchyViewState
                   children: [
                     // Period Dropdown
                     SizedBox(
-                      width: 155,
+                      width: 185,
                       child: DropdownButtonFormField<String>(
                         initialValue: availablePeriods.contains(activePeriod) || activePeriod == 'ALL' ? activePeriod : availablePeriods.first,
                         isExpanded: true,
@@ -663,7 +663,7 @@ class _DistributorAssignmentHierarchyViewState
                       ),
                       // Status PIC Filter
                       SizedBox(
-                        width: 170,
+                        width: 195,
                         child: DropdownButtonFormField<String>(
                           initialValue: _statusFilter,
                           isExpanded: true,

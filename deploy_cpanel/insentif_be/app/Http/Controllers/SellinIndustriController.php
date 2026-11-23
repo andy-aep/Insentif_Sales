@@ -21,11 +21,11 @@ class SellinIndustriController extends Controller
             ->when($request->filled('user_id'), fn ($q) => $q->where('user_id', $request->user_id))
             ->when($request->filled('industri_customer_id'), fn ($q) => $q->where('industri_customer_id', $request->industri_customer_id))
             ->when($request->filled('q'), function ($q) use ($request) {
-                $term = trim($request->q);
+                $term = '%' . strtolower(trim((string) $request->q)) . '%';
                 $q->where(function ($sub) use ($term) {
-                    $sub->where('customer_name', 'like', "%{$term}%")
-                        ->orWhere('customer_code', 'like', "%{$term}%")
-                        ->orWhere('sap_so_no', 'like', "%{$term}%");
+                    $sub->whereRaw('LOWER(COALESCE(customer_name, \'\')) LIKE ?', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(customer_code, \'\')) LIKE ?', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(sap_so_no, \'\')) LIKE ?', [$term]);
                 });
             })
             ->latest('id');

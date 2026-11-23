@@ -676,10 +676,11 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                                 flex: 2,
                                 child: DropdownButtonFormField<String>(
                                   initialValue: selectedKategori,
+                                  isExpanded: true,
                                   dropdownColor: colors.bgElevated,
                                   style: TextStyle(color: colors.textPrimary, fontSize: 13),
                                   decoration: const InputDecoration(labelText: 'Kategori Skema *'),
-                                  items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                                  items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c, overflow: TextOverflow.ellipsis))).toList(),
                                   onChanged: (val) {
                                     if (val != null) setDialogState(() => selectedKategori = val);
                                   },
@@ -1350,12 +1351,13 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
                   const SizedBox(height: 12),
                   DropdownButtonFormField<bool>(
                     initialValue: isRateBased,
+                    isExpanded: true,
                     dropdownColor: colors.bgElevated,
                     style: TextStyle(color: colors.textPrimary),
                     decoration: const InputDecoration(labelText: 'Model Rumus Pengali'),
                     items: const [
-                      DropdownMenuItem(value: true, child: Text('Tarif per Satuan (Rate-based / Kg)')),
-                      DropdownMenuItem(value: false, child: Text('Nominal Tetap (Lump-sum / Flat)')),
+                      DropdownMenuItem(value: true, child: Text('Tarif per Satuan (Rate-based / Kg)', overflow: TextOverflow.ellipsis)),
+                      DropdownMenuItem(value: false, child: Text('Nominal Tetap (Lump-sum / Flat)', overflow: TextOverflow.ellipsis)),
                     ],
                     onChanged: (val) {
                       if (val != null) setDialogState(() => isRateBased = val);
@@ -2323,13 +2325,13 @@ class _IncentiveSchemeScreenState extends ConsumerState<IncentiveSchemeScreen> {
     if (achievement >= 120) {
       double capped = _simTarget * 1.2;
       reward = 3.5 * capped * (100 / 100);
-      matchedRule = 'Tier > 120%: Capped Max Realisasi ($capped Kg) x Rp 3.5 / Kg';
+      matchedRule = 'Tier > 120%: Capped Max Realisasi (${CurrencyFormatter.formatNumber(capped)} Kg) × ${CurrencyFormatter.formatRate(3.5)}/Kg';
     } else if (achievement >= 100) {
       reward = 3.5 * _simRealization * (100 / 100);
-      matchedRule = 'Tier 100% - 120%: Realisasi ($_simRealization Kg) x Rp 3.5 / Kg';
+      matchedRule = 'Tier 100% - 120%: Realisasi (${CurrencyFormatter.formatNumber(_simRealization)} Kg) × ${CurrencyFormatter.formatRate(3.5)}/Kg';
     } else if (achievement >= 80) {
       reward = 2.0 * _simRealization * (100 / 100);
-      matchedRule = 'Tier 80% - 99.9%: Realisasi ($_simRealization Kg) x Rp 2.0 / Kg';
+      matchedRule = 'Tier 80% - 99.9%: Realisasi (${CurrencyFormatter.formatNumber(_simRealization)} Kg) × ${CurrencyFormatter.formatRate(2.0)}/Kg';
     } else {
       reward = 0;
       matchedRule = 'Di bawah 80%: Tidak berhak insentif';

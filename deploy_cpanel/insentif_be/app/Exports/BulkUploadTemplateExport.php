@@ -31,25 +31,28 @@ class BulkUploadTemplateExport implements Export, WithMultipleSheets
     protected ?string $period;
     protected ?int $distributorId;
     protected ?int $brandId;
+    protected ?int $depoId;
 
     public function __construct(
         string $entity,
         bool $withData = false,
         ?string $period = null,
         ?int $distributorId = null,
-        ?int $brandId = null
+        ?int $brandId = null,
+        ?int $depoId = null
     ) {
         $this->entity = BatchImportService::normalizeEntity($entity);
         $this->withData = $withData;
         $this->period = $period;
         $this->distributorId = $distributorId;
         $this->brandId = $brandId;
+        $this->depoId = $depoId;
     }
 
     public function sheets(): array
     {
         return [
-            new BulkUploadDataSheet($this->entity, $this->withData, $this->period, $this->distributorId, $this->brandId),
+            new BulkUploadDataSheet($this->entity, $this->withData, $this->period, $this->distributorId, $this->brandId, $this->depoId),
             new BulkUploadGuideSheet($this->entity),
         ];
     }
@@ -62,7 +65,8 @@ class BulkUploadDataSheet implements FromArray, ShouldAutoSize, WithHeadings, Wi
         protected bool $withData = false,
         protected ?string $period = null,
         protected ?int $distributorId = null,
-        protected ?int $brandId = null
+        protected ?int $brandId = null,
+        protected ?int $depoId = null
     ) {}
 
     public function title(): string
@@ -190,14 +194,14 @@ class BulkUploadDataSheet implements FromArray, ShouldAutoSize, WithHeadings, Wi
             ],
             'sellout_distributor' => [
                 [
-                    '1983-07-26',
+                    'INV/07/26/0001',
                     '2026-07-01',
                     7,
                     'C110003678',
                     'INDO PRIMA, CV',
                     'PONTIANAK',
                     'AR00100',
-                    '1932-03-01',
+                    'CUST-0001',
                     'MARI MART',
                     'JL. DR. WAHIDIN ( UJUNG BANGET )',
                     'KAPAL',
@@ -326,6 +330,9 @@ class BulkUploadDataSheet implements FromArray, ShouldAutoSize, WithHeadings, Wi
         if ($this->distributorId) {
             $q->where('distributor_id', $this->distributorId);
         }
+        if ($this->depoId) {
+            $q->where('depo_id', $this->depoId);
+        }
         if ($this->brandId) {
             $q->where('brand_id', $this->brandId);
         }
@@ -377,8 +384,9 @@ class BulkUploadDataSheet implements FromArray, ShouldAutoSize, WithHeadings, Wi
     private function getSellinDistributorData(): array
     {
         $q = SellinDistributor::with(['distributor', 'brand']);
-        if ($this->period && $this->period !== 'ALL') {
-            $q->where('period', $this->period);
+        $periodList = $this->parsePeriodList();
+        if (! empty($periodList)) {
+            $q->whereIn('period', $periodList);
         }
 
         return $q->get()->map(function ($s) {
@@ -396,8 +404,9 @@ class BulkUploadDataSheet implements FromArray, ShouldAutoSize, WithHeadings, Wi
     private function getSellinIndustriData(): array
     {
         $q = SellinIndustri::with(['user', 'industriCustomer']);
-        if ($this->period && $this->period !== 'ALL') {
-            $q->where('period', $this->period);
+        $periodList = $this->parsePeriodList();
+        if (! empty($periodList)) {
+            $q->whereIn('period', $periodList);
         }
 
         return $q->get()->map(function ($s) {
@@ -437,8 +446,9 @@ class BulkUploadDataSheet implements FromArray, ShouldAutoSize, WithHeadings, Wi
     private function getSelloutDistributorData(): array
     {
         $q = SelloutDistributor::with(['distributor', 'depo', 'area', 'brand']);
-        if ($this->period && $this->period !== 'ALL') {
-            $q->where('period', $this->period);
+        $periodList = $this->parsePeriodList();
+        if (! empty($periodList)) {
+            $q->whereIn('period', $periodList);
         }
 
         return $q->get()->map(function ($s) {

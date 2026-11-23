@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Services\IncentiveCalculationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -53,6 +54,9 @@ class IncentiveCalculationController extends Controller
                 isset($validated['position_id']) ? (int) $validated['position_id'] : null,
                 isset($validated['user_id']) ? (int) $validated['user_id'] : null
             );
+            if (! isset($validated['position_id']) && ! isset($validated['user_id'])) {
+                Cache::put("incentive_calc_fresh:{$validated['kategori_skema']}:{$p}", now()->timestamp, 30);
+            }
             $results = $results->merge($res);
         }
 
@@ -84,22 +88,28 @@ class IncentiveCalculationController extends Controller
             ->unique()
             ->values();
 
-        // Otomatis jalankan kalkulasi saat menu dibuka / ganti periode tanpa perlu klik Kunci Hitungan
+        // Otomatis jalankan kalkulasi saat periode belum dihitung atau cache kesegaran 30 detik habis (hindari kalkulasi ulang setiap ganti filter/paging)
         if ($request->filled('kategori_skema') && $periods->isNotEmpty()) {
             $kategori = strtoupper((string) $request->kategori_skema);
             if ($kategori === 'DISTRIBUTOR') {
                 $kategori = 'KONSUMSI';
             }
             if (in_array($kategori, ['KONSUMSI', 'INDUSTRI', 'SURABAYA'], true)) {
+                $forceRecalc = $request->boolean('recalculate');
                 foreach ($periods as $p) {
+                    $cacheKey = "incentive_calc_fresh:{$kategori}:{$p}";
+                    if (! $forceRecalc && Cache::has($cacheKey)) {
+                        continue;
+                    }
                     try {
                         $this->calculationService->execute(
                             $kategori,
                             $p,
                             (int) ($authUser?->id ?? 1),
-                            $request->filled('position_id') ? (int) $request->position_id : null,
-                            $scopedUserId ? (int) $scopedUserId : null
+                            null,
+                            null
                         );
+                        Cache::put($cacheKey, now()->timestamp, 30);
                     } catch (\Throwable) {
                     }
                 }
@@ -161,7 +171,7 @@ class IncentiveCalculationController extends Controller
         }
 
         return Excel::download(
-            new IncentiveCalculationExport($kategoriSkema, $period, $positionId, $userId),
+            new IncentiveCalculationExport($kategoriSkema, $rawPeriod !== '' ? $rawPeriod : $period, $positionId, $userId),
             $fileName
         );
     }
@@ -700,29 +710,67 @@ class IncentiveCalculationController extends Controller
     public function industriBreakdown(Request $request): JsonResponse
     {
         $request->validate([
-            'period' => 'required|string|size:6',
+            'period' => 'required|string|max:300',
             'position_id' => 'nullable|integer|exists:positions,id',
             'user_id' => 'nullable|integer|exists:users,id',
             'search' => 'nullable|string',
         ]);
 
-        $evaluated = $this->calculationService->evaluateIndustriForPeriod(
-            $request->period,
-            $request->filled('position_id') ? (int) $request->position_id : null,
-            $request->filled('user_id') ? (int) $request->user_id : null,
-            $request->filled('search') ? trim((string) $request->search) : null,
-            true
-        );
+        $periods = collect(explode(',', (string) $request->period))
+            ->map(fn ($p) => preg_replace('/[^0-9]/', '', $p))
+            ->filter(fn ($p) => strlen($p) === 6)
+            ->unique()
+            ->sort()
+            ->values();
+        if ($periods->isEmpty()) {
+            $periods = collect([date('Ym')]);
+        }
 
-        // Hapus key internal header_records agar payload bersih
-        $cards = collect($evaluated['cards'])->map(function ($card) {
-            unset($card['header_records']);
-            return $card;
-        })->values();
+        $positionId = $request->filled('position_id') ? (int) $request->position_id : null;
+        $userId = $request->filled('user_id') ? (int) $request->user_id : null;
+        $search = $request->filled('search') ? trim((string) $request->search) : null;
+
+        $allCards = collect();
+        $totalTargetSi = 0.0;
+        $totalActualSi = 0.0;
+        $totalTargetNoo = 0.0;
+        $totalActualNoo = 0.0;
+        $totalActualNooKg = 0.0;
+        $totalPayout = 0.0;
+        $personilIds = [];
+
+        foreach ($periods as $p) {
+            $evaluated = $this->calculationService->evaluateIndustriForPeriod($p, $positionId, $userId, $search, true);
+            $meta = $evaluated['meta'] ?? [];
+            $totalTargetSi += (float) ($meta['total_target_sell_in_kg'] ?? 0);
+            $totalActualSi += (float) ($meta['total_actual_sell_in_kg'] ?? 0);
+            $totalTargetNoo += (float) ($meta['total_target_noo'] ?? 0);
+            $totalActualNoo += (float) ($meta['total_actual_noo'] ?? 0);
+            $totalActualNooKg += (float) ($meta['total_actual_noo_kg'] ?? 0);
+            $totalPayout += (float) ($meta['total_payout'] ?? 0);
+
+            foreach ($evaluated['cards'] as $card) {
+                unset($card['header_records']);
+                $card['period'] = $p;
+                if (! empty($card['user_id'])) {
+                    $personilIds[$card['user_id']] = true;
+                }
+                $allCards->push($card);
+            }
+        }
 
         return response()->json([
-            'meta' => $evaluated['meta'],
-            'data' => $cards,
+            'meta' => [
+                'period' => $periods->implode(','),
+                'total_personil' => count($personilIds),
+                'total_target_sell_in_kg' => $totalTargetSi,
+                'total_actual_sell_in_kg' => $totalActualSi,
+                'total_target_noo' => $totalTargetNoo,
+                'total_actual_noo' => $totalActualNoo,
+                'total_actual_noo_kg' => $totalActualNooKg,
+                'total_payout' => $totalPayout,
+            ],
+            'data' => $allCards->values(),
         ]);
     }
 
@@ -732,28 +780,58 @@ class IncentiveCalculationController extends Controller
     public function surabayaBreakdown(Request $request): JsonResponse
     {
         $request->validate([
-            'period' => 'required|string|size:6',
+            'period' => 'required|string|max:300',
             'position_id' => 'nullable|integer|exists:positions,id',
             'user_id' => 'nullable|integer|exists:users,id',
             'search' => 'nullable|string',
         ]);
 
-        $evaluated = $this->calculationService->evaluateSurabayaForPeriod(
-            $request->period,
-            $request->filled('position_id') ? (int) $request->position_id : null,
-            $request->filled('user_id') ? (int) $request->user_id : null,
-            $request->filled('search') ? trim((string) $request->search) : null,
-            true
-        );
+        $periods = collect(explode(',', (string) $request->period))
+            ->map(fn ($p) => preg_replace('/[^0-9]/', '', $p))
+            ->filter(fn ($p) => strlen($p) === 6)
+            ->unique()
+            ->sort()
+            ->values();
+        if ($periods->isEmpty()) {
+            $periods = collect([date('Ym')]);
+        }
 
-        $cards = collect($evaluated['cards'])->map(function ($card) {
-            unset($card['header_records']);
-            return $card;
-        })->values();
+        $positionId = $request->filled('position_id') ? (int) $request->position_id : null;
+        $userId = $request->filled('user_id') ? (int) $request->user_id : null;
+        $search = $request->filled('search') ? trim((string) $request->search) : null;
+
+        $allCards = collect();
+        $totalTargetKg = 0.0;
+        $totalActualKg = 0.0;
+        $totalPayout = 0.0;
+        $personilIds = [];
+
+        foreach ($periods as $p) {
+            $evaluated = $this->calculationService->evaluateSurabayaForPeriod($p, $positionId, $userId, $search, true);
+            $meta = $evaluated['meta'] ?? [];
+            $totalTargetKg += (float) ($meta['total_target_kg'] ?? 0);
+            $totalActualKg += (float) ($meta['total_actual_kg'] ?? 0);
+            $totalPayout += (float) ($meta['total_payout'] ?? 0);
+
+            foreach ($evaluated['cards'] as $card) {
+                unset($card['header_records']);
+                $card['period'] = $p;
+                if (! empty($card['user_id'])) {
+                    $personilIds[$card['user_id']] = true;
+                }
+                $allCards->push($card);
+            }
+        }
 
         return response()->json([
-            'meta' => $evaluated['meta'],
-            'data' => $cards,
+            'meta' => [
+                'period' => $periods->implode(','),
+                'total_personil' => count($personilIds),
+                'total_target_kg' => $totalTargetKg,
+                'total_actual_kg' => $totalActualKg,
+                'total_payout' => $totalPayout,
+            ],
+            'data' => $allCards->values(),
         ]);
     }
 }

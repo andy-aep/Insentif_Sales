@@ -69,11 +69,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
         // Fetch fresh profile from /me
         try {
           final response = await DioClient.instance.get(ApiEndpoints.me);
-          if (response.statusCode == 200) {
-            final freshUserData = response.data['user'] ?? response.data['data'] ?? response.data;
-            final freshUser = UserModel.fromJson(freshUserData);
-            await prefs.setString('user_data', jsonEncode(freshUser.toJson()));
-            state = state.copyWith(user: freshUser);
+          if (response.statusCode == 200 && response.data is Map) {
+            final resMap = response.data as Map;
+            final freshUserData = resMap['user'] ?? resMap['data'] ?? resMap;
+            if (freshUserData is Map<String, dynamic>) {
+              final freshUser = UserModel.fromJson(freshUserData);
+              await prefs.setString('user_data', jsonEncode(freshUser.toJson()));
+              state = state.copyWith(user: freshUser);
+            }
           }
         } on DioException catch (dioErr) {
           if (dioErr.response?.statusCode == 401) {

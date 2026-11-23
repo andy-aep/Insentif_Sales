@@ -15,7 +15,7 @@ class DistributorController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $limit = $request->integer('limit', 150);
+        $limit = min(max($request->integer('limit', 1000), 1), 5000);
         $search = $request->string('search')->trim();
 
         $query = Distributor::withCount(['depos', 'areas'])
@@ -25,13 +25,14 @@ class DistributorController extends Controller
             ]);
 
         if ($search->isNotEmpty()) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%");
+            $term = '%' . strtolower((string) $search) . '%';
+            $query->where(function ($q) use ($term) {
+                $q->whereRaw('LOWER(name) LIKE ?', [$term])
+                  ->orWhereRaw('LOWER(code) LIKE ?', [$term]);
             });
         }
 
-        return response()->json($query->latest('id')->limit($limit)->get());
+        return response()->json($query->orderBy('name')->limit($limit)->get());
     }
 
     /**

@@ -1601,17 +1601,17 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
-                columnSpacing: 18,
-                horizontalMargin: 8,
+                columnSpacing: 12,
+                horizontalMargin: 6,
                 headingRowHeight: 40,
                 dataRowMinHeight: 54,
                 dataRowMaxHeight: 62,
                 columns: const [
                   DataColumn(label: Text('#', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
                   DataColumn(label: Text('Personil & Wilayah', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                  DataColumn(label: Text('Sell-In (Real / Target)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                  DataColumn(label: Text('Sell-Out (Real / Target)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                  DataColumn(label: Text('Target AO (Real / Target)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                  DataColumn(label: Text('Sell-In', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                  DataColumn(label: Text('Sell-Out', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                  DataColumn(label: Text('AO (Toko)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
                 ],
                 rows: leaderboard.asMap().entries.map((entry) {
                   final idx = entry.key + 1;
@@ -1901,7 +1901,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     final tile1 = buildTile(
       icon: LucideIcons.activity,
       iconColor: stColor,
-      label: 'Sell-Through Ratio (SO ÷ SI)',
+      label: 'Sell-Through (SO ÷ SI)',
       value: '${sellThroughPct.toStringAsFixed(1)}%',
       badge: stBadge,
       badgeColor: stColor,
@@ -1923,7 +1923,7 @@ class _DashboardHomeScreenState extends ConsumerState<DashboardHomeScreen> {
     final tile3 = buildTile(
       icon: LucideIcons.pieChart,
       iconColor: ratioColor,
-      label: 'Rasio Budget Insentif / Omzet',
+      label: 'Rasio Insentif / Omzet',
       value: '${incentiveRatioPct.toStringAsFixed(2)}%',
       badge: ratioBadge,
       badgeColor: ratioColor,
