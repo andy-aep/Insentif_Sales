@@ -15,6 +15,7 @@ use App\Models\SelloutDistributor;
 use App\Models\TargetHeader;
 use App\Models\User;
 use App\Services\IncentiveCalculationService;
+use App\Services\SellinSapSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -96,6 +97,9 @@ class IncentiveCalculationController extends Controller
                 $kategori = 'KONSUMSI';
             }
             if (in_array($kategori, ['KONSUMSI', 'INDUSTRI', 'SURABAYA'], true)) {
+                if ($kategori === 'KONSUMSI') {
+                    app(SellinSapSyncService::class)->syncPeriodsIfStale($periods->all());
+                }
                 $forceRecalc = $request->boolean('recalculate');
                 foreach ($periods as $p) {
                     $cacheKey = "incentive_calc_fresh:{$kategori}:{$p}";
@@ -206,6 +210,9 @@ class IncentiveCalculationController extends Controller
         }
         $cleanPeriod = (string) $periods->first();
         $periodList = $periods->all();
+
+        // Auto-sync Sell-In SAP secara cerdas (TTL 15 menit) sebelum menghitung kartu distributor
+        app(SellinSapSyncService::class)->syncPeriodsIfStale($periodList);
         $formatPeriod = static function (string $p): string {
             if (strlen($p) !== 6) {
                 return $p;

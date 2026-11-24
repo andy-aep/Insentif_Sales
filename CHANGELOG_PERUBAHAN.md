@@ -123,6 +123,16 @@ Mencegah insiden terputusnya relasi transaksi (`orphan area_id` / `orphan depo_i
 
 ---
 
-### 9. Infrastruktur Deploy
+### 9. Auto-Sync Realisasi Sell-In SAP Otomatis (Smart TTL 15 Menit)
+Menghilangkan kebutuhan klik tombol **Sync SAP** manual setiap kali ingin melihat realisasi Sell-In terbaru di **Dashboard**, **Realisasi Penjualan**, maupun **Insentif Distributor**.
+
+- **Backend**:
+  - [`BE/app/Services/SellinSapSyncService.php`](BE/app/Services/SellinSapSyncService.php): Service baru dengan `syncIfStale()` (TTL cache 15 menit, concurrency `Cache::lock` 45 detik, fallback backoff 2 menit jika SAP tidak terjangkau agar halaman tetap terbuka normal). Auto-sync aktif untuk bulan berjalan, bulan lalu, serta bulan lalu yang masih `0` baris.
+  - [`BE/app/Http/Controllers/SellinDistributorController.php`](BE/app/Http/Controllers/SellinDistributorController.php): `index()` otomatis memanggil `syncIfStale()`; `syncFromSap()` memanggil `syncPeriod()` secara terpusat.
+  - [`BE/app/Http/Controllers/DashboardController.php`](BE/app/Http/Controllers/DashboardController.php) & [`BE/app/Http/Controllers/IncentiveCalculationController.php`](BE/app/Http/Controllers/IncentiveCalculationController.php): Otomatis memanggil `syncPeriodsIfStale()` sebelum menyajikan ringkasan & perhitungan insentif.
+
+---
+
+### 10. Infrastruktur Deploy
 - [`deploy_cpanel/deploy_ke_cpanel.ps1`](deploy_cpanel/deploy_ke_cpanel.ps1): Menambahkan `-timeout=60` pada koneksi SFTP WinSCP untuk mengurangi timeout pada jaringan dengan latensi tinggi.
 - Semua perubahan BE & FE di atas telah di-deploy ke produksi (`api-prod.garamonline.com` & `insentif-dev.susantimegah.com`).

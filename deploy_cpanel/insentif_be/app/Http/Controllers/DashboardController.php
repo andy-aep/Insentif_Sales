@@ -16,6 +16,7 @@ use App\Models\SelloutDistributor;
 use App\Models\SelloutSalesSurabaya;
 use App\Models\User;
 use App\Services\IncentiveCalculationService;
+use App\Services\SellinSapSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -51,6 +52,9 @@ class DashboardController extends Controller
             $periodList = [$latestPeriod];
         }
         $period = implode(',', $periodList);
+
+        // Auto-sync Sell-In SAP secara cerdas (TTL 15 menit) untuk periode aktif/terpilih
+        app(SellinSapSyncService::class)->syncPeriodsIfStale($periodList);
 
         $availablePeriods = MasterTarget::distinct()
             ->orderByDesc('period')
