@@ -495,14 +495,33 @@ class DashboardController extends Controller
             ->groupBy('brand_id')
             ->pluck('vol', 'brand_id');
 
-        $brandPerformance = Brand::orderBy('name')
-            ->get(['id', 'code', 'name'])
-            ->map(function ($b) use ($brandTargetsAgg, $brandSellinAgg, $brandSelloutAgg, $realisasiSellInKg, $targetSellInKg, $realisasiSellOutKg, $targetSellOutKg) {
+        $allBrandsList = Brand::orderBy('id')->get(['id', 'code', 'name', 'is_all_brands', 'component_brand_ids']);
+        $effectiveBrandIdsMap = Brand::buildEffectiveBrandIdsMap($allBrandsList);
+
+        $brandPerformance = $allBrandsList
+            ->map(function ($b) use ($brandTargetsAgg, $brandSellinAgg, $brandSelloutAgg, $effectiveBrandIdsMap, $realisasiSellInKg, $targetSellInKg, $realisasiSellOutKg, $targetSellOutKg) {
                 $tRow = $brandTargetsAgg->get($b->id);
                 $tSi = $tRow ? (float) $tRow->target_si : 0.0;
                 $tSo = $tRow ? (float) $tRow->target_so : 0.0;
-                $rSi = (float) ($brandSellinAgg->get($b->id) ?? 0.0);
-                $rSo = (float) ($brandSelloutAgg->get($b->id) ?? 0.0);
+                $effIds = $effectiveBrandIdsMap[$b->id] ?? [(int) $b->id];
+                $isComposite = $effIds === null || count($effIds) > 1;
+
+                if ($isComposite && ($tSi > 0 || $tSo > 0)) {
+                    if ($effIds === null) {
+                        $rSi = (float) $brandSellinAgg->sum();
+                        $rSo = (float) $brandSelloutAgg->sum();
+                    } else {
+                        $rSi = 0.0;
+                        $rSo = 0.0;
+                        foreach ($effIds as $compId) {
+                            $rSi += (float) ($brandSellinAgg->get($compId) ?? 0.0);
+                            $rSo += (float) ($brandSelloutAgg->get($compId) ?? 0.0);
+                        }
+                    }
+                } else {
+                    $rSi = (float) ($brandSellinAgg->get($b->id) ?? 0.0);
+                    $rSo = (float) ($brandSelloutAgg->get($b->id) ?? 0.0);
+                }
 
                 $shareSiDenom = $realisasiSellInKg > 0 ? $realisasiSellInKg : $targetSellInKg;
                 $shareSiNum = $realisasiSellInKg > 0 ? $rSi : $tSi;

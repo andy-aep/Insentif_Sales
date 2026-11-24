@@ -4,14 +4,20 @@ class BrandModel {
   final int id;
   final String code;
   final String name;
+  final bool isAllBrands;
+  final List<int> componentBrandIds;
   final List<String> itemCodes;
 
   BrandModel({
     required this.id,
     required this.code,
     required this.name,
+    this.isAllBrands = false,
+    this.componentBrandIds = const [],
     this.itemCodes = const [],
   });
+
+  bool get isComposite => isAllBrands || componentBrandIds.isNotEmpty || code.contains('+');
 
   factory BrandModel.fromJson(Map<String, dynamic> json) {
     final rawItems = json['items'] as List? ?? [];
@@ -21,10 +27,20 @@ class BrandModel {
         .where((c) => c.isNotEmpty)
         .toList();
 
+    final rawCompIds = json['component_brand_ids'] as List? ?? [];
+    final compIds = rawCompIds
+        .map((e) => e is int ? e : int.tryParse(e.toString()) ?? 0)
+        .where((id) => id > 0)
+        .toList();
+
+    final isAll = json['is_all_brands'] == true || json['is_all_brands'] == 1 || json['is_all_brands'] == '1';
+
     return BrandModel(
       id: json['id'] is int ? json['id'] : int.tryParse(json['id'].toString()) ?? 0,
       code: json['code'] ?? '',
       name: json['name'] ?? '',
+      isAllBrands: isAll,
+      componentBrandIds: compIds,
       itemCodes: codes,
     );
   }
@@ -33,6 +49,8 @@ class BrandModel {
         'id': id,
         'code': code,
         'name': name,
+        'is_all_brands': isAllBrands,
+        'component_brand_ids': componentBrandIds,
         'item_codes': itemCodes,
       };
 }

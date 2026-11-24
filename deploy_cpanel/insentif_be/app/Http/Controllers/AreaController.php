@@ -40,7 +40,10 @@ class AreaController extends Controller
         if (empty($validated['code'])) {
             $validated['code'] = DistributorController::nextSequentialCode(Area::class, 'AR', 5);
         } else {
-            $validated['code'] = strtoupper(trim($validated['code']));
+            $validated['code'] = DistributorController::normalizeCodeFormat($validated['code'], 'AR', 5);
+            if (Area::where('code', $validated['code'])->exists()) {
+                $validated['code'] = DistributorController::nextSequentialCode(Area::class, 'AR', 5);
+            }
         }
 
         $area = Area::create($validated);
@@ -61,6 +64,10 @@ class AreaController extends Controller
             'name' => 'sometimes|required|string|max:150',
         ]);
 
+        if (isset($validated['code'])) {
+            $validated['code'] = DistributorController::normalizeCodeFormat($validated['code'], 'AR', 5);
+        }
+
         $area->update($validated);
 
         return response()->json(['message' => 'Area berhasil diperbarui', 'data' => $area->load('depo.distributor')]);
@@ -68,6 +75,10 @@ class AreaController extends Controller
 
     public function destroy(Area $area): JsonResponse
     {
+        if ($reason = DistributorController::findAreaUsageReason($area)) {
+            return response()->json(['message' => $reason], 422);
+        }
+
         $area->delete();
 
         return response()->json(['message' => 'Area berhasil dihapus']);

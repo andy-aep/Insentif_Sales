@@ -96,7 +96,7 @@ if ($proto -eq 'sftp' -and (Test-Path $sshKeyPem)) {
         & $WinScpPath /keygen "$sshKeyPem" /output="$sshKeyPpk" | Out-Null
     }
     Write-Host "Autentikasi   : Menggunakan SSH Key ($sshKeyPpk) - Tanpa Password" -ForegroundColor Green
-    $openCmd = "open sftp://${encodedUser}@$($cfg.host):${port}/ -hostkey=""*"" -privatekey=""$sshKeyPpk"""
+    $openCmd = "open sftp://${encodedUser}@$($cfg.host):${port}/ -timeout=60 -hostkey=""*"" -privatekey=""$sshKeyPpk"""
 } else {
     $secPass = Read-Host "Masukkan Password FTP/SFTP cPanel" -AsSecureString
     $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secPass)
@@ -109,7 +109,7 @@ if ($proto -eq 'sftp' -and (Test-Path $sshKeyPem)) {
     }
     $encodedPass = [System.Uri]::EscapeDataString($plainPass)
     $openCmd = if ($proto -eq 'sftp') {
-        "open sftp://${encodedUser}:${encodedPass}@$($cfg.host):${port}/ -hostkey=""*"""
+        "open sftp://${encodedUser}:${encodedPass}@$($cfg.host):${port}/ -timeout=60 -hostkey=""*"""
     } elseif ($proto -eq 'ftps' -or $proto -eq 'ftpes') {
         "open ftpes://${encodedUser}:${encodedPass}@$($cfg.host):${port}/ -certificate=""*"""
     } else {

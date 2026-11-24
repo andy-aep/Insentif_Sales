@@ -261,21 +261,20 @@ class BulkUploadDataSheet implements FromArray, ShouldAutoSize, WithHeadings, Wi
                 ['WEST', 'DST02', 'PT Maju Bersama Distribusi', 'DP03', 'Depo Semarang Pusat', 'AR04', 'Simpang Lima & Sekitarnya'],
             ],
             'master_target_depo' => [
-                ['202610', 'DST01', 'DP01', 'BRD01', 'SELL_OUT', 5000, 50, 'budi_asm'],
-                ['202610', 'DST01', 'DP01', 'BRD01', 'SELL_IN', 5000, '', 'budi_asm'],
-                ['202610', 'DST01', 'DP02', 'BRD02', 'SELL_OUT', 4000, 40, 'budi_asm'],
+                ['202610', 'DST01', 'DP01', 'KAPAL', 'SELL_IN', 5000, '', 'budi_asm'],
+                ['202610', 'DST01', 'DP02', 'KAPAL+JEMPOL', 'SELL_IN', 4000, '', 'budi_asm'],
             ],
             'master_target_area' => [
-                ['202610', 'DST01', 'DP01', 'AR01', 'BRD01', 'SELL_OUT', 1500, 25, 'rian_spv'],
-                ['202610', 'DST01', 'DP01', 'AR02', 'BRD01', 'SELL_OUT', 1500, 25, 'rian_spv'],
-                ['202610', 'DST01', 'DP02', 'AR03', 'BRD02', 'SELL_OUT', 1500, 20, 'rian_spv'],
+                ['202610', 'DST01', 'DP01', 'AR01', 'KAPAL', 'SELL_OUT', 1500, 25, 'rian_spv'],
+                ['202610', 'DST01', 'DP01', 'AR02', 'KAPAL', 'SELL_OUT', 1500, 25, 'rian_spv'],
+                ['202610', 'DST01', 'DP02', 'AR03', 'KAPAL+JEMPOL', 'SELL_OUT', 1500, 20, 'rian_spv'],
             ],
             'master_target_distributor' => [
-                ['202610', 'DST01', 'DP01', '', 'BRD01', 'SELL_IN', 5000, '', 'budi_asm'],
-                ['202610', 'DST01', 'DP01', 'AR01', 'BRD01', 'SELL_OUT', 1500, 25, 'rian_spv'],
-                ['202610', 'DST01', 'DP01', 'AR02', 'BRD01', 'SELL_OUT', 1500, 25, 'rian_spv'],
-                ['202610', 'DST01', 'DP02', '', 'BRD02', 'SELL_IN', 4000, '', 'budi_asm'],
-                ['202610', 'DST01', 'DP02', 'AR03', 'BRD02', 'SELL_OUT', 1500, 20, 'rian_spv'],
+                ['202610', 'DST01', 'DP01', '', 'KAPAL', 'SELL_IN', 5000, '', 'budi_asm'],
+                ['202610', 'DST01', 'DP01', 'AR01', 'KAPAL', 'SELL_OUT', 1500, 25, 'rian_spv'],
+                ['202610', 'DST01', 'DP01', 'AR02', 'KAPAL', 'SELL_OUT', 1500, 25, 'rian_spv'],
+                ['202610', 'DST01', 'DP02', '', 'KAPAL+JEMPOL', 'SELL_IN', 4000, '', 'budi_asm'],
+                ['202610', 'DST01', 'DP02', 'AR03', 'KAPAL+JEMPOL', 'SELL_OUT', 1500, 20, 'rian_spv'],
             ],
             'depo' => [
                 ['DP01', 'Depo Surabaya Timur', 'DST01'],
@@ -524,46 +523,74 @@ class BulkUploadGuideSheet implements FromArray, ShouldAutoSize, WithStyles, Wit
 
         // Brands
         $rows[] = [''];
-        $rows[] = ['A. KODE BRAND (brand_code)'];
-        $rows[] = ['brand_code', 'Nama Brand', 'brand_id'];
-        foreach (Brand::orderBy('code')->get(['id', 'code', 'name']) as $b) {
-            $rows[] = [$b->code, $b->name, $b->id];
+        $rows[] = ['A. KODE BRAND (brand_code) — Mendukung Brand Tunggal, Brand Gabungan (+), & All Brand'];
+        $rows[] = ['brand_code', 'Nama Brand', 'Tipe Brand', 'Deskripsi / Komponen Gabungan', 'brand_id'];
+        $allBrands = Brand::withCount('items')->orderBy('id')->get();
+        $brandById = $allBrands->keyBy('id');
+        foreach ($allBrands as $b) {
+            $isAll = (bool) ($b->is_all_brands ?? false);
+            $compIds = is_array($b->component_brand_ids) ? $b->component_brand_ids : [];
+            $isComp = $isAll || ! empty($compIds) || str_contains((string) $b->code, '+');
+
+            if ($isAll) {
+                $tipe = 'Semua Brand (All Brand)';
+                $desc = 'Menggabungkan realisasi seluruh brand pada Depo & Area terkait';
+            } elseif ($isComp) {
+                $compNames = collect($compIds)
+                    ->map(fn ($id) => $brandById->get((int) $id)?->name ?? $brandById->get((int) $id)?->code)
+                    ->filter()
+                    ->values()
+                    ->all();
+                $tipe = 'Brand Gabungan (Mix)';
+                $desc = ! empty($compNames)
+                    ? 'Gabungan ' . count($compNames) . ' brand: ' . implode(' + ', $compNames)
+                    : 'Gabungan brand sesuai kode: ' . str_replace('+', ' + ', (string) $b->code);
+            } else {
+                $tipe = 'Brand Tunggal';
+                $desc = $b->items_count > 0
+                    ? "Merek tunggal ({$b->items_count} ItemCode SAP terdaftar)"
+                    : 'Merek tunggal';
+            }
+
+            $rows[] = [$b->code, $b->name, $tipe, $desc, $b->id];
         }
 
         // Regions
         $rows[] = [''];
         $rows[] = ['B. KODE REGION (region_code)'];
-        $rows[] = ['region_code', 'Nama Region', 'region_id'];
-        foreach (Region::orderBy('code')->get(['id', 'code', 'name']) as $r) {
-            $rows[] = [$r->code, $r->name, $r->id];
+        $rows[] = ['region_code', 'Nama Region', 'Deskripsi', 'region_id'];
+        foreach (Region::orderBy('code')->get(['id', 'code', 'name', 'description']) as $r) {
+            $rows[] = [$r->code, $r->name, $r->description ?: "Wilayah penjualan {$r->name}", $r->id];
         }
 
-        // Distributors (maksimal 200 sampel referensi agar file template tetap ringan)
+        // Distributors
         $rows[] = [''];
         $rows[] = ['C. KODE DISTRIBUTOR (distributor_code)'];
-        $rows[] = ['distributor_code', 'Nama Distributor', 'distributor_id'];
-        foreach (Distributor::orderBy('code')->limit(200)->get(['id', 'code', 'name']) as $d) {
-            $rows[] = [$d->code, $d->name, $d->id];
+        $rows[] = ['distributor_code', 'Nama Distributor', 'Region', 'Jumlah Depo', 'distributor_id'];
+        foreach (Distributor::with('region:id,code,name')->withCount('depos')->orderBy('code')->limit(1000)->get(['id', 'code', 'name', 'region_id']) as $d) {
+            $regLabel = $d->region ? "{$d->region->code} - {$d->region->name}" : '-';
+            $rows[] = [$d->code, $d->name, $regLabel, $d->depos_count, $d->id];
         }
 
         // Depos
         $rows[] = [''];
         $rows[] = ['D. KODE DEPO (depo_code)'];
-        $rows[] = ['depo_code', 'Nama Depo', 'Kode Distributor Induk', 'depo_id'];
-        foreach (Depo::with('distributor:id,code')->orderBy('code')->limit(200)->get(['id', 'code', 'name', 'distributor_id']) as $dp) {
-            $rows[] = [$dp->code, $dp->name, $dp->distributor?->code ?? '-', $dp->id];
+        $rows[] = ['depo_code', 'Nama Depo', 'Kode Distributor Induk', 'Nama Distributor Induk', 'depo_id'];
+        foreach (Depo::with('distributor:id,code,name')->orderBy('code')->limit(1000)->get(['id', 'code', 'name', 'distributor_id']) as $dp) {
+            $rows[] = [$dp->code, $dp->name, $dp->distributor?->code ?? '-', $dp->distributor?->name ?? '-', $dp->id];
         }
 
         // Areas
         $rows[] = [''];
         $rows[] = ['E. KODE AREA & RELASI DEPO / DISTRIBUTOR (AreaCode)'];
-        $rows[] = ['AreaCode', 'Nama Area', 'Depo', 'KodeDistributor (SAP Depo)', 'NamaDistributor', 'area_id'];
-        foreach (Area::with('depo.distributor')->orderBy('code')->limit(300)->get() as $ar) {
+        $rows[] = ['AreaCode', 'Nama Area', 'Kode Depo', 'Nama Depo', 'Kode Distributor Induk', 'Nama Distributor', 'area_id'];
+        foreach (Area::with('depo.distributor')->orderBy('code')->limit(2000)->get() as $ar) {
             $rows[] = [
                 $ar->code,
                 $ar->name,
-                $ar->depo?->name ?? '-',
                 $ar->depo?->code ?? '-',
+                $ar->depo?->name ?? '-',
+                $ar->depo?->distributor?->code ?? '-',
                 $ar->depo?->distributor?->name ?? '-',
                 $ar->id,
             ];
@@ -572,9 +599,15 @@ class BulkUploadGuideSheet implements FromArray, ShouldAutoSize, WithStyles, Wit
         // Users / Sales
         $rows[] = [''];
         $rows[] = ['F. DAFTAR USERNAME & ID USER / SALES'];
-        $rows[] = ['username', 'Nama Lengkap', 'Jabatan / Position', 'user_id'];
+        $rows[] = ['username', 'Nama Lengkap', 'Kode Jabatan', 'Nama Jabatan / Position', 'user_id'];
         foreach (User::with('position')->orderBy('id')->get() as $u) {
-            $rows[] = [$u->username, $u->name, $u->position?->name ?? 'Admin / All', $u->id];
+            $rows[] = [
+                $u->username,
+                $u->name,
+                $u->position?->code ?? '-',
+                $u->position?->name ?? 'Admin / All',
+                $u->id,
+            ];
         }
 
         return $rows;
@@ -651,35 +684,35 @@ class BulkUploadGuideSheet implements FromArray, ShouldAutoSize, WithStyles, Wit
             ],
             'master_target_depo' => [
                 ['period', 'WAJIB', 'YYYYMM / YYYY', '202610', 'Periode target 6 digit (contoh: 202610) atau 4 digit tahun (contoh: 2026 untuk otomatis 12 bulan)'],
-                ['distributor_code', 'WAJIB', 'Teks (Kode)', 'DST01', 'Kode Distributor sesuai Master Distributor'],
-                ['depo_code', 'WAJIB', 'Teks (Kode)', 'DP01', 'Kode Depo sesuai Master Depo'],
-                ['brand_code', 'WAJIB', 'Teks (Kode)', 'BRD01', 'Kode Brand produk sesuai Master Brand (contoh: BRD01, BRD02)'],
-                ['metrik_target', 'WAJIB', 'SELL_OUT / SELL_IN / AO', 'SELL_OUT', 'Metrik kuota target Depo: SELL_OUT, SELL_IN, atau AO (Active Outlet)'],
-                ['target_quota', 'WAJIB', 'Angka / Desimal', '5000', 'Besaran kuota Target Depo (ASM) dalam Kg/Box atau jumlah toko jika metrik AO'],
-                ['target_outlet', 'OPSIONAL', 'Angka Bulat', '50', 'Target jumlah toko Active Outlet (AO) Depo'],
-                ['username', 'OPSIONAL', 'Teks (Username)', 'budi_asm', 'Username ASM penanggung jawab Depo (otomatis jika dikosongkan)'],
+                ['distributor_code', 'WAJIB', 'Teks (Kode)', 'DST01', 'Kode Distributor sesuai Master Distributor (lihat daftar C di bawah untuk nama & region)'],
+                ['depo_code', 'WAJIB', 'Teks (Kode)', 'DP01', 'Kode Depo sesuai Master Depo (lihat daftar D di bawah untuk nama depo & distributor induk)'],
+                ['brand_code', 'WAJIB', 'Teks (Kode)', 'KAPAL / KAPAL+JEMPOL', 'Kode Brand tunggal (KAPAL, JEMPOL) atau Brand Gabungan (KAPAL+JEMPOL, KAPAL+JEMPOL+GARAMI, ALL_BRAND) — lihat daftar A'],
+                ['metrik_target', 'WAJIB', 'SELL_IN / SELL_OUT / AO', 'SELL_IN', 'Metrik kuota target Depo: SELL_IN (standar Depo ASM), SELL_OUT, atau AO'],
+                ['target_quota', 'WAJIB', 'Angka / Desimal', '5000', 'Besaran kuota Target Depo (ASM) dalam satuan Kg'],
+                ['target_outlet', 'OPSIONAL', 'Angka Bulat', '', 'Kosongkan untuk level Depo (AO hanya diisi pada level Area)'],
+                ['username', 'OPSIONAL', 'Teks (Username)', 'budi_asm', 'Username ASM penanggung jawab Depo (otomatis jika dikosongkan — lihat daftar F)'],
             ],
             'master_target_area' => [
                 ['period', 'WAJIB', 'YYYYMM / YYYY', '202610', 'Periode target 6 digit (contoh: 202610) atau 4 digit tahun (contoh: 2026 untuk otomatis 12 bulan)'],
-                ['distributor_code', 'WAJIB', 'Teks (Kode)', 'DST01', 'Kode Distributor sesuai Master Distributor'],
-                ['depo_code', 'WAJIB', 'Teks (Kode)', 'DP01', 'Kode Depo induk dari Area tersebut'],
-                ['area_code', 'WAJIB', 'Teks (Kode)', 'AR01', 'Kode Area sesuai Master Area'],
-                ['brand_code', 'WAJIB', 'Teks (Kode)', 'BRD01', 'Kode Brand produk sesuai Master Brand (contoh: BRD01, BRD02)'],
-                ['metrik_target', 'WAJIB', 'SELL_OUT / SELL_IN / AO', 'SELL_OUT', 'Metrik kuota target Area: SELL_OUT, SELL_IN, atau AO (Active Outlet)'],
-                ['target_quota', 'WAJIB', 'Angka / Desimal', '1500', 'Besaran kuota Target Area (SPV) dalam Kg/Box atau jumlah toko jika metrik AO'],
-                ['target_outlet', 'OPSIONAL', 'Angka Bulat', '25', 'Target jumlah toko Active Outlet (AO) Area'],
-                ['username', 'OPSIONAL', 'Teks (Username)', 'rian_spv', 'Username SPV penanggung jawab Area (otomatis jika dikosongkan)'],
+                ['distributor_code', 'WAJIB', 'Teks (Kode)', 'DST01', 'Kode Distributor sesuai Master Distributor (lihat daftar C di bawah untuk nama & region)'],
+                ['depo_code', 'WAJIB', 'Teks (Kode)', 'DP01', 'Kode Depo induk dari Area tersebut (lihat daftar D di bawah untuk nama depo & distributor induk)'],
+                ['area_code', 'WAJIB', 'Teks (Kode)', 'AR01', 'Kode Area sesuai Master Area (lihat daftar E di bawah untuk nama area, depo & distributor)'],
+                ['brand_code', 'WAJIB', 'Teks (Kode)', 'KAPAL / KAPAL+JEMPOL', 'Kode Brand tunggal atau Brand Gabungan (contoh: KAPAL, KAPAL+JEMPOL, ALL_BRAND) — lihat daftar A'],
+                ['metrik_target', 'WAJIB', 'SELL_OUT / SELL_IN / AO', 'SELL_OUT', 'Metrik kuota target Area: SELL_OUT (standar Area SPV)'],
+                ['target_quota', 'WAJIB', 'Angka / Desimal', '1500', 'Besaran kuota Target Sell-Out Area (SPV) dalam satuan Kg'],
+                ['target_outlet', 'OPSIONAL', 'Angka Bulat', '25', 'Target jumlah toko Active Outlet (AO) Area dalam satuan Toko'],
+                ['username', 'OPSIONAL', 'Teks (Username)', 'rian_spv', 'Username SPV penanggung jawab Area (otomatis jika dikosongkan — lihat daftar F)'],
             ],
             'master_target_distributor' => [
                 ['period', 'WAJIB', 'YYYYMM / YYYY', '202610', 'Periode target 6 digit (contoh: 202610) atau 4 digit tahun (contoh: 2026 untuk otomatis 12 bulan)'],
-                ['distributor_code', 'WAJIB', 'Teks (Kode)', 'DST01', 'Kode Distributor sesuai Master Distributor'],
-                ['depo_code', 'WAJIB', 'Teks (Kode)', 'DP01', 'Kode Depo sesuai Master Depo'],
-                ['area_code', 'OPSIONAL', 'Teks (Kode)', 'AR01', 'KOSONGKAN jika baris ini Target Depo (ASM); ISI kode Area jika baris ini Target Area (SPV)'],
-                ['brand_code', 'WAJIB', 'Teks (Kode)', 'BRD01', 'Kode Brand produk sesuai Master Brand (contoh: BRD01, BRD02)'],
-                ['metrik_target', 'WAJIB', 'SELL_OUT / SELL_IN / AO', 'SELL_OUT', 'Metrik kuota target: SELL_OUT, SELL_IN, atau AO (Active Outlet)'],
-                ['target_quota', 'WAJIB', 'Angka / Desimal', '5000', 'Besaran kuota Target Depo atau Area dalam Kg/Box (atau jumlah toko jika metrik AO)'],
-                ['target_outlet', 'OPSIONAL', 'Angka Bulat', '50', 'Target jumlah toko Active Outlet (AO)'],
-                ['username', 'OPSIONAL', 'Teks (Username)', 'budi_asm / rian_spv', 'Username ASM (untuk Depo) atau SPV (untuk Area) — otomatis jika dikosongkan'],
+                ['distributor_code', 'WAJIB', 'Teks (Kode)', 'DST01', 'Kode Distributor sesuai Master Distributor (lihat daftar C di bawah untuk nama & region)'],
+                ['depo_code', 'WAJIB', 'Teks (Kode)', 'DP01', 'Kode Depo sesuai Master Depo (lihat daftar D di bawah untuk nama depo & distributor induk)'],
+                ['area_code', 'OPSIONAL', 'Teks (Kode)', 'AR01', 'KOSONGKAN jika baris ini Target Depo (ASM); ISI kode Area (ARxxxxx) jika baris ini Target Area (SPV) — lihat daftar E'],
+                ['brand_code', 'WAJIB', 'Teks (Kode)', 'KAPAL / KAPAL+JEMPOL', 'Kode Brand tunggal (KAPAL, JEMPOL) atau Brand Gabungan (KAPAL+JEMPOL, KAPAL+JEMPOL+GARAMI, ALL_BRAND) — lihat daftar A'],
+                ['metrik_target', 'WAJIB', 'SELL_IN / SELL_OUT', 'SELL_IN / SELL_OUT', 'Gunakan SELL_IN untuk baris Depo (area_code kosong) dan SELL_OUT untuk baris Area (area_code terisi)'],
+                ['target_quota', 'WAJIB', 'Angka / Desimal', '5000', 'Besaran kuota Target Depo (Sell-In) atau Area (Sell-Out) dalam satuan Kg'],
+                ['target_outlet', 'OPSIONAL', 'Angka Bulat', '25', 'Target jumlah toko Active Outlet (AO) dalam satuan Toko — isi pada baris Area, kosongkan pada baris Depo'],
+                ['username', 'OPSIONAL', 'Teks (Username)', 'budi_asm / rian_spv', 'Username ASM (untuk Depo) atau SPV (untuk Area) — otomatis jika dikosongkan (lihat daftar F)'],
             ],
             'depo' => [
                 ['code', 'WAJIB', 'Teks Unik', 'DP03', 'Kode unik depo (jika sudah ada, data akan diperbarui)'],

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exports\DistributorBreakdownExport;
 use App\Exports\IncentiveCalculationExport;
 use App\Models\Area;
+use App\Models\Brand;
 use App\Models\IncentiveCalculation;
 use App\Models\MasterTarget;
 use App\Models\Position;
@@ -287,11 +288,12 @@ class IncentiveCalculationController extends Controller
             ->get()
             ->keyBy('area_id');
 
-        // 1. Get relevant DEPO target rows
+        // 1. Get relevant DEPO target rows (khusus SELL_IN agar tidak terduplikasi bila ada metrik lain di level DEPO)
         $depoQuery = MasterTarget::with(['distributor', 'depo', 'brand', 'user.position'])
             ->whereIn('period', $periodList)
             ->where('kategori_skema', 'KONSUMSI')
-            ->where('level', 'DEPO');
+            ->where('level', 'DEPO')
+            ->where('metrik_target', 'SELL_IN');
 
         $assignedAreaIds = collect();
 
@@ -429,6 +431,30 @@ class IncentiveCalculationController extends Controller
 
         $allAreaTargets = $areaQuery->get()->groupBy(fn ($a) => $a->period . '_' . $a->depo_id . '_' . ($a->brand_id ?? 0));
 
+        $allBrands = Brand::all(['id', 'code', 'name', 'is_all_brands', 'component_brand_ids']);
+        $effectiveBrandIdsMap = Brand::buildEffectiveBrandIdsMap($allBrands);
+
+        $collectMatchedRecords = static function (?int $targetBrandId, string $prefix, $byBrandMap, $byAllMap) use ($effectiveBrandIdsMap) {
+            if (! $targetBrandId || ! array_key_exists($targetBrandId, $effectiveBrandIdsMap) || $effectiveBrandIdsMap[$targetBrandId] === null) {
+                return $byAllMap->get($prefix) ?? collect();
+            }
+
+            $effIds = $effectiveBrandIdsMap[$targetBrandId];
+            if (count($effIds) === 1) {
+                return $byBrandMap->get($prefix . '_' . $effIds[0]) ?? collect();
+            }
+
+            $merged = collect();
+            foreach ($effIds as $bId) {
+                $rows = $byBrandMap->get($prefix . '_' . $bId);
+                if ($rows && $rows->isNotEmpty()) {
+                    $merged = $merged->concat($rows);
+                }
+            }
+
+            return $merged;
+        };
+
         $cardItems = [];
         $uniquePersonil = [];
         $totalGrandReward = 0;
@@ -461,14 +487,21 @@ class IncentiveCalculationController extends Controller
 
             // Sell-In (utamakan depo_id + filter masa aktif ASM jika transaction_date tersedia)
             $targetSi = (float) $dt->target_quota;
+            $targetSiBrandId = $dt->brand_id ? (int) $dt->brand_id : null;
             if ($hasDepoLevelSellin && $dt->depo_id) {
-                $matchedSiRecords = $dt->brand_id
-                    ? ($sellinByDepoBrand->get($dtPeriod . '_' . $dt->depo_id . '_' . $dt->brand_id) ?? collect())
-                    : ($sellinByDepo->get($dtPeriod . '_' . $dt->depo_id) ?? collect());
+                $matchedSiRecords = $collectMatchedRecords(
+                    $targetSiBrandId,
+                    $dtPeriod . '_' . $dt->depo_id,
+                    $sellinByDepoBrand,
+                    $sellinByDepo
+                );
             } else {
-                $matchedSiRecords = $dt->brand_id
-                    ? ($sellinByDistBrand->get($dtPeriod . '_' . $dt->distributor_id . '_' . $dt->brand_id) ?? collect())
-                    : ($sellinByDist->get($dtPeriod . '_' . $dt->distributor_id) ?? collect());
+                $matchedSiRecords = $collectMatchedRecords(
+                    $targetSiBrandId,
+                    $dtPeriod . '_' . $dt->distributor_id,
+                    $sellinByDistBrand,
+                    $sellinByDist
+                );
             }
 
             $asmUser = $dt->user ?? $asmAssignments->get($dt->distributor_id)?->user;
@@ -526,14 +559,21 @@ class IncentiveCalculationController extends Controller
                 $targetAo = (int) $at->target_outlet;
 
                 // Sell-Out & AO (O(1) hash map lookup: utamakan area_id jika tersedia, fallback ke depo_id)
+                $targetSoBrandId = $at->brand_id ? (int) $at->brand_id : null;
                 if ($hasAreaLevelSellout && $at->area_id) {
-                    $matchedSoRecords = $at->brand_id
-                        ? ($selloutByAreaBrand->get($dtPeriod . '_' . $at->area_id . '_' . $at->brand_id) ?? collect())
-                        : ($selloutByArea->get($dtPeriod . '_' . $at->area_id) ?? collect());
+                    $matchedSoRecords = $collectMatchedRecords(
+                        $targetSoBrandId,
+                        $dtPeriod . '_' . $at->area_id,
+                        $selloutByAreaBrand,
+                        $selloutByArea
+                    );
                 } else {
-                    $matchedSoRecords = $at->brand_id
-                        ? ($selloutByDepoBrand->get($dtPeriod . '_' . $dt->depo_id . '_' . $at->brand_id) ?? collect())
-                        : ($selloutByDepo->get($dtPeriod . '_' . $dt->depo_id) ?? collect());
+                    $matchedSoRecords = $collectMatchedRecords(
+                        $targetSoBrandId,
+                        $dtPeriod . '_' . $dt->depo_id,
+                        $selloutByDepoBrand,
+                        $selloutByDepo
+                    );
                 }
 
                 $realSo = (float) $matchedSoRecords->sum('volume_kg');

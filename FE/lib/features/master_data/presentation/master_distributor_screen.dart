@@ -118,12 +118,16 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
     List<_DepoDraft> draftDepos = [];
     int draftAreaCount = 0;
     if (dist != null && dist.depos.isNotEmpty) {
+      final allAreas = ref.read(masterDataProvider).areas;
       draftDepos = dist.depos.map((d) {
+        final effectiveAreas = d.areas.isNotEmpty
+            ? d.areas
+            : allAreas.where((a) => a.depoId == d.id).toList();
         return _DepoDraft(
           id: d.id,
           code: d.code,
           name: d.name,
-          areas: d.areas.map((a) => _AreaDraft(id: a.id, code: a.code, name: a.name)).toList(),
+          areas: effectiveAreas.map((a) => _AreaDraft(id: a.id, code: a.code, name: a.name)).toList(),
         );
       }).toList();
     } else {
@@ -1086,101 +1090,284 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
   // ---------------- 5. Brand Dialog ----------------
   void _showBrandDialog({BrandModel? brand}) {
     final colors = context.colors;
+    final allBrands = ref.read(masterDataProvider).brands;
+    final singleBrands = allBrands.where((b) => !b.isComposite && b.id != brand?.id).toList();
     final isEdit = brand != null;
+
+    bool isCompositeMode = brand != null ? brand.isComposite : false;
+    bool isAllBrands = brand?.isAllBrands ?? false;
+    final Set<int> selectedComponentIds = (brand?.componentBrandIds ?? []).toSet();
+    if (selectedComponentIds.isEmpty && brand != null && !isAllBrands && brand.code.contains('+')) {
+      final tokens = brand.code.split('+').map((e) => e.trim().toUpperCase()).where((e) => e.isNotEmpty).toSet();
+      for (final sb in singleBrands) {
+        if (tokens.contains(sb.code.trim().toUpperCase()) || tokens.contains(sb.name.trim().toUpperCase())) {
+          selectedComponentIds.add(sb.id);
+        }
+      }
+    }
+
     final codeCtrl = TextEditingController(text: brand?.code ?? '');
     final nameCtrl = TextEditingController(text: brand?.name ?? '');
     final itemsCtrl = TextEditingController(text: brand?.itemCodes.join(', ') ?? '');
+    bool customCodeEdited = isEdit;
+    bool customNameEdited = isEdit;
+
+    void syncCompositeLabels() {
+      if (!isCompositeMode) return;
+      if (isAllBrands) {
+        if (!customCodeEdited || codeCtrl.text.trim().isEmpty || codeCtrl.text.contains('+')) {
+          codeCtrl.text = 'ALL_BRAND';
+        }
+        if (!customNameEdited || nameCtrl.text.trim().isEmpty || nameCtrl.text.contains('+')) {
+          nameCtrl.text = 'ALL BRAND (Semua Merek)';
+        }
+        return;
+      }
+      final picked = singleBrands.where((b) => selectedComponentIds.contains(b.id)).toList();
+      if (picked.isNotEmpty) {
+        if (!customCodeEdited || codeCtrl.text.trim().isEmpty || codeCtrl.text.contains('+') || codeCtrl.text == 'ALL_BRAND') {
+          codeCtrl.text = picked.map((b) => b.code.trim().toUpperCase()).join('+');
+        }
+        if (!customNameEdited || nameCtrl.text.trim().isEmpty || nameCtrl.text.contains('+') || nameCtrl.text.startsWith('ALL BRAND')) {
+          nameCtrl.text = picked.map((b) => b.name.trim()).join(' + ');
+        }
+      }
+    }
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: colors.bgDialog,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.border)),
-        title: Row(
-          children: [
-            Icon(LucideIcons.tag, color: Theme.of(context).colorScheme.primary, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                isEdit ? 'Edit Brand: ${brand.name}' : 'Tambah Brand Baru',
-                style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: colors.bgDialog,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.border)),
+          title: Row(
+            children: [
+              Icon(LucideIcons.tag, color: Theme.of(context).colorScheme.primary, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  isEdit ? 'Edit Brand: ${brand.name}' : 'Tambah Brand Baru',
+                  style: GoogleFonts.plusJakartaSans(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
+                ),
               ),
+            ],
+          ),
+          content: SizedBox(
+            width: 500,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment<bool>(
+                        value: false,
+                        icon: Icon(LucideIcons.tag, size: 14),
+                        label: Text('Brand Tunggal'),
+                      ),
+                      ButtonSegment<bool>(
+                        value: true,
+                        icon: Icon(LucideIcons.layers, size: 14),
+                        label: Text('Brand Gabungan (Mix / All)'),
+                      ),
+                    ],
+                    selected: {isCompositeMode},
+                    onSelectionChanged: (sel) {
+                      setDialogState(() {
+                        isCompositeMode = sel.first;
+                        customCodeEdited = false;
+                        customNameEdited = false;
+                        if (isCompositeMode) {
+                          syncCompositeLabels();
+                        }
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  if (isCompositeMode) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: colors.bgElevated,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: colors.border),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SwitchListTile.adaptive(
+                            contentPadding: EdgeInsets.zero,
+                            dense: true,
+                            title: Text(
+                              'Semua Brand (All Brand)',
+                              style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13),
+                            ),
+                            subtitle: Text(
+                              'Otomatis menggabungkan seluruh brand pada Depo & Area',
+                              style: TextStyle(color: colors.textMuted, fontSize: 11.5),
+                            ),
+                            value: isAllBrands,
+                            onChanged: (v) {
+                              setDialogState(() {
+                                isAllBrands = v;
+                                customCodeEdited = false;
+                                customNameEdited = false;
+                                syncCompositeLabels();
+                              });
+                            },
+                          ),
+                          if (!isAllBrands) ...[
+                            const Divider(height: 16),
+                            Text(
+                              'Pilih brand yang digabungkan (minimal 2):',
+                              style: TextStyle(color: colors.textSecondary, fontWeight: FontWeight.w600, fontSize: 12.5),
+                            ),
+                            const SizedBox(height: 8),
+                            if (singleBrands.isEmpty)
+                              Text(
+                                'Belum ada brand tunggal terdaftar.',
+                                style: TextStyle(color: colors.textMuted, fontSize: 12),
+                              )
+                            else
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: singleBrands.map((sb) {
+                                  final selected = selectedComponentIds.contains(sb.id);
+                                  return FilterChip(
+                                    label: Text('${sb.name} (${sb.code})'),
+                                    selected: selected,
+                                    onSelected: (checked) {
+                                      setDialogState(() {
+                                        if (checked) {
+                                          selectedComponentIds.add(sb.id);
+                                        } else {
+                                          selectedComponentIds.remove(sb.id);
+                                        }
+                                        customCodeEdited = false;
+                                        customNameEdited = false;
+                                        syncCompositeLabels();
+                                      });
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  TextField(
+                    controller: codeCtrl,
+                    style: TextStyle(color: colors.textPrimary),
+                    onChanged: (_) => customCodeEdited = true,
+                    decoration: InputDecoration(
+                      labelText: 'Kode Brand *',
+                      hintText: isCompositeMode ? 'Contoh: KAPAL+JEMPOL+GARAMI atau ALL_BRAND' : 'Contoh: KAPAL',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: nameCtrl,
+                    style: TextStyle(color: colors.textPrimary),
+                    onChanged: (_) => customNameEdited = true,
+                    decoration: InputDecoration(
+                      labelText: 'Nama Merek Dagang *',
+                      hintText: isCompositeMode ? 'Contoh: KAPAL + JEMPOL + GARAMI' : 'Contoh: KAPAL',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (isCompositeMode)
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(LucideIcons.info, size: 15, color: Theme.of(context).colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'ItemCode SAP dan faktur Sell-Out tetap mengikuti brand tunggal masing-masing, lalu otomatis dijumlahkan saat perhitungan insentif.',
+                              style: TextStyle(color: colors.textSecondary, fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    TextField(
+                      controller: itemsCtrl,
+                      maxLines: 4,
+                      style: TextStyle(color: colors.textPrimary, fontSize: 13),
+                      decoration: const InputDecoration(
+                        labelText: 'Mapping ItemCode SAP (Opsional)',
+                        hintText: 'Contoh: B13, B15, B26, C56 (pisahkan dengan koma atau baris baru)',
+                        helperText: 'Dipakai untuk otomatis mendeteksi Brand dari ItemCode SAP',
+                        alignLabelWithHint: true,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: TextStyle(color: colors.textMuted))),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Theme.of(context).colorScheme.onPrimary),
+              onPressed: () async {
+                if (isCompositeMode && !isAllBrands && selectedComponentIds.length < 2) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Pilih minimal 2 brand untuk digabungkan, atau aktifkan Semua Brand.')),
+                  );
+                  return;
+                }
+                if (codeCtrl.text.trim().isEmpty || nameCtrl.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Kode dan Nama Brand wajib diisi!')),
+                  );
+                  return;
+                }
+
+                final parsedCodes = isCompositeMode
+                    ? <String>[]
+                    : itemsCtrl.text
+                        .split(RegExp(r'[\s,;]+'))
+                        .map((e) => e.trim().toUpperCase())
+                        .where((e) => e.isNotEmpty)
+                        .toSet()
+                        .toList();
+
+                Navigator.pop(ctx);
+                final ok = await ref.read(masterDataProvider.notifier).saveBrand(
+                      id: brand?.id,
+                      code: codeCtrl.text.trim().toUpperCase(),
+                      name: nameCtrl.text.trim(),
+                      itemCodes: parsedCodes,
+                      isAllBrands: isCompositeMode && isAllBrands,
+                      componentBrandIds: (isCompositeMode && !isAllBrands) ? selectedComponentIds.toList() : <int>[],
+                    );
+
+                if (mounted) {
+                  final err = ref.read(masterDataProvider).errorMessage;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(ok ? 'Brand & konfigurasi berhasil disimpan' : (err ?? 'Gagal menyimpan brand')),
+                      backgroundColor: ok ? context.semantic.success : context.semantic.danger,
+                    ),
+                  );
+                }
+              },
+              child: Text(isEdit ? 'Simpan Perubahan' : 'Simpan Brand'),
             ),
           ],
         ),
-        content: SizedBox(
-          width: 480,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: codeCtrl,
-                  style: TextStyle(color: colors.textPrimary),
-                  decoration: const InputDecoration(labelText: 'Kode Brand *', hintText: 'Contoh: KAPAL'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: nameCtrl,
-                  style: TextStyle(color: colors.textPrimary),
-                  decoration: const InputDecoration(labelText: 'Nama Merek Dagang *', hintText: 'Contoh: KAPAL'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: itemsCtrl,
-                  maxLines: 4,
-                  style: TextStyle(color: colors.textPrimary, fontSize: 13),
-                  decoration: const InputDecoration(
-                    labelText: 'Mapping ItemCode SAP (Opsional)',
-                    hintText: 'Contoh: B13, B15, B26, C56 (pisahkan dengan koma atau baris baru)',
-                    helperText: 'Dipakai untuk otomatis mendeteksi Brand dari ItemCode SAP',
-                    alignLabelWithHint: true,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: TextStyle(color: colors.textMuted))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Theme.of(context).colorScheme.onPrimary),
-            onPressed: () async {
-              if (codeCtrl.text.trim().isEmpty || nameCtrl.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Kode dan Nama Brand wajib diisi!')),
-                );
-                return;
-              }
-
-              final parsedCodes = itemsCtrl.text
-                  .split(RegExp(r'[\s,;]+'))
-                  .map((e) => e.trim().toUpperCase())
-                  .where((e) => e.isNotEmpty)
-                  .toSet()
-                  .toList();
-
-              Navigator.pop(ctx);
-              final ok = await ref.read(masterDataProvider.notifier).saveBrand(
-                    id: brand?.id,
-                    code: codeCtrl.text.trim().toUpperCase(),
-                    name: nameCtrl.text.trim(),
-                    itemCodes: parsedCodes,
-                  );
-
-              if (mounted) {
-                final err = ref.read(masterDataProvider).errorMessage;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(ok ? 'Brand & mapping item SAP berhasil disimpan' : (err ?? 'Gagal menyimpan brand')),
-                    backgroundColor: ok ? context.semantic.success : context.semantic.danger,
-                  ),
-                );
-              }
-            },
-            child: Text(isEdit ? 'Simpan Perubahan' : 'Simpan Brand'),
-          ),
-        ],
       ),
     );
   }
@@ -2134,17 +2321,53 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                   DataCell(
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 320),
-                      child: brand.itemCodes.isEmpty
-                          ? Text('Belum ada item SAP', style: TextStyle(color: context.colors.textMuted, fontSize: 12))
-                          : Tooltip(
-                              message: brand.itemCodes.join(', '),
+                      child: Builder(
+                        builder: (_) {
+                          if (brand.isAllBrands) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
                               child: Text(
-                                '${brand.itemCodes.length} Item: ${brand.itemCodes.take(5).join(', ')}${brand.itemCodes.length > 5 ? ', ...' : ''}',
+                                'Gabungan: Semua Brand (All Brand)',
+                                style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 12, fontWeight: FontWeight.w600),
+                              ),
+                            );
+                          }
+                          if (brand.isComposite) {
+                            final brandById = {for (final b in state.brands) b.id: b};
+                            final compNames = brand.componentBrandIds
+                                .map((id) => brandById[id]?.name ?? brandById[id]?.code)
+                                .whereType<String>()
+                                .toList();
+                            final label = compNames.isNotEmpty
+                                ? 'Gabungan ${compNames.length} Brand: ${compNames.join(' + ')}'
+                                : 'Gabungan: ${brand.code}';
+                            return Tooltip(
+                              message: label,
+                              child: Text(
+                                label,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(color: context.semantic.secondaryAccent, fontSize: 12, fontWeight: FontWeight.w500),
+                                style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 12, fontWeight: FontWeight.w600),
                               ),
-                            ),
+                            );
+                          }
+                          return brand.itemCodes.isEmpty
+                              ? Text('Belum ada item SAP', style: TextStyle(color: context.colors.textMuted, fontSize: 12))
+                              : Tooltip(
+                                  message: brand.itemCodes.join(', '),
+                                  child: Text(
+                                    '${brand.itemCodes.length} Item: ${brand.itemCodes.take(5).join(', ')}${brand.itemCodes.length > 5 ? ', ...' : ''}',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(color: context.semantic.secondaryAccent, fontSize: 12, fontWeight: FontWeight.w500),
+                                  ),
+                                );
+                        },
+                      ),
                     ),
                   ),
                   DataCell(

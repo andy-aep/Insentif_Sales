@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Http\Controllers\DistributorController;
 use App\Models\Area;
 use App\Models\Brand;
 use App\Models\Depo;
@@ -395,12 +396,31 @@ class BatchImportService
 
         $regionMap = array_change_key_case(Region::pluck('id', 'code')->all(), CASE_UPPER);
         $existingDistMap = array_change_key_case(Distributor::pluck('name', 'code')->all(), CASE_UPPER);
+        $existingDistNameToCode = [];
+        foreach (Distributor::get(['code', 'name']) as $ed) {
+            $nKey = preg_replace('/\s+/', ' ', strtoupper(trim((string) $ed->name)));
+            $cKey = strtoupper(trim((string) $ed->code));
+            if ($nKey !== '' && $cKey !== '') {
+                $existingDistNameToCode[$nKey][$cKey] = true;
+            }
+        }
         $existingDepoMap = array_change_key_case(Depo::pluck('name', 'code')->all(), CASE_UPPER);
-        $existingAreaMap = array_change_key_case(Area::pluck('name', 'code')->all(), CASE_UPPER);
+        $existingAreaMap = [];
+        $existingAreaMeta = [];
+        foreach (DB::table('areas')->join('depos', 'areas.depo_id', '=', 'depos.id')->select('areas.code', 'areas.name', 'depos.code as depo_code')->get() as $ea) {
+            $ak = strtoupper(trim((string) $ea->code));
+            $existingAreaMap[$ak] = $ea->name;
+            $existingAreaMeta[$ak] = strtoupper(trim((string) $ea->depo_code));
+        }
 
         $uniqueDistributors = [];
         $uniqueDepos = [];
         $uniqueAreas = [];
+        $seenDistCodeToName = [];
+        $seenDistNameToCodes = [];
+        $seenDepoToDist = [];
+        $seenAreaToDepo = [];
+        $conflictErrors = [];
         $now = now()->format('Y-m-d H:i:s');
 
         while ($generator->valid()) {
@@ -411,8 +431,10 @@ class BatchImportService
                 continue;
             }
             $totalRows++;
+            $excelLine = $totalRows + 1;
 
-            $distCode = trim((string) ($row['distributor_code'] ?? $row['code'] ?? ''));
+            $rawDistCode = trim((string) ($row['distributor_code'] ?? $row['code'] ?? ''));
+            $distCode = DistributorController::normalizeCodeFormat($rawDistCode, 'DST', 4);
             $distName = trim((string) ($row['distributor_name'] ?? $row['name'] ?? ''));
             $regCode = strtoupper(trim((string) ($row['region_code'] ?? '')));
 
@@ -430,6 +452,27 @@ class BatchImportService
                 continue;
             }
 
+            $distNameNorm = preg_replace('/\s+/', ' ', strtoupper($distName));
+
+            // Cek konflik 1: distributor_code sama dengan distributor_name berbeda dalam 1 file
+            if (isset($seenDistCodeToName[$distKey]) && $seenDistCodeToName[$distKey]['norm'] !== $distNameNorm) {
+                $conflictErrors[] = "Baris {$excelLine}: Kode Distributor '{$distCode}' konflik — sebelumnya bernama '{$seenDistCodeToName[$distKey]['raw']}', di baris ini tertulis '{$distName}'.";
+            } else {
+                $seenDistCodeToName[$distKey] = ['norm' => $distNameNorm, 'raw' => $distName];
+            }
+
+            // Cek konflik 2: nama distributor yang sama dipakai lebih dari 1 distributor_code berbeda (indikasi Excel auto-drag)
+            $seenDistNameToCodes[$distNameNorm][$distKey] = true;
+            if (count($seenDistNameToCodes[$distNameNorm]) > 1) {
+                $codesList = implode(', ', array_keys($seenDistNameToCodes[$distNameNorm]));
+                $conflictErrors[] = "Baris {$excelLine}: Nama Distributor '{$distName}' dipakai oleh lebih dari 1 kode berbeda ({$codesList}). Periksa kemungkinan Excel auto-drag pada kolom distributor_code.";
+            } elseif (isset($existingDistNameToCode[$distNameNorm])) {
+                $otherDbCodes = array_diff(array_keys($existingDistNameToCode[$distNameNorm]), [$distKey]);
+                if (! empty($otherDbCodes)) {
+                    $conflictErrors[] = "Baris {$excelLine}: Nama Distributor '{$distName}' sudah terdaftar di database dengan kode " . implode(', ', $otherDbCodes) . " (bukan '{$distCode}').";
+                }
+            }
+
             $regionId = $row['region_id'] ?? ($regCode !== '' ? ($regionMap[$regCode] ?? null) : null);
 
             $uniqueDistributors[$distKey] = [
@@ -445,6 +488,11 @@ class BatchImportService
             $depoName = trim((string) ($row['depo_name'] ?? ''));
             if ($depoCode !== '') {
                 $depoKey = strtoupper($depoCode);
+                if (isset($seenDepoToDist[$depoKey]) && $seenDepoToDist[$depoKey] !== $distKey) {
+                    $conflictErrors[] = "Baris {$excelLine}: Kode Depo '{$depoCode}' muncul di lebih dari 1 Distributor ({$seenDepoToDist[$depoKey]} dan {$distKey}).";
+                } else {
+                    $seenDepoToDist[$depoKey] = $distKey;
+                }
                 if ($depoName === '') {
                     $depoName = $uniqueDepos[$depoKey]['name'] ?? $existingDepoMap[$depoKey] ?? $depoCode;
                 }
@@ -457,10 +505,19 @@ class BatchImportService
                     'updated_at' => $now,
                 ];
 
-                $areaCode = trim((string) ($row['area_code'] ?? ''));
+                $rawAreaCode = trim((string) ($row['area_code'] ?? ''));
+                $areaCode = DistributorController::normalizeCodeFormat($rawAreaCode, 'AR', 5);
                 $areaName = trim((string) ($row['area_name'] ?? ''));
                 if ($areaCode !== '') {
                     $areaKey = strtoupper($areaCode);
+                    if (isset($seenAreaToDepo[$areaKey]) && $seenAreaToDepo[$areaKey] !== $depoKey) {
+                        $conflictErrors[] = "Baris {$excelLine}: Kode Area '{$areaCode}' konflik — sudah dipakai di Depo '{$seenAreaToDepo[$areaKey]}' (bukan '{$depoCode}').";
+                    } elseif (isset($existingAreaMeta[$areaKey]) && $existingAreaMeta[$areaKey] !== $depoKey) {
+                        $suggestedCode = DistributorController::nextSequentialCode(Area::class, 'AR', 5);
+                        $conflictErrors[] = "Baris {$excelLine}: Kode Area '{$areaCode}' sudah terdaftar di Depo lain ({$existingAreaMeta[$areaKey]}). Gunakan kode baru 5 digit seperti '{$suggestedCode}'.";
+                    } else {
+                        $seenAreaToDepo[$areaKey] = $depoKey;
+                    }
                     if ($areaName === '') {
                         $areaName = $uniqueAreas[$areaKey]['name'] ?? $existingAreaMap[$areaKey] ?? $areaCode;
                     }
@@ -478,15 +535,21 @@ class BatchImportService
             $successCount++;
         }
 
+        if (! empty($conflictErrors)) {
+            $preview = implode("\n- ", array_slice(array_values(array_unique($conflictErrors)), 0, 15));
+            throw new Exception("Upload Master Distributor Ditolak (Terdeteksi Konflik Kode / Auto-Drag Excel):\n- {$preview}");
+        }
+
         // Eksekusi Bulk Upsert Hierarki dalam Chunk 1.000
         DB::transaction(function () use ($uniqueDistributors, $uniqueDepos, $uniqueAreas, $batchId) {
             if (! empty($uniqueDistributors)) {
-                foreach (array_chunk(array_values($uniqueDistributors), 1000) as $chunk) {
-                    DB::table('distributors')->upsert($chunk, ['code'], ['name', 'region_id', 'batch_id', 'updated_at']);
+                $distRows = array_map(fn ($r) => $r + ['deleted_at' => null], array_values($uniqueDistributors));
+                foreach (array_chunk($distRows, 1000) as $chunk) {
+                    DB::table('distributors')->upsert($chunk, ['code'], ['name', 'region_id', 'batch_id', 'deleted_at', 'updated_at']);
                 }
             }
 
-            $distIdMap = array_change_key_case(DB::table('distributors')->pluck('id', 'code')->all(), CASE_UPPER);
+            $distIdMap = array_change_key_case(DB::table('distributors')->whereNull('deleted_at')->pluck('id', 'code')->all(), CASE_UPPER);
 
             if (! empty($uniqueDepos)) {
                 $depoRows = [];
@@ -498,17 +561,18 @@ class BatchImportService
                             'code' => $d['code'],
                             'name' => $d['name'],
                             'distributor_id' => $distId,
+                            'deleted_at' => null,
                             'created_at' => $d['created_at'],
                             'updated_at' => $d['updated_at'],
                         ];
                     }
                 }
                 foreach (array_chunk($depoRows, 1000) as $chunk) {
-                    DB::table('depos')->upsert($chunk, ['code'], ['name', 'distributor_id', 'batch_id', 'updated_at']);
+                    DB::table('depos')->upsert($chunk, ['code'], ['name', 'distributor_id', 'batch_id', 'deleted_at', 'updated_at']);
                 }
             }
 
-            $depoIdMap = array_change_key_case(DB::table('depos')->pluck('id', 'code')->all(), CASE_UPPER);
+            $depoIdMap = array_change_key_case(DB::table('depos')->whereNull('deleted_at')->pluck('id', 'code')->all(), CASE_UPPER);
 
             if (! empty($uniqueAreas)) {
                 $areaRows = [];
@@ -520,13 +584,14 @@ class BatchImportService
                             'code' => $a['code'],
                             'name' => $a['name'],
                             'depo_id' => $depoId,
+                            'deleted_at' => null,
                             'created_at' => $a['created_at'],
                             'updated_at' => $a['updated_at'],
                         ];
                     }
                 }
                 foreach (array_chunk($areaRows, 1000) as $chunk) {
-                    DB::table('areas')->upsert($chunk, ['code'], ['name', 'depo_id', 'batch_id', 'updated_at']);
+                    DB::table('areas')->upsert($chunk, ['code'], ['name', 'depo_id', 'batch_id', 'deleted_at', 'updated_at']);
                 }
             }
         });
@@ -742,8 +807,9 @@ class BatchImportService
 
             // 4. Validasi ketat AreaCode (terdaftar di Master atau kode resmi Area Luar: LUAR / OUT_AREA)
             $rawAreaCode = strtoupper($val('areacode'));
+            $normAreaCode = DistributorController::normalizeCodeFormat($rawAreaCode, 'AR', 5);
             $isOutOfArea = in_array($rawAreaCode, $outAreaTokens, true);
-            $areaObj = $isOutOfArea ? null : ($areaByCode[$rawAreaCode] ?? null);
+            $areaObj = $isOutOfArea ? null : ($areaByCode[$rawAreaCode] ?? $areaByCode[$normAreaCode] ?? null);
 
             if ($isOutOfArea) {
                 $rawDepoKey = strtoupper($val('depo'));
@@ -782,8 +848,9 @@ class BatchImportService
             }
 
             $rawDistCode = strtoupper($val('kodedistributor'));
+            $normDistCode = DistributorController::normalizeCodeFormat($rawDistCode, 'DST', 4);
             $masterDistCode = strtoupper(trim((string) $distObj->code));
-            if ($rawDistCode !== $masterDepoCode && $rawDistCode !== $masterDistCode) {
+            if ($rawDistCode !== $masterDepoCode && $rawDistCode !== $masterDistCode && $normDistCode !== $masterDistCode) {
                 $errors[] = "Baris {$excelLine}: AreaCode '{$rawAreaCode}' milik KodeDistributor '{$depoObj->code}' ({$distObj->code}), tidak sinkron dengan kolom KodeDistributor '{$val('kodedistributor')}'.";
                 if (count($errors) >= 25) {
                     break;
@@ -1011,6 +1078,36 @@ class BatchImportService
     }
 
     /**
+     * Petakan seluruh user berdasarkan username, email lengkap, dan prefix email (before '@').
+     *
+     * @return array{userMap: array<string, int>, emailMap: array<string, int>}
+     */
+    protected function buildUserLookupMaps(): array
+    {
+        $userMap = [];
+        $emailMap = [];
+
+        foreach (DB::table('users')->get(['id', 'username', 'email']) as $u) {
+            $id = (int) $u->id;
+            $uname = strtolower(trim((string) $u->username));
+            $email = strtolower(trim((string) $u->email));
+
+            if ($uname !== '') {
+                $userMap[$uname] = $id;
+            }
+            if ($email !== '') {
+                $emailMap[$email] = $id;
+                $localPart = explode('@', $email)[0] ?? '';
+                if ($localPart !== '' && ! isset($userMap[$localPart])) {
+                    $userMap[$localPart] = $id;
+                }
+            }
+        }
+
+        return ['userMap' => $userMap, 'emailMap' => $emailMap];
+    }
+
+    /**
      * 3. BULK IMPORT: Master Target Depo / Area (100k - 500k+ baris)
      */
     protected function processMasterTargetDistributorBulk(Generator $generator, array $header, ?string $forcedLevel = null, ?string $batchId = null): array
@@ -1031,8 +1128,38 @@ class BatchImportService
             $areaMap[strtoupper($a->code)] = ['id' => $a->id, 'depo_id' => $a->depo_id];
         }
 
-        $brandMap = array_change_key_case(DB::table('brands')->pluck('id', 'code')->all(), CASE_UPPER);
-        $userMap = array_change_key_case(DB::table('users')->pluck('id', 'username')->all(), CASE_LOWER);
+        $brandMap = [];
+        $singleBrandMap = [];
+        foreach (DB::table('brands')->get(['id', 'code', 'name', 'is_all_brands', 'component_brand_ids']) as $b) {
+            $bId = (int) $b->id;
+            $cKey = strtoupper(trim((string) $b->code));
+            $nKey = strtoupper(trim((string) $b->name));
+            $cNorm = preg_replace('/\s*\+\s*/', '+', $cKey);
+            $nNorm = preg_replace('/\s*\+\s*/', '+', $nKey);
+            if ($cKey !== '') {
+                $brandMap[$cKey] = $bId;
+                $brandMap[$cNorm] = $bId;
+            }
+            if ($nKey !== '') {
+                $brandMap[$nKey] = $brandMap[$nKey] ?? $bId;
+                $brandMap[$nNorm] = $brandMap[$nNorm] ?? $bId;
+            }
+            $isComp = (bool) ($b->is_all_brands ?? false)
+                || (! empty($b->component_brand_ids) && $b->component_brand_ids !== '[]')
+                || str_contains($cNorm, '+');
+            if (! $isComp && $cKey !== '') {
+                $singleBrandMap[$cKey] = $bId;
+                if ($nKey !== '') {
+                    $singleBrandMap[$nKey] = $singleBrandMap[$nKey] ?? $bId;
+                }
+            }
+        }
+        $maps = $this->buildUserLookupMaps();
+        $userMap = $maps['userMap'];
+        $emailMap = $maps['emailMap'];
+        $salesRoleId = (int) (DB::table('roles')->whereRaw('LOWER(name) = ?', ['sales'])->value('id') ?? 3);
+        $asmPosId = (int) (DB::table('positions')->whereRaw('UPPER(code) = ?', ['ASM'])->value('id') ?? 1);
+        $spvPosId = (int) (DB::table('positions')->whereRaw('UPPER(code) = ?', ['SPV'])->value('id') ?? 2);
 
         // Preload ASM per distributor dan SPV per area
         $asmByDist = [];
@@ -1063,7 +1190,9 @@ class BatchImportService
 
             $distributorId = $row['distributor_id'] ?? null;
             if (! $distributorId && ! empty($row['distributor_code'])) {
-                $distributorId = $distMap[strtoupper(trim((string) $row['distributor_code']))] ?? null;
+                $rawDistKey = strtoupper(trim((string) $row['distributor_code']));
+                $normDistKey = DistributorController::normalizeCodeFormat($rawDistKey, 'DST', 4);
+                $distributorId = $distMap[$rawDistKey] ?? $distMap[$normDistKey] ?? null;
             }
 
             $depoId = $row['depo_id'] ?? null;
@@ -1081,7 +1210,9 @@ class BatchImportService
             if ($forcedLevel !== 'DEPO') {
                 $areaId = $row['area_id'] ?? null;
                 if (! $areaId && ! empty($row['area_code'])) {
-                    $areaInfo = $areaMap[strtoupper(trim((string) $row['area_code']))] ?? null;
+                    $rawAreaKey = strtoupper(trim((string) $row['area_code']));
+                    $normAreaKey = DistributorController::normalizeCodeFormat($rawAreaKey, 'AR', 5);
+                    $areaInfo = $areaMap[$rawAreaKey] ?? $areaMap[$normAreaKey] ?? null;
                     if ($areaInfo) {
                         $areaId = $areaInfo['id'];
                         if (! $depoId) {
@@ -1093,7 +1224,34 @@ class BatchImportService
 
             $brandId = $row['brand_id'] ?? null;
             if (! $brandId && ! empty($row['brand_code'])) {
-                $brandId = $brandMap[strtoupper(trim((string) $row['brand_code']))] ?? null;
+                $rawBrandCode = preg_replace('/\s*\+\s*/', '+', strtoupper(trim((string) $row['brand_code'])));
+                $brandId = $brandMap[$rawBrandCode] ?? null;
+
+                if (! $brandId && str_contains($rawBrandCode, '+')) {
+                    $parts = array_values(array_filter(array_map('trim', explode('+', $rawBrandCode)), fn ($p) => $p !== ''));
+                    $compIds = [];
+                    $allValid = count($parts) >= 2;
+                    foreach ($parts as $part) {
+                        $foundId = $singleBrandMap[$part] ?? $brandMap[$part] ?? null;
+                        if (! $foundId) {
+                            $allValid = false;
+                            break;
+                        }
+                        $compIds[] = (int) $foundId;
+                    }
+                    if ($allValid) {
+                        $compIds = array_values(array_unique($compIds));
+                        $newBrand = Brand::create([
+                            'code' => $rawBrandCode,
+                            'name' => str_replace('+', ' + ', $rawBrandCode),
+                            'is_all_brands' => false,
+                            'component_brand_ids' => $compIds,
+                        ]);
+                        $brandId = (int) $newBrand->id;
+                        $brandMap[$rawBrandCode] = $brandId;
+                        $brandMap[strtoupper($newBrand->name)] = $brandId;
+                    }
+                }
             }
 
             if (! $distributorId || ! $depoId || ! $brandId) {
@@ -1117,6 +1275,11 @@ class BatchImportService
             $level = $forcedLevel ?? ($areaId ? 'AREA' : 'DEPO');
             if ($level === 'DEPO') {
                 $areaId = null;
+                // Target level DEPO wajib bermetrik SELL_IN; baris SELL_OUT/AO tanpa area_code diabaikan agar tidak memicu kartu ganda
+                if ($metrik !== 'SELL_IN') {
+                    $failedCount++;
+                    continue;
+                }
             }
 
             $rawPeriod = trim((string) ($row['period'] ?? $defaultPeriod));
@@ -1137,25 +1300,44 @@ class BatchImportService
                     $cleanUname = 'sulis';
                 }
                 if ($cleanUname !== 'vacant') {
-                    $userId = $userMap[$cleanUname] ?? null;
+                    $candidateEmail = $cleanUname . '@company.com';
+                    $userId = $userMap[$cleanUname] ?? $emailMap[$candidateEmail] ?? null;
+
                     if (! $userId) {
-                        $posId = $level === 'AREA' ? 2 : 1; // 1: ASM, 2: SPV
-                        $newUserId = DB::table('users')->insertGetId([
-                            'name' => ucwords(str_replace(['.', '_', '-'], ' ', $cleanUname)),
-                            'username' => $cleanUname,
-                            'email' => $cleanUname . '@company.com',
-                            'password' => bcrypt('password123'),
-                            'role_id' => 3, // Sales
-                            'position_id' => $posId,
-                            'aktif_from' => '2024-01-01',
-                            'is_eligible_konsumsi' => 1,
-                            'is_eligible_industri' => 0,
-                            'is_eligible_surabaya' => 0,
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ]);
-                        $userMap[$cleanUname] = $newUserId;
-                        $userId = $newUserId;
+                        $existingUserId = DB::table('users')
+                            ->whereRaw('LOWER(TRIM(username)) = ?', [$cleanUname])
+                            ->orWhereRaw('LOWER(TRIM(email)) = ?', [$candidateEmail])
+                            ->value('id');
+
+                        if ($existingUserId) {
+                            $userId = (int) $existingUserId;
+                            $userMap[$cleanUname] = $userId;
+                            $emailMap[$candidateEmail] = $userId;
+                        } else {
+                            $posId = $level === 'AREA' ? $spvPosId : $asmPosId;
+                            $emailToSave = $candidateEmail;
+                            if (isset($emailMap[$emailToSave]) || DB::table('users')->whereRaw('LOWER(TRIM(email)) = ?', [$emailToSave])->exists()) {
+                                $emailToSave = $cleanUname . '+' . substr(md5($cleanUname . microtime(true)), 0, 5) . '@company.com';
+                            }
+
+                            $newUserId = DB::table('users')->insertGetId([
+                                'name' => ucwords(str_replace(['.', '_', '-'], ' ', $cleanUname)),
+                                'username' => $cleanUname,
+                                'email' => $emailToSave,
+                                'password' => bcrypt('password123'),
+                                'role_id' => $salesRoleId,
+                                'position_id' => $posId,
+                                'aktif_from' => '2024-01-01',
+                                'is_eligible_konsumsi' => 1,
+                                'is_eligible_industri' => 0,
+                                'is_eligible_surabaya' => 0,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                            $userMap[$cleanUname] = $newUserId;
+                            $emailMap[$emailToSave] = $newUserId;
+                            $userId = $newUserId;
+                        }
                     }
                 }
             }
@@ -1336,7 +1518,12 @@ class BatchImportService
         $successCount = 0;
         $failedCount = 0;
 
-        $userMap = array_change_key_case(DB::table('users')->pluck('id', 'username')->all(), CASE_LOWER);
+        $maps = $this->buildUserLookupMaps();
+        $userMap = $maps['userMap'];
+        $emailMap = $maps['emailMap'];
+        $salesRoleId = (int) (DB::table('roles')->whereRaw('LOWER(name) = ?', ['sales'])->value('id') ?? 3);
+        $asmPosId = (int) (DB::table('positions')->whereRaw('UPPER(code) = ?', ['ASM'])->value('id') ?? 1);
+        $spvPosId = (int) (DB::table('positions')->whereRaw('UPPER(code) = ?', ['SPV'])->value('id') ?? 2);
         $customerByCode = array_change_key_case(DB::table('industri_customers')->pluck('id', 'customer_code')->all(), CASE_UPPER);
         $customerByName = array_change_key_case(DB::table('industri_customers')->pluck('id', 'customer_name')->all(), CASE_LOWER);
         $assignmentByCust = DB::table('sales_industri_assignments')
@@ -1432,7 +1619,12 @@ class BatchImportService
         $successCount = 0;
         $failedCount = 0;
 
-        $userMap = array_change_key_case(DB::table('users')->pluck('id', 'username')->all(), CASE_LOWER);
+        $maps = $this->buildUserLookupMaps();
+        $userMap = $maps['userMap'];
+        $emailMap = $maps['emailMap'];
+        $salesRoleId = (int) (DB::table('roles')->whereRaw('LOWER(name) = ?', ['sales'])->value('id') ?? 3);
+        $asmPosId = (int) (DB::table('positions')->whereRaw('UPPER(code) = ?', ['ASM'])->value('id') ?? 1);
+        $spvPosId = (int) (DB::table('positions')->whereRaw('UPPER(code) = ?', ['SPV'])->value('id') ?? 2);
         $now = now()->format('Y-m-d H:i:s');
         $pendingAssignments = [];
 
@@ -1508,7 +1700,12 @@ class BatchImportService
         $successCount = 0;
         $failedCount = 0;
 
-        $userMap = array_change_key_case(DB::table('users')->pluck('id', 'username')->all(), CASE_LOWER);
+        $maps = $this->buildUserLookupMaps();
+        $userMap = $maps['userMap'];
+        $emailMap = $maps['emailMap'];
+        $salesRoleId = (int) (DB::table('roles')->whereRaw('LOWER(name) = ?', ['sales'])->value('id') ?? 3);
+        $asmPosId = (int) (DB::table('positions')->whereRaw('UPPER(code) = ?', ['ASM'])->value('id') ?? 1);
+        $spvPosId = (int) (DB::table('positions')->whereRaw('UPPER(code) = ?', ['SPV'])->value('id') ?? 2);
         $defaultPeriod = date('Ym');
         $now = now()->format('Y-m-d H:i:s');
         $chunk = [];

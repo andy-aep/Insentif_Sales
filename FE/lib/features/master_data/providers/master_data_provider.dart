@@ -274,12 +274,16 @@ class MasterDataNotifier extends StateNotifier<MasterDataState> {
     required String code,
     required String name,
     List<String>? itemCodes,
+    bool isAllBrands = false,
+    List<int>? componentBrandIds,
   }) async {
     state = state.copyWith(isLoading: true, clearError: true, clearSuccess: true);
     try {
       final payload = {
         'code': code,
         'name': name,
+        'is_all_brands': isAllBrands,
+        'component_brand_ids': componentBrandIds ?? <int>[],
         if (itemCodes != null) 'item_codes': itemCodes,
       };
       if (id != null) {

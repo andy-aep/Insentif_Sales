@@ -7,6 +7,7 @@ use App\Models\Depo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class DepoController extends Controller
 {
@@ -55,12 +56,10 @@ class DepoController extends Controller
             if (!empty($validated['areas'])) {
                 foreach ($validated['areas'] as $aIdx => $areaData) {
                     $areaCode = !empty($areaData['code'])
-                        ? strtoupper(trim($areaData['code']))
+                        ? DistributorController::normalizeCodeFormat($areaData['code'], 'AR', 5)
                         : DistributorController::nextSequentialCode(Area::class, 'AR', 5);
-                    $baseCode = $areaCode;
-                    $counter = 1;
-                    while (Area::where('code', $areaCode)->exists()) {
-                        $areaCode = $baseCode . '-' . $counter++;
+                    if (Area::where('code', $areaCode)->exists()) {
+                        $areaCode = DistributorController::nextSequentialCode(Area::class, 'AR', 5);
                     }
                     $depo->areas()->create([
                         'code' => $areaCode,
@@ -106,12 +105,15 @@ class DepoController extends Controller
                     $areaId = $areaData['id'] ?? null;
                     $areaName = $areaData['name'] ?? '';
                     $areaCode = !empty($areaData['code'])
-                        ? strtoupper(trim($areaData['code']))
+                        ? DistributorController::normalizeCodeFormat($areaData['code'], 'AR', 5)
                         : DistributorController::nextSequentialCode(Area::class, 'AR', 5);
 
                     if ($areaId) {
                         $area = Area::where('id', $areaId)->where('depo_id', $depo->id)->first();
                         if ($area) {
+                            if ($areaCode !== $area->code && Area::where('code', $areaCode)->where('id', '!=', $area->id)->exists()) {
+                                $areaCode = DistributorController::nextSequentialCode(Area::class, 'AR', 5);
+                            }
                             $area->update([
                                 'code' => $areaCode,
                                 'name' => $areaName,
@@ -119,10 +121,8 @@ class DepoController extends Controller
                             $keptAreaIds[] = $area->id;
                         }
                     } else {
-                        $baseCode = $areaCode;
-                        $counter = 1;
-                        while (Area::where('code', $areaCode)->exists()) {
-                            $areaCode = $baseCode . '-' . $counter++;
+                        if (Area::where('code', $areaCode)->exists()) {
+                            $areaCode = DistributorController::nextSequentialCode(Area::class, 'AR', 5);
                         }
                         $area = $depo->areas()->create([
                             'code' => $areaCode,
@@ -131,7 +131,13 @@ class DepoController extends Controller
                         $keptAreaIds[] = $area->id;
                     }
                 }
-                $depo->areas()->whereNotIn('id', $keptAreaIds)->delete();
+                $areasToDelete = $depo->areas()->whereNotIn('id', $keptAreaIds)->get();
+                foreach ($areasToDelete as $oldArea) {
+                    if ($reason = DistributorController::findAreaUsageReason($oldArea)) {
+                        throw ValidationException::withMessages(['areas' => [$reason]]);
+                    }
+                    $oldArea->delete();
+                }
             }
 
             return response()->json([
@@ -143,7 +149,14 @@ class DepoController extends Controller
 
     public function destroy(Depo $depo): JsonResponse
     {
-        $depo->delete();
+        if ($reason = DistributorController::findDepoUsageReason($depo)) {
+            return response()->json(['message' => $reason], 422);
+        }
+
+        DB::transaction(function () use ($depo) {
+            $depo->areas()->delete();
+            $depo->delete();
+        });
 
         return response()->json(['message' => 'Depo berhasil dihapus']);
     }
