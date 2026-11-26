@@ -158,6 +158,7 @@ class DashboardController extends Controller
             ->get(['user_id', 'level', 'metrik_target', 'distributor_id', 'depo_id', 'area_id', 'brand_id', 'target_quota', 'target_outlet']);
 
         $allAssignments = SalesDistributorAssignment::where('is_active', true)
+            ->where(fn ($q) => $q->whereIn('period', $periodList)->orWhereNull('period'))
             ->when($scopedDistIds !== null, fn ($q) => $q->whereIn('distributor_id', $scopedDistIds))
             ->get(['user_id', 'distributor_id', 'depo_id', 'area_id']);
 
@@ -644,6 +645,7 @@ class DashboardController extends Controller
 
         // Ambil penugasan wilayah dari SalesDistributorAssignment jika ada
         $assignments = SalesDistributorAssignment::where('is_active', true)
+            ->where(fn ($q) => $q->whereIn('period', $periodList)->orWhereNull('period'))
             ->where(function ($q) use ($user) {
                 $q->where('user_id', $user->id)
                     ->orWhere('asm_id', $user->id)
@@ -666,7 +668,7 @@ class DashboardController extends Controller
                         $q->orWhere(function ($sq) use ($assignedDepoIdsFromMap) {
                             $sq->where('level', 'DEPO')->whereIn('depo_id', $assignedDepoIdsFromMap);
                         });
-                    } elseif ($posCode === 'SPV' && $assignedAreaIdsFromMap->isNotEmpty()) {
+                    } elseif (in_array($posCode, ['SPV', 'ASC'], true) && $assignedAreaIdsFromMap->isNotEmpty()) {
                         $q->orWhere(function ($sq) use ($assignedAreaIdsFromMap) {
                             $sq->where('level', 'AREA')->whereIn('area_id', $assignedAreaIdsFromMap);
                         });

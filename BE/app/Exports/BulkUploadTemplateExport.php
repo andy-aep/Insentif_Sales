@@ -164,6 +164,13 @@ class BulkUploadDataSheet implements FromArray, ShouldAutoSize, WithHeadings, Wi
                 'target_outlet',
                 'username',
             ],
+            'master_target_industri', 'master_target_surabaya' => [
+                'period',
+                'username',
+                'metrik_target',
+                'target_quota',
+                'target_outlet',
+            ],
             'depo' => [
                 'code',
                 'name',
@@ -276,6 +283,14 @@ class BulkUploadDataSheet implements FromArray, ShouldAutoSize, WithHeadings, Wi
                 ['202610', 'DST01', 'DP02', '', 'KAPAL+JEMPOL', 'SELL_IN', 4000, '', 'budi_asm'],
                 ['202610', 'DST01', 'DP02', 'AR03', 'KAPAL+JEMPOL', 'SELL_OUT', 1500, 20, 'rian_spv'],
             ],
+            'master_target_industri' => [
+                ['202611', 'andre_spv', 'SELL_IN', 50000, ''],
+                ['202611', 'andre_spv', 'NOO', '', 3],
+            ],
+            'master_target_surabaya' => [
+                ['202611', 'eko_surabaya', 'SELL_OUT', 3500, ''],
+                ['202611', 'eko_surabaya', 'AO', '', 40],
+            ],
             'depo' => [
                 ['DP01', 'Depo Surabaya Timur', 'DST01'],
                 ['DP02', 'Depo A2 - Surabaya Barat', 'DST01'],
@@ -292,6 +307,8 @@ class BulkUploadDataSheet implements FromArray, ShouldAutoSize, WithHeadings, Wi
     {
         return match ($this->entity) {
             'master_target_distributor', 'master_target_depo', 'master_target_area' => $this->getMasterTargetData(),
+            'master_target_industri' => $this->getMasterTargetSalesData('INDUSTRI'),
+            'master_target_surabaya' => $this->getMasterTargetSalesData('SURABAYA'),
             'distributor' => $this->getDistributorData(),
             'sellin_distributor' => $this->getSellinDistributorData(),
             'sellout_distributor' => $this->getSelloutDistributorData(),
@@ -353,6 +370,36 @@ class BulkUploadDataSheet implements FromArray, ShouldAutoSize, WithHeadings, Wi
                     (float) $t->target_quota,
                     $t->level === 'AREA' ? ($t->target_outlet ?? '') : '',
                     $t->user?->username ?? '',
+                ];
+            })
+            ->toArray();
+    }
+
+    private function getMasterTargetSalesData(string $kategoriSkema): array
+    {
+        $periodList = $this->parsePeriodList();
+        $q = MasterTarget::with(['user'])
+            ->where('kategori_skema', $kategoriSkema);
+
+        if (! empty($periodList)) {
+            $q->whereIn('period', $periodList);
+        }
+
+        return $q->orderBy('period')
+            ->orderBy('user_id')
+            ->orderBy('metrik_target')
+            ->get()
+            ->map(function ($t) {
+                $metrik = strtoupper((string) ($t->metrik_target ?? ''));
+                $isOutletMetric = in_array($metrik, ['NOO', 'AO'], true);
+                $outletVal = $t->target_outlet ?? ($isOutletMetric ? (int) round((float) $t->target_quota) : '');
+
+                return [
+                    (string) $t->period,
+                    $t->user?->username ?? '',
+                    $metrik,
+                    $isOutletMetric ? '' : (float) $t->target_quota,
+                    $isOutletMetric ? $outletVal : '',
                 ];
             })
             ->toArray();
@@ -713,6 +760,20 @@ class BulkUploadGuideSheet implements FromArray, ShouldAutoSize, WithStyles, Wit
                 ['target_quota', 'WAJIB', 'Angka / Desimal', '5000', 'Besaran kuota Target Depo (Sell-In) atau Area (Sell-Out) dalam satuan Kg'],
                 ['target_outlet', 'OPSIONAL', 'Angka Bulat', '25', 'Target jumlah toko Active Outlet (AO) dalam satuan Toko — isi pada baris Area, kosongkan pada baris Depo'],
                 ['username', 'OPSIONAL', 'Teks (Username)', 'budi_asm / rian_spv', 'Username ASM (untuk Depo) atau SPV (untuk Area) — otomatis jika dikosongkan (lihat daftar F)'],
+            ],
+            'master_target_industri' => [
+                ['period', 'WAJIB', 'YYYYMM / YYYY', '202611', 'Periode target 6 digit (contoh: 202611) atau 4 digit tahun (contoh: 2026 untuk otomatis 12 bulan)'],
+                ['username', 'WAJIB', 'Teks (Username)', 'andre_spv', 'Username sales Industri sesuai Master Pengguna (lihat daftar F di bawah)'],
+                ['metrik_target', 'WAJIB', 'SELL_IN / NOO', 'SELL_IN', 'Gunakan SELL_IN untuk target volume (Kg) atau NOO untuk target New Open Outlet (Toko/Customer Baru)'],
+                ['target_quota', 'WAJIB (SELL_IN)', 'Angka / Desimal', '50000', 'Besaran kuota Target Sell-In Industri dalam satuan Kg (kosongkan jika baris metrik NOO)'],
+                ['target_outlet', 'WAJIB (NOO)', 'Angka Bulat', '3', 'Target jumlah toko/customer baru NOO dalam satuan Toko (kosongkan jika baris metrik SELL_IN)'],
+            ],
+            'master_target_surabaya' => [
+                ['period', 'WAJIB', 'YYYYMM / YYYY', '202611', 'Periode target 6 digit (contoh: 202611) atau 4 digit tahun (contoh: 2026 untuk otomatis 12 bulan)'],
+                ['username', 'WAJIB', 'Teks (Username)', 'eko_surabaya', 'Username sales TO/Canvasing Surabaya sesuai Master Pengguna (lihat daftar F di bawah)'],
+                ['metrik_target', 'WAJIB', 'SELL_OUT / AO', 'SELL_OUT', 'Gunakan SELL_OUT untuk target volume (Kg) atau AO untuk target Active Outlet (Toko)'],
+                ['target_quota', 'WAJIB (SELL_OUT)', 'Angka / Desimal', '3500', 'Besaran kuota Target Sell-Out Surabaya dalam satuan Kg (kosongkan jika baris metrik AO)'],
+                ['target_outlet', 'WAJIB (AO)', 'Angka Bulat', '40', 'Target jumlah toko Active Outlet (AO) dalam satuan Toko (kosongkan jika baris metrik SELL_OUT)'],
             ],
             'depo' => [
                 ['code', 'WAJIB', 'Teks Unik', 'DP03', 'Kode unik depo (jika sudah ada, data akan diperbarui)'],

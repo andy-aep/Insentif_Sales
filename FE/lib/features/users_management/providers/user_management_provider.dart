@@ -455,19 +455,25 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
       return true;
     } on DioException catch (e) {
       final err = ApiException.fromDioException(e);
+      if (e.response != null) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Gagal menyimpan hak akses: ${err.message}',
+        );
+        return false;
+      }
       _localUpdateRolePermissions(roleId, permissions);
       state = state.copyWith(
         isLoading: false,
-        successMessage: 'Hak akses diperbarui: ${err.message}',
+        successMessage: 'Hak akses diperbarui lokal: ${err.message}',
       );
       return true;
     } catch (e) {
-      _localUpdateRolePermissions(roleId, permissions);
       state = state.copyWith(
         isLoading: false,
-        successMessage: 'Hak akses diperbarui',
+        errorMessage: 'Gagal menyimpan hak akses: $e',
       );
-      return true;
+      return false;
     }
   }
 

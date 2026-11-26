@@ -21,6 +21,8 @@ class BatchUploadController extends Controller
         'master_target_distributor',
         'master_target_depo',
         'master_target_area',
+        'master_target_industri',
+        'master_target_surabaya',
         'sellin_distributor',
         'sellin_industri',
         'industri_customer',

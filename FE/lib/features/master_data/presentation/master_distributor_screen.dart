@@ -800,10 +800,13 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
     final nameCtrl = TextEditingController(text: depo?.name ?? '');
 
     List<_AreaDraft> draftAreas = [];
-    if (depo != null && depo.areas.isNotEmpty) {
-      draftAreas = depo.areas.map((a) => _AreaDraft(id: a.id, code: a.code, name: a.name)).toList();
+    if (depo != null) {
+      final effectiveAreas = depo.areas.isNotEmpty
+          ? depo.areas
+          : state.areas.where((a) => a.depoId == depo.id).toList();
+      draftAreas = effectiveAreas.map((a) => _AreaDraft(id: a.id, code: a.code, name: a.name)).toList();
     } else {
-      draftAreas = [_AreaDraft(code: '', name: '')];
+      draftAreas = [_AreaDraft(code: _nextAreaCode(), name: '')];
     }
 
     showDialog(
@@ -834,11 +837,15 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                   children: [
                     // Induk Distributor Selector
                     DropdownButtonFormField<int>(
-                      initialValue: selectedDistId,
+                      initialValue: state.distributors.any((d) => d.id == selectedDistId) ? selectedDistId : null,
                       isExpanded: true,
                       dropdownColor: colors.bgElevated,
                       style: TextStyle(color: colors.textPrimary),
-                      decoration: const InputDecoration(labelText: 'Induk Distributor *'),
+                      decoration: const InputDecoration(
+                        labelText: 'Induk Distributor *',
+                        prefixIcon: Icon(LucideIcons.building2, size: 16),
+                        prefixIconConstraints: BoxConstraints(minWidth: 36, minHeight: 36),
+                      ),
                       items: state.distributors.map((dist) {
                         return DropdownMenuItem<int>(
                           value: dist.id,
@@ -1021,11 +1028,15 @@ class _MasterDistributorScreenState extends ConsumerState<MasterDistributorScree
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   DropdownButtonFormField<int>(
-                    initialValue: selectedDepoId,
+                    initialValue: state.depos.any((d) => d.id == selectedDepoId) ? selectedDepoId : null,
                     isExpanded: true,
                     dropdownColor: colors.bgElevated,
                     style: TextStyle(color: colors.textPrimary),
-                    decoration: const InputDecoration(labelText: 'Pilih Induk Depo *'),
+                    decoration: const InputDecoration(
+                      labelText: 'Pilih Induk Depo *',
+                      prefixIcon: Icon(LucideIcons.warehouse, size: 16),
+                      prefixIconConstraints: BoxConstraints(minWidth: 36, minHeight: 36),
+                    ),
                     items: state.depos.map((depo) {
                       final distName = depo.distributor?.name ?? 'Distributor';
                       return DropdownMenuItem<int>(

@@ -76,10 +76,10 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
     final userState = ref.read(userManagementProvider);
     final masterState = ref.read(masterDataProvider);
 
-    // Sales yang eligible insentif konsumsi (prioritas isEligibleKonsumsi == true atau berposisi NSM/LSM/ASM/SPV)
+    // Sales yang eligible insentif konsumsi (prioritas isEligibleKonsumsi == true atau berposisi NSM/LSM/ASM/SPV/ASC)
     final eligibleSales = userState.users.where((u) {
       final pCode = u.position?.code.toUpperCase() ?? '';
-      return u.isEligibleKonsumsi || ['NSM', 'LSM', 'ASM', 'SPV'].contains(pCode);
+      return u.isEligibleKonsumsi || ['NSM', 'LSM', 'ASM', 'SPV', 'ASC'].contains(pCode);
     }).toList();
     final allSalesList = eligibleSales.isNotEmpty ? eligibleSales : userState.users;
 
@@ -98,6 +98,20 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
     final lsmUsers = userState.users.where((u) => u.position?.code.toUpperCase() == 'LSM').toList();
     final asmUsers = userState.users.where((u) => u.position?.code.toUpperCase() == 'ASM').toList();
 
+    List<DepoModel> deposForDist(DistributorModel? d) {
+      if (d == null) return const [];
+      if (d.depos.isNotEmpty) return d.depos;
+      return masterState.depos.where((dp) => dp.distributorId == d.id).toList();
+    }
+
+    List<AreaModel> areasForDepo(DepoModel? dp) {
+      if (dp == null) return const [];
+      if (dp.areas.isNotEmpty) return dp.areas;
+      return masterState.areas.where((ar) => ar.depoId == dp.id).toList();
+    }
+
+    final assignmentState = ref.read(salesAssignmentProvider);
+
     // Default form states
     UserModel selectedUser = allSalesList.first;
     UserModel? selectedNsm = nsmUsers.isNotEmpty ? nsmUsers.first : null;
@@ -107,14 +121,43 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
     RegionModel? selectedRegion = masterState.regions.isNotEmpty ? masterState.regions.first : null;
     DistributorModel? selectedDistributor = masterState.distributors.isNotEmpty ? masterState.distributors.first : null;
 
-    // Depo & Area selection
-    DepoModel? selectedDepo = (selectedDistributor != null && selectedDistributor.depos.isNotEmpty) ? selectedDistributor.depos.first : null;
-    AreaModel? selectedArea = (selectedDepo != null && selectedDepo.areas.isNotEmpty) ? selectedDepo.areas.first : null;
+    // Depo & Area selection (dengan fallback dari masterState bila nested list belum terisi)
+    final initDepos = deposForDist(selectedDistributor);
+    DepoModel? selectedDepo = initDepos.isNotEmpty ? initDepos.first : null;
+    final initAreas = areasForDepo(selectedDepo);
+    AreaModel? selectedArea = initAreas.isNotEmpty ? initAreas.first : null;
 
     final periodCtrl = TextEditingController(text: '202610');
     final notesCtrl = TextEditingController();
 
-    final assignmentState = ref.read(salesAssignmentProvider);
+    void syncAsmForDistributor(DistributorModel? d, String p) {
+      if (d == null) return;
+      final asmSource = asmUsers.isNotEmpty ? asmUsers : allSalesList;
+      final exact = assignmentState.distributorAssignments.firstWhereOrNull(
+        (a) =>
+            a.isActive &&
+            a.distributorId == d.id &&
+            a.areaId == null &&
+            a.period == p &&
+            (a.user?.position?.code.toUpperCase() == 'ASM'),
+      );
+      final anyPeriod = exact ??
+          assignmentState.distributorAssignments.firstWhereOrNull(
+            (a) =>
+                a.isActive &&
+                a.distributorId == d.id &&
+                a.areaId == null &&
+                (a.user?.position?.code.toUpperCase() == 'ASM'),
+          );
+      if (anyPeriod != null) {
+        final matched = asmSource.firstWhereOrNull((u) => u.id == anyPeriod.userId);
+        if (matched != null) {
+          selectedAsm = matched;
+        }
+      }
+    }
+
+    syncAsmForDistributor(selectedDistributor, periodCtrl.text.trim());
 
     // NSM territory customization state
     String nsmScope = 'SPECIFIC';
@@ -150,7 +193,7 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
           final isNsm = posCode == 'NSM';
           final isLsm = posCode == 'LSM';
           final isAsm = posCode == 'ASM';
-          final isSpv = posCode == 'SPV';
+          final isSpv = posCode == 'SPV' || posCode == 'ASC';
 
           return AlertDialog(
             backgroundColor: colors.bgDialog,
@@ -209,12 +252,13 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                     Text('Sales Personil Lapangan (Eligible Konsumsi) *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<int>(
-                      initialValue: selectedUser.id,
+                      initialValue: allSalesList.any((u) => u.id == selectedUser.id) ? selectedUser.id : null,
                       dropdownColor: colors.bgElevated,
                       isExpanded: true,
                       style: TextStyle(color: colors.textPrimary, fontSize: 14),
                       decoration: InputDecoration(
                         prefixIcon: const Icon(LucideIcons.user, size: 18),
+                        prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                         filled: true,
                         fillColor: colors.bgElevated,
@@ -820,30 +864,37 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                       // SPV: Pilih Atasan ASM
                       Text('Atasan ASM Penanggung Jawab Distributor *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 6),
-                      DropdownButtonFormField<int>(
-                        initialValue: selectedAsm?.id,
-                        dropdownColor: colors.bgElevated,
-                        isExpanded: true,
-                        style: TextStyle(color: colors.textPrimary, fontSize: 14),
-                        decoration: InputDecoration(
-                          prefixIcon: Icon(LucideIcons.shieldCheck, size: 18, color: context.semantic.warning),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          filled: true,
-                          fillColor: colors.bgElevated,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        ),
-                        items: (asmUsers.isNotEmpty ? asmUsers : allSalesList).map((a) {
-                          return DropdownMenuItem<int>(
-                            value: a.id,
-                            child: Text('${a.name} (@${a.username})', overflow: TextOverflow.ellipsis),
+                      Builder(
+                        builder: (_) {
+                          final asmOpts = asmUsers.isNotEmpty ? asmUsers : allSalesList;
+                          return DropdownButtonFormField<int>(
+                            key: ValueKey('spv_asm_${selectedDistributor?.id}_${selectedAsm?.id}'),
+                            initialValue: selectedAsm != null && asmOpts.any((u) => u.id == selectedAsm!.id) ? selectedAsm!.id : null,
+                            dropdownColor: colors.bgElevated,
+                            isExpanded: true,
+                            style: TextStyle(color: colors.textPrimary, fontSize: 14),
+                            decoration: InputDecoration(
+                              prefixIcon: Icon(LucideIcons.shieldCheck, size: 18, color: context.semantic.warning),
+                              prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              filled: true,
+                              fillColor: colors.bgElevated,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            ),
+                            items: asmOpts.map((a) {
+                              return DropdownMenuItem<int>(
+                                value: a.id,
+                                child: Text('${a.name} (@${a.username})', overflow: TextOverflow.ellipsis),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setDialogState(() {
+                                  selectedAsm = asmOpts.firstWhere((u) => u.id == val);
+                                });
+                              }
+                            },
                           );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setDialogState(() {
-                              selectedAsm = allSalesList.firstWhere((u) => u.id == val);
-                            });
-                          }
                         },
                       ),
                       const SizedBox(height: 14),
@@ -852,12 +903,16 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                       Text('Pilih Distributor *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 6),
                       DropdownButtonFormField<int>(
-                        initialValue: selectedDistributor?.id,
+                        key: ValueKey('spv_dist_${selectedDistributor?.id}'),
+                        initialValue: selectedDistributor != null && masterState.distributors.any((d) => d.id == selectedDistributor!.id)
+                            ? selectedDistributor!.id
+                            : null,
                         dropdownColor: colors.bgElevated,
                         isExpanded: true,
                         style: TextStyle(color: colors.textPrimary, fontSize: 14),
                         decoration: InputDecoration(
                           prefixIcon: const Icon(LucideIcons.truck, size: 18),
+                          prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           filled: true,
                           fillColor: colors.bgElevated,
@@ -873,8 +928,11 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                           if (val != null) {
                             setDialogState(() {
                               selectedDistributor = masterState.distributors.firstWhere((d) => d.id == val);
-                              selectedDepo = selectedDistributor!.depos.isNotEmpty ? selectedDistributor!.depos.first : null;
-                              selectedArea = (selectedDepo != null && selectedDepo!.areas.isNotEmpty) ? selectedDepo!.areas.first : null;
+                              final distDepos = deposForDist(selectedDistributor);
+                              selectedDepo = distDepos.isNotEmpty ? distDepos.first : null;
+                              final dpAreas = areasForDepo(selectedDepo);
+                              selectedArea = dpAreas.isNotEmpty ? dpAreas.first : null;
+                              syncAsmForDistributor(selectedDistributor, periodCtrl.text.trim());
                             });
                           }
                         },
@@ -884,32 +942,39 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                       // Pilih Depo
                       Text('Pilih Depo Distributor *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 6),
-                      DropdownButtonFormField<int>(
-                        key: ValueKey('depo_field_${selectedDistributor?.id}_${selectedDepo?.id}'),
-                        initialValue: selectedDepo?.id,
-                        dropdownColor: colors.bgElevated,
-                        isExpanded: true,
-                        style: TextStyle(color: colors.textPrimary, fontSize: 14),
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(LucideIcons.home, size: 18),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          filled: true,
-                          fillColor: colors.bgElevated,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        ),
-                        items: (selectedDistributor?.depos ?? []).map((d) {
-                          return DropdownMenuItem<int>(
-                            value: d.id,
-                            child: Text('${d.name} (${d.code})', overflow: TextOverflow.ellipsis),
+                      Builder(
+                        builder: (_) {
+                          final distDepos = deposForDist(selectedDistributor);
+                          return DropdownButtonFormField<int>(
+                            key: ValueKey('depo_field_${selectedDistributor?.id}_${selectedDepo?.id}_${distDepos.length}'),
+                            initialValue: selectedDepo != null && distDepos.any((d) => d.id == selectedDepo!.id) ? selectedDepo!.id : null,
+                            dropdownColor: colors.bgElevated,
+                            isExpanded: true,
+                            style: TextStyle(color: colors.textPrimary, fontSize: 14),
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(LucideIcons.home, size: 18),
+                              prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              filled: true,
+                              fillColor: colors.bgElevated,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            ),
+                            items: distDepos.map((d) {
+                              return DropdownMenuItem<int>(
+                                value: d.id,
+                                child: Text('${d.name} (${d.code})', overflow: TextOverflow.ellipsis),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setDialogState(() {
+                                  selectedDepo = distDepos.firstWhere((d) => d.id == val);
+                                  final dpAreas = areasForDepo(selectedDepo);
+                                  selectedArea = dpAreas.isNotEmpty ? dpAreas.first : null;
+                                });
+                              }
+                            },
                           );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setDialogState(() {
-                              selectedDepo = selectedDistributor?.depos.firstWhere((d) => d.id == val);
-                              selectedArea = (selectedDepo != null && selectedDepo!.areas.isNotEmpty) ? selectedDepo!.areas.first : null;
-                            });
-                          }
                         },
                       ),
                       const SizedBox(height: 14),
@@ -917,31 +982,37 @@ class _MasterSurabayaScreenState extends ConsumerState<MasterSurabayaScreen> wit
                       // Pilih Area
                       Text('Pilih Area yang Di-manage SPV *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 6),
-                      DropdownButtonFormField<int>(
-                        key: ValueKey('area_field_${selectedDepo?.id}_${selectedArea?.id}'),
-                        initialValue: selectedArea?.id,
-                        dropdownColor: colors.bgElevated,
-                        isExpanded: true,
-                        style: TextStyle(color: colors.textPrimary, fontSize: 14),
-                        decoration: InputDecoration(
-                          prefixIcon: Icon(LucideIcons.mapPin, size: 18, color: context.semantic.info),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          filled: true,
-                          fillColor: colors.bgElevated,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        ),
-                        items: (selectedDepo?.areas ?? []).map((a) {
-                          return DropdownMenuItem<int>(
-                            value: a.id,
-                            child: Text('${a.name} (${a.code})', overflow: TextOverflow.ellipsis),
+                      Builder(
+                        builder: (_) {
+                          final dpAreas = areasForDepo(selectedDepo);
+                          return DropdownButtonFormField<int>(
+                            key: ValueKey('area_field_${selectedDepo?.id}_${selectedArea?.id}_${dpAreas.length}'),
+                            initialValue: selectedArea != null && dpAreas.any((a) => a.id == selectedArea!.id) ? selectedArea!.id : null,
+                            dropdownColor: colors.bgElevated,
+                            isExpanded: true,
+                            style: TextStyle(color: colors.textPrimary, fontSize: 14),
+                            decoration: InputDecoration(
+                              prefixIcon: Icon(LucideIcons.mapPin, size: 18, color: context.semantic.info),
+                              prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              filled: true,
+                              fillColor: colors.bgElevated,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            ),
+                            items: dpAreas.map((a) {
+                              return DropdownMenuItem<int>(
+                                value: a.id,
+                                child: Text('${a.name} (${a.code})', overflow: TextOverflow.ellipsis),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setDialogState(() {
+                                  selectedArea = dpAreas.firstWhere((a) => a.id == val);
+                                });
+                              }
+                            },
                           );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setDialogState(() {
-                              selectedArea = selectedDepo!.areas.firstWhere((a) => a.id == val);
-                            });
-                          }
                         },
                       ),
                       const SizedBox(height: 14),

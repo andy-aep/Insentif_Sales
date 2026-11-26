@@ -8,6 +8,7 @@ import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../../../core/widgets/responsive_table.dart';
 import '../../../data/models/auth_user_model.dart';
 import '../../../data/models/master_model.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../master_data/providers/master_data_provider.dart';
 import '../providers/user_management_provider.dart';
 
@@ -204,14 +205,19 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                     Row(
                       children: [
                         Expanded(
-                          child: DropdownButtonFormField<int>(
-                            initialValue: selectedRoleId,
+                          child: DropdownButtonFormField<int?>(
+                            initialValue: state.roles.any((r) => r.id == selectedRoleId)
+                                ? selectedRoleId
+                                : (state.roles.isNotEmpty ? state.roles.first.id : null),
                             dropdownColor: colors.bgCard,
                             isExpanded: true,
                             style: TextStyle(color: colors.textPrimary, fontSize: 13),
-                            decoration: const InputDecoration(labelText: 'Role Akses'),
+                            decoration: const InputDecoration(
+                              labelText: 'Role Akses',
+                              prefixIconConstraints: BoxConstraints(minWidth: 36, minHeight: 36),
+                            ),
                             items: state.roles.map((r) {
-                              return DropdownMenuItem(
+                              return DropdownMenuItem<int?>(
                                 value: r.id,
                                 child: Text(r.displayName, overflow: TextOverflow.ellipsis),
                               );
@@ -224,18 +230,21 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                         const SizedBox(width: 12),
                         Expanded(
                           child: DropdownButtonFormField<int?>(
-                            initialValue: selectedPosId,
+                            initialValue: state.positions.any((p) => p.id == selectedPosId) ? selectedPosId : null,
                             dropdownColor: colors.bgCard,
                             isExpanded: true,
                             style: TextStyle(color: colors.textPrimary, fontSize: 13),
-                            decoration: const InputDecoration(labelText: 'Posisi Sales'),
+                            decoration: const InputDecoration(
+                              labelText: 'Posisi Sales',
+                              prefixIconConstraints: BoxConstraints(minWidth: 36, minHeight: 36),
+                            ),
                             items: [
-                              const DropdownMenuItem(
+                              const DropdownMenuItem<int?>(
                                 value: null,
                                 child: Text('Tanpa Posisi', overflow: TextOverflow.ellipsis),
                               ),
                               ...state.positions.map((p) {
-                                return DropdownMenuItem(
+                                return DropdownMenuItem<int?>(
                                   value: p.id,
                                   child: Text('${p.name} (${p.code})', overflow: TextOverflow.ellipsis),
                                 );
@@ -270,7 +279,10 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
                               children: [
                                 Expanded(
                                   child: DropdownButtonFormField<int?>(
-                                    initialValue: selectedSapCode,
+                                    key: ValueKey('user_sap_${selectedSapCode}_${sapList.length}'),
+                                    initialValue: selectedSapCode != null && sapList.any((s) => s.slpCode == selectedSapCode)
+                                        ? selectedSapCode
+                                        : null,
                                     dropdownColor: colors.bgCard,
                                     isExpanded: true,
                                     style: TextStyle(color: colors.textPrimary, fontSize: 13),
@@ -1432,12 +1444,15 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
             'can_delete': existing.canDelete,
           };
         } else {
-          final isAdmin = role.name.toLowerCase().contains('admin');
+          final roleNameLower = role.name.trim().toLowerCase();
+          final isSuperAdmin = roleNameLower == 'administrator' ||
+              roleNameLower == 'superadmin' ||
+              roleNameLower == 'admin';
           _workingPermissions[menu.id] = {
-            'can_view': isAdmin,
-            'can_create': isAdmin,
-            'can_update': isAdmin,
-            'can_delete': isAdmin,
+            'can_view': isSuperAdmin,
+            'can_create': isSuperAdmin,
+            'can_update': isSuperAdmin,
+            'can_delete': isSuperAdmin,
           };
         }
       }
@@ -1454,12 +1469,15 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
               'can_delete': existing.canDelete,
             };
           } else {
-            final isAdmin = role.name.toLowerCase().contains('admin');
+            final roleNameLower = role.name.trim().toLowerCase();
+            final isSuperAdmin = roleNameLower == 'administrator' ||
+                roleNameLower == 'superadmin' ||
+                roleNameLower == 'admin';
             _workingPermissions[menu.id] = {
-              'can_view': isAdmin,
-              'can_create': isAdmin,
-              'can_update': isAdmin,
-              'can_delete': isAdmin,
+              'can_view': isSuperAdmin,
+              'can_create': isSuperAdmin,
+              'can_update': isSuperAdmin,
+              'can_delete': isSuperAdmin,
             };
           }
         }
@@ -1592,14 +1610,25 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> wit
       }).toList();
 
       final success = await ref.read(userManagementProvider.notifier).updateRolePermissions(role.id, payload);
+      if (success) {
+        if (mounted) {
+          setState(() => _lastSyncedRoleId = null);
+        }
+        if (ref.read(authProvider).user?.roleId == role.id) {
+          await ref.read(authProvider.notifier).checkAuth();
+        }
+      }
       if (mounted) {
+        final errMsg = ref.read(userManagementProvider).errorMessage;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              success ? 'Hak akses role "${role.displayName}" berhasil disimpan!' : 'Gagal menyimpan hak akses',
+              success
+                  ? 'Hak akses role "${role.displayName}" berhasil disimpan!'
+                  : (errMsg ?? 'Gagal menyimpan hak akses'),
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            backgroundColor: success ? context.semantic.success : context.semantic.danger,
+            backgroundColor: success ? context.semantic.successSolid : context.semantic.dangerSolid,
             behavior: SnackBarBehavior.floating,
           ),
         );

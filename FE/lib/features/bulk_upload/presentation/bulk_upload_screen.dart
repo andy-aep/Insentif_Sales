@@ -50,6 +50,8 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
     'industri_customer': 'Master: Customer & Assignment Sales Industri',
     'distributor': 'Master: Distributor, Depo & Area',
     'master_target_distributor': 'Master: Target Distributor (Depo & Area)',
+    'master_target_industri': 'Master: Target Sales Industri (Sell-In & NOO)',
+    'master_target_surabaya': 'Master: Target Sales Surabaya (Sell-Out & AO)',
   };
 
   final Map<String, List<Map<String, String>>> _entityColumnGuides = {
@@ -114,6 +116,20 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
       {'col': 'target_quota', 'req': 'WAJIB', 'ex': '5000 / 1500', 'desc': 'Besaran kuota Target Depo atau Area (Kg)'},
       {'col': 'target_outlet', 'req': 'OPSIONAL', 'ex': '25', 'desc': 'Target jumlah toko Active Outlet / AO (satuan Toko, khusus baris Area)'},
       {'col': 'username', 'req': 'OPSIONAL', 'ex': 'budi_asm / rian_spv', 'desc': 'Username ASM/SPV (otomatis jika kosong)'},
+    ],
+    'master_target_industri': [
+      {'col': 'period', 'req': 'WAJIB', 'ex': '202611 / 2026', 'desc': 'Periode YYYYMM (atau YYYY untuk otomatis 12 bulan)'},
+      {'col': 'username', 'req': 'WAJIB', 'ex': 'andre_spv', 'desc': 'Username sales Industri sesuai Master Pengguna (lihat Sheet 2 daftar F)'},
+      {'col': 'metrik_target', 'req': 'WAJIB', 'ex': 'SELL_IN / NOO', 'desc': 'SELL_IN untuk target volume (Kg); NOO untuk target customer baru (Toko)'},
+      {'col': 'target_quota', 'req': 'WAJIB (SELL_IN)', 'ex': '50000', 'desc': 'Kuota target volume Sell-In Industri dalam satuan Kg (kosongkan jika NOO)'},
+      {'col': 'target_outlet', 'req': 'WAJIB (NOO)', 'ex': '3', 'desc': 'Target jumlah toko/customer baru NOO dalam satuan Toko (kosongkan jika SELL_IN)'},
+    ],
+    'master_target_surabaya': [
+      {'col': 'period', 'req': 'WAJIB', 'ex': '202611 / 2026', 'desc': 'Periode YYYYMM (atau YYYY untuk otomatis 12 bulan)'},
+      {'col': 'username', 'req': 'WAJIB', 'ex': 'eko_surabaya', 'desc': 'Username sales TO/Canvasing Surabaya sesuai Master Pengguna (lihat Sheet 2 daftar F)'},
+      {'col': 'metrik_target', 'req': 'WAJIB', 'ex': 'SELL_OUT / AO', 'desc': 'SELL_OUT untuk target volume (Kg); AO untuk target Active Outlet (Toko)'},
+      {'col': 'target_quota', 'req': 'WAJIB (SELL_OUT)', 'ex': '3500', 'desc': 'Kuota target volume Sell-Out Surabaya dalam satuan Kg (kosongkan jika AO)'},
+      {'col': 'target_outlet', 'req': 'WAJIB (AO)', 'ex': '40', 'desc': 'Target jumlah toko Active Outlet (AO) dalam satuan Toko (kosongkan jika SELL_OUT)'},
     ],
   };
 

@@ -278,22 +278,82 @@ class IncentiveCalculationController extends Controller
         $posSoHeader = $activeHeaders['so'];
         $posAoHeader = $activeHeaders['ao'];
 
-        // Preload active assignments for ASM and SPV
-        $asmAssignments = SalesDistributorAssignment::whereNotNull('distributor_id')
+        // Preload active assignments for ASM and SPV (period-aware, sorted id DESC)
+        $asmAssignRows = SalesDistributorAssignment::whereNotNull('distributor_id')
             ->whereHas('user.position', fn ($q) => $q->where('code', 'ASM'))
             ->where('is_active', true)
             ->where(fn ($q) => $q->whereIn('period', $periodList)->orWhereNull('period'))
-            ->with('user:id,name')
-            ->get()
-            ->keyBy('distributor_id');
+            ->with('user:id,name,aktif_from,aktif_to')
+            ->orderByDesc('id')
+            ->get();
 
-        $spvAssignments = SalesDistributorAssignment::whereNotNull('area_id')
+        $asmByDepoPeriod = [];
+        $asmByDistPeriod = [];
+        $asmByDistFallback = [];
+        foreach ($asmAssignRows as $assign) {
+            if (! $assign->user) {
+                continue;
+            }
+            if ($assign->depo_id && $assign->period) {
+                $asmByDepoPeriod[$assign->depo_id . ':' . $assign->period] ??= $assign->user;
+            }
+            if ($assign->distributor_id) {
+                if ($assign->period) {
+                    $asmByDistPeriod[$assign->distributor_id . ':' . $assign->period] ??= $assign->user;
+                }
+                $asmByDistFallback[$assign->distributor_id] ??= $assign->user;
+            }
+        }
+
+        $spvAssignRows = SalesDistributorAssignment::whereNotNull('area_id')
             ->whereHas('user.position', fn ($q) => $q->whereIn('code', ['SPV', 'ASC']))
             ->where('is_active', true)
             ->where(fn ($q) => $q->whereIn('period', $periodList)->orWhereNull('period'))
             ->with('user:id,name')
-            ->get()
-            ->keyBy('area_id');
+            ->orderByDesc('id')
+            ->get();
+
+        $spvByAreaPeriod = [];
+        $spvByAreaFallback = [];
+        foreach ($spvAssignRows as $assign) {
+            if (! $assign->user || ! $assign->area_id) {
+                continue;
+            }
+            if ($assign->period) {
+                $spvByAreaPeriod[$assign->area_id . ':' . $assign->period] ??= $assign->user;
+            }
+            $spvByAreaFallback[$assign->area_id] ??= $assign->user;
+        }
+
+        $resolveAsmUser = static function ($dt) use ($asmByDepoPeriod, $asmByDistPeriod, $asmByDistFallback) {
+            if ($dt->user) {
+                return $dt->user;
+            }
+            $p = (string) $dt->period;
+            if ($dt->depo_id && isset($asmByDepoPeriod[$dt->depo_id . ':' . $p])) {
+                return $asmByDepoPeriod[$dt->depo_id . ':' . $p];
+            }
+            if ($dt->distributor_id) {
+                return $asmByDistPeriod[$dt->distributor_id . ':' . $p]
+                    ?? $asmByDistFallback[$dt->distributor_id]
+                    ?? null;
+            }
+
+            return null;
+        };
+
+        $resolveSpvUser = static function ($at, string $p) use ($spvByAreaPeriod, $spvByAreaFallback) {
+            if ($at->user) {
+                return $at->user;
+            }
+            if ($at->area_id) {
+                return $spvByAreaPeriod[$at->area_id . ':' . $p]
+                    ?? $spvByAreaFallback[$at->area_id]
+                    ?? null;
+            }
+
+            return null;
+        };
 
         // 1. Get relevant DEPO target rows (khusus SELL_IN agar tidak terduplikasi bila ada metrik lain di level DEPO)
         $depoQuery = MasterTarget::with(['distributor', 'depo', 'brand', 'user.position'])
@@ -478,7 +538,8 @@ class IncentiveCalculationController extends Controller
             $distName = $dt->distributor?->name ?? '-';
             $depoName = $dt->depo?->name ?? '-';
             $brandName = $dt->brand?->name ?? '-';
-            $asmName = $dt->user?->name ?? $asmAssignments->get($dt->distributor_id)?->user?->name ?? '-';
+            $asmUser = $resolveAsmUser($dt);
+            $asmName = $asmUser?->name ?? '-';
 
             if ($search) {
                 $match = str_contains(strtolower($distName), $search)
@@ -511,7 +572,6 @@ class IncentiveCalculationController extends Controller
                 );
             }
 
-            $asmUser = $dt->user ?? $asmAssignments->get($dt->distributor_id)?->user;
             if ($asmUser) {
                 $from = $asmUser->aktif_from ? $asmUser->aktif_from->format('Y-m-d') : null;
                 $to = $asmUser->aktif_to ? $asmUser->aktif_to->format('Y-m-d') : null;
@@ -555,7 +615,7 @@ class IncentiveCalculationController extends Controller
             foreach ($areaTargets as $at) {
                 $areaName = $at->area?->name ?? '-';
                 $areaCode = $at->area?->code ?? '-';
-                $spvName = $at->user?->name ?? $spvAssignments->get($at->area_id)?->user?->name ?? '-';
+                $spvName = $resolveSpvUser($at, $dtPeriod)?->name ?? '-';
                 $areaBrandName = $at->brand?->name ?? $brandName;
 
                 if ($spvName !== '-' && ($isSpv || in_array($filterPosCode, ['SPV', 'ASC'], true))) {

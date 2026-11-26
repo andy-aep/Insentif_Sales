@@ -118,29 +118,65 @@ class MasterTargetController extends Controller
             ->get();
 
         // Resolusi PIC dari Penugasan Sales Distributor jika user belum terisi di target
-        $asmAssignments = SalesDistributorAssignment::whereIn('distributor_id', $distIds)
+        $asmRows = SalesDistributorAssignment::whereIn('distributor_id', $distIds)
             ->whereHas('user.position', fn ($q) => $q->where('code', 'ASM'))
             ->where('is_active', true)
             ->when(! empty($periodList), fn ($q) => $q->where(fn ($sub) => $sub->whereIn('period', $periodList)->orWhereNull('period')))
             ->with('user:id,name,username')
-            ->get()
-            ->keyBy('distributor_id');
+            ->orderByDesc('id')
+            ->get();
+
+        $asmByDistPeriod = [];
+        $asmByDistFallback = [];
+        foreach ($asmRows as $assign) {
+            if (! $assign->user) {
+                continue;
+            }
+            if ($assign->period) {
+                $key = $assign->distributor_id . ':' . $assign->period;
+                $asmByDistPeriod[$key] ??= $assign->user;
+            }
+            $asmByDistFallback[$assign->distributor_id] ??= $assign->user;
+        }
 
         $areaIds = $rows->where('level', 'AREA')->pluck('area_id')->filter()->unique()->all();
-        $spvAssignments = SalesDistributorAssignment::whereIn('area_id', $areaIds)
+        $spvRows = SalesDistributorAssignment::whereIn('area_id', $areaIds)
             ->whereHas('user.position', fn ($q) => $q->whereIn('code', ['SPV', 'ASC']))
             ->where('is_active', true)
             ->when(! empty($periodList), fn ($q) => $q->where(fn ($sub) => $sub->whereIn('period', $periodList)->orWhereNull('period')))
             ->with('user:id,name,username')
-            ->get()
-            ->keyBy('area_id');
+            ->orderByDesc('id')
+            ->get();
+
+        $spvByAreaPeriod = [];
+        $spvByAreaFallback = [];
+        foreach ($spvRows as $assign) {
+            if (! $assign->user) {
+                continue;
+            }
+            if ($assign->period) {
+                $key = $assign->area_id . ':' . $assign->period;
+                $spvByAreaPeriod[$key] ??= $assign->user;
+            }
+            $spvByAreaFallback[$assign->area_id] ??= $assign->user;
+        }
 
         foreach ($rows as $row) {
             if (! $row->user) {
-                if ($row->level === 'DEPO' && isset($asmAssignments[$row->distributor_id])) {
-                    $row->setRelation('user', $asmAssignments[$row->distributor_id]->user);
-                } elseif ($row->level === 'AREA' && isset($spvAssignments[$row->area_id])) {
-                    $row->setRelation('user', $spvAssignments[$row->area_id]->user);
+                if ($row->level === 'DEPO') {
+                    $resolvedUser = $asmByDistPeriod[$row->distributor_id . ':' . $row->period]
+                        ?? $asmByDistFallback[$row->distributor_id]
+                        ?? null;
+                    if ($resolvedUser) {
+                        $row->setRelation('user', $resolvedUser);
+                    }
+                } elseif ($row->level === 'AREA') {
+                    $resolvedUser = $spvByAreaPeriod[$row->area_id . ':' . $row->period]
+                        ?? $spvByAreaFallback[$row->area_id]
+                        ?? null;
+                    if ($resolvedUser) {
+                        $row->setRelation('user', $resolvedUser);
+                    }
                 }
             }
         }
@@ -360,6 +396,8 @@ class MasterTargetController extends Controller
                         ->whereHas('user.position', fn ($q) => $q->where('code', 'ASM'))
                         ->where('is_active', true)
                         ->where(fn ($q) => $q->where('period', $p)->orWhereNull('period'))
+                        ->orderByRaw('CASE WHEN period = ? THEN 0 ELSE 1 END', [$p])
+                        ->orderByDesc('id')
                         ->first();
                     if (! $asmAssign) {
                         $asmAssign = SalesDistributorAssignment::where('distributor_id', $validated['distributor_id'])
@@ -379,6 +417,8 @@ class MasterTargetController extends Controller
                     $spvAssign = SalesDistributorAssignment::where('area_id', $validated['area_id'])
                         ->where('is_active', true)
                         ->where(fn ($q) => $q->where('period', $p)->orWhereNull('period'))
+                        ->orderByRaw('CASE WHEN period = ? THEN 0 ELSE 1 END', [$p])
+                        ->orderByDesc('id')
                         ->first();
                     if (! $spvAssign) {
                         $spvAssign = SalesDistributorAssignment::where('area_id', $validated['area_id'])

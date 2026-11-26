@@ -292,6 +292,57 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
       selectedBrandId = masterState.brands.first.id;
     }
 
+    UserModel? detectAsmForDistributor(int? distId, int? depoId, String period) {
+      if (distId == null && depoId == null) return null;
+      if (depoId != null) {
+        final depoAssigns = assignState.distributorAssignments
+            .where((a) =>
+                a.isActive &&
+                a.user != null &&
+                (a.user?.position?.code.toUpperCase() == 'ASM') &&
+                a.depoId == depoId)
+            .toList();
+        if (depoAssigns.isNotEmpty) {
+          final exact = depoAssigns.where((a) => a.period == period).firstOrNull;
+          return (exact ?? depoAssigns.first).user;
+        }
+        final depoTargets = targetState.targets
+            .where((t) => t.level == 'DEPO' && t.depoId == depoId && t.user != null)
+            .toList();
+        if (depoTargets.isNotEmpty) {
+          final exact = depoTargets.where((t) => t.period == period).firstOrNull;
+          return (exact ?? depoTargets.first).user;
+        }
+      }
+      if (distId == null) return null;
+      final candidates = assignState.distributorAssignments
+          .where((a) =>
+              a.distributorId == distId &&
+              (a.user?.position?.code.toUpperCase() == 'ASM') &&
+              a.isActive &&
+              a.user != null)
+          .toList();
+      final exact = candidates.where((a) => a.period == period).firstOrNull;
+      return (exact ?? candidates.firstOrNull)?.user;
+    }
+
+    UserModel? detectSpvForArea(int? areaId, String period) {
+      if (areaId == null) return null;
+      final candidates = assignState.distributorAssignments
+          .where((a) => a.areaId == areaId && a.isActive && a.user != null)
+          .toList();
+      final exact = candidates.where((a) => a.period == period).firstOrNull;
+      return (exact ?? candidates.firstOrNull)?.user;
+    }
+
+    if (isEdit && selectedUserId == null) {
+      if (selectedScheme == 'TARGET_AREA') {
+        selectedUserId = detectSpvForArea(selectedAreaId, defaultPeriod)?.id;
+      } else if (selectedScheme == 'TARGET_DEPO') {
+        selectedUserId = detectAsmForDistributor(selectedDistributorId, selectedDepoId, defaultPeriod)?.id;
+      }
+    }
+
     final quotaCtrl = TextEditingController(text: defaultQuota);
     final outletCtrl = TextEditingController(text: defaultOutlet);
     final periodCtrl = TextEditingController(text: defaultPeriod);
@@ -330,7 +381,11 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
       return const [];
     }
 
-    Future<void> loadAreasForDepo(int? depoId, StateSetter setDialogState) async {
+    Future<void> loadAreasForDepo(
+      int? depoId,
+      StateSetter setDialogState, {
+      bool preserveSelection = false,
+    }) async {
       if (depoId == null) {
         setDialogState(() {
           dialogAreas = [];
@@ -338,10 +393,13 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
         });
         return;
       }
+      final prevAreaId = preserveSelection ? selectedAreaId : null;
       setDialogState(() {
         isLoadingAreas = true;
-        dialogAreas = [];
-        selectedAreaId = null;
+        if (!preserveSelection) {
+          dialogAreas = [];
+          selectedAreaId = null;
+        }
       });
       try {
         final res = await DioClient.instance.get(
@@ -351,12 +409,20 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
         final List raw = extractList(res.data);
         final fetched = raw.map((e) => AreaModel.fromJson(e)).toList()
           ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        if (preserveSelection &&
+            targetToEdit?.area != null &&
+            targetToEdit!.area!.depoId == depoId &&
+            !fetched.any((a) => a.id == targetToEdit.area!.id)) {
+          fetched.insert(0, targetToEdit.area!);
+        }
         syncAreaControllers(fetched);
+        int? nextAreaId = prevAreaId;
+        if (nextAreaId == null || !fetched.any((a) => a.id == nextAreaId)) {
+          nextAreaId = fetched.isNotEmpty ? fetched.first.id : null;
+        }
         setDialogState(() {
           dialogAreas = fetched;
-          if (selectedAreaId == null || !dialogAreas.any((a) => a.id == selectedAreaId)) {
-            selectedAreaId = dialogAreas.isNotEmpty ? dialogAreas.first.id : null;
-          }
+          selectedAreaId = nextAreaId;
           isLoadingAreas = false;
         });
       } catch (_) {
@@ -407,7 +473,11 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
           currentDepo = fetched.where((d) => d.id == nextDepoId).firstOrNull;
           isLoadingDepos = false;
         });
-        await loadAreasForDepo(nextDepoId, setDialogState);
+        await loadAreasForDepo(
+          nextDepoId,
+          setDialogState,
+          preserveSelection: preserveSelection && nextDepoId == prevDepoId,
+        );
       } catch (_) {
         setDialogState(() => isLoadingDepos = false);
       }
@@ -429,25 +499,43 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
           final isDistributor = isDistributorBundle || isTargetDepo || isTargetArea;
           final isOutletMetric = !isDistributor && (selectedTargetType == 'AO' || selectedTargetType == 'NOO');
 
-          // Auto-detect ASM untuk Depo
-          UserModel? detectedAsm;
-          if (isDistributor && selectedDistributorId != null) {
-            final asmAssign = assignState.distributorAssignments
-                .where((a) => a.distributorId == selectedDistributorId && (a.user?.position?.code.toUpperCase() == 'ASM') && a.isActive)
-                .firstOrNull;
-            detectedAsm = asmAssign?.user;
-          }
+          final activeDialogPeriod = periodCtrl.text.trim().isNotEmpty ? periodCtrl.text.trim() : defaultPeriod;
+          final detectedAsm = isDistributor ? detectAsmForDistributor(selectedDistributorId, selectedDepoId, activeDialogPeriod) : null;
+          final detectedSpv = isTargetArea ? detectSpvForArea(selectedAreaId, activeDialogPeriod) : null;
 
-          // Helper auto-detect SPV untuk Area tertentu
-          UserModel? detectSpvForArea(int? areaId) {
-            if (areaId == null) return null;
-            final spvAssign = assignState.distributorAssignments
-                .where((a) => a.areaId == areaId && a.isActive)
-                .firstOrNull;
-            return spvAssign?.user;
-          }
+          List<UserModel> buildPicOptions({required bool forDepo}) {
+            final Map<int, UserModel> byId = {};
+            final filtered = userState.users.where((u) {
+              if (forDepo) {
+                return u.position?.code.toUpperCase() == 'ASM' || u.isEligibleKonsumsi;
+              }
+              return u.isEligibleKonsumsi;
+            });
+            for (final u in (filtered.isNotEmpty ? filtered : userState.users)) {
+              byId[u.id] = u;
+            }
+            if (targetToEdit?.user != null) {
+              byId.putIfAbsent(targetToEdit!.user!.id, () => targetToEdit.user!);
+            }
+            if (forDepo && detectedAsm != null) {
+              byId.putIfAbsent(detectedAsm.id, () => detectedAsm);
+            }
+            if (!forDepo && detectedSpv != null) {
+              byId.putIfAbsent(detectedSpv.id, () => detectedSpv);
+            }
+            final list = byId.values.toList();
+            list.sort((a, b) {
+              int rank(UserModel u) {
+                final pos = u.position?.code.toUpperCase() ?? '';
+                if (forDepo) return pos == 'ASM' ? 0 : 1;
+                return (pos == 'SPV' || pos == 'ASC') ? 0 : 1;
+              }
 
-          final detectedSpv = isTargetArea ? detectSpvForArea(selectedAreaId) : null;
+              final r = rank(a).compareTo(rank(b));
+              return r != 0 ? r : a.name.toLowerCase().compareTo(b.name.toLowerCase());
+            });
+            return list;
+          }
 
           return AlertDialog(
             backgroundColor: colors.bgDialog,
@@ -554,6 +642,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                       Text('Pilih Distributor *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 6),
                       DropdownButtonFormField<int>(
+                        key: ValueKey('dialog_dist_$selectedDistributorId'),
                         initialValue: sortedDistributors.any((d) => d.id == selectedDistributorId) ? selectedDistributorId : null,
                         dropdownColor: colors.bgElevated,
                         isExpanded: true,
@@ -647,6 +736,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                                 Text('Pilih Brand Produk *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
                                 const SizedBox(height: 6),
                                 DropdownButtonFormField<int>(
+                                  key: ValueKey('dialog_brand_$selectedBrandId'),
                                   initialValue: masterState.brands.any((b) => b.id == selectedBrandId) ? selectedBrandId : null,
                                   dropdownColor: colors.bgElevated,
                                   isExpanded: true,
@@ -783,10 +873,10 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                                     style: TextStyle(color: colors.textMuted, fontSize: 12, fontStyle: FontStyle.italic),
                                   ),
                                 )
-                              else
-                                ...dialogAreas.map((area) {
-                                  final spv = detectSpvForArea(area.id);
-                                  final soCtrl = areaSellOutCtrls.putIfAbsent(area.id, () => TextEditingController());
+                                else
+                                  ...dialogAreas.map((area) {
+                                    final spv = detectSpvForArea(area.id, activeDialogPeriod);
+                                    final soCtrl = areaSellOutCtrls.putIfAbsent(area.id, () => TextEditingController());
                                   final aoCtrl = areaAoCtrls.putIfAbsent(area.id, () => TextEditingController());
                                   return Container(
                                     margin: const EdgeInsets.only(bottom: 8),
@@ -864,27 +954,41 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                         const SizedBox(height: 14),
                       ] else if (isTargetDepo) ...[
                         // MODE EDIT DEPO: Langsung input Target Sell-In (Kg) tanpa dropdown metrik
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: colors.bgElevated,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: colors.border),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(LucideIcons.crown, size: 18, color: Theme.of(context).colorScheme.primary),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  detectedAsm != null
-                                      ? 'ASM Penanggung Jawab: ${detectedAsm.name} (@${detectedAsm.username})'
-                                      : 'ASM Penanggung Jawab: Otomatis mengikuti assignment aktif',
-                                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: colors.textPrimary),
-                                ),
+                        Text('ASM Penanggung Jawab', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 6),
+                        Builder(
+                          builder: (_) {
+                            final picOptions = buildPicOptions(forDepo: true);
+                            return DropdownButtonFormField<int?>(
+                              key: ValueKey('dialog_depo_pic_${selectedDistributorId}_${selectedUserId}_${picOptions.length}'),
+                              initialValue: selectedUserId != null && picOptions.any((u) => u.id == selectedUserId) ? selectedUserId : null,
+                              dropdownColor: colors.bgElevated,
+                              isExpanded: true,
+                              style: TextStyle(color: colors.textPrimary, fontSize: 13.5),
+                              decoration: InputDecoration(
+                                prefixIcon: Icon(LucideIcons.crown, size: 17, color: Theme.of(context).colorScheme.primary),
+                                prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                filled: true,
+                                fillColor: colors.bgElevated,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
                               ),
-                            ],
-                          ),
+                              items: [
+                                const DropdownMenuItem<int?>(
+                                  value: null,
+                                  child: Text('Otomatis mengikuti assignment aktif', overflow: TextOverflow.ellipsis),
+                                ),
+                                ...picOptions.map((u) => DropdownMenuItem<int?>(
+                                      value: u.id,
+                                      child: Text(
+                                        '${u.name} (@${u.username})${u.position != null ? ' • ${u.position!.code}' : ''}',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    )),
+                              ],
+                              onChanged: (val) => setDialogState(() => selectedUserId = val),
+                            );
+                          },
                         ),
                         const SizedBox(height: 14),
                         Text('Target Sell-In Depo (Kg) *', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
@@ -932,27 +1036,41 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                           },
                         ),
                         const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: colors.bgElevated,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: colors.border),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(LucideIcons.userCheck, size: 18, color: context.semantic.warning),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  detectedSpv != null
-                                      ? 'SPV / ASC Area: ${detectedSpv.name} (@${detectedSpv.username})'
-                                      : 'SPV / ASC Area: Otomatis mengikuti assignment aktif',
-                                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: colors.textPrimary),
-                                ),
+                        Text('SPV / ASC Area', style: TextStyle(color: colors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 6),
+                        Builder(
+                          builder: (_) {
+                            final areaPicOptions = buildPicOptions(forDepo: false);
+                            return DropdownButtonFormField<int?>(
+                              key: ValueKey('dialog_area_pic_${selectedAreaId}_${selectedUserId}_${areaPicOptions.length}'),
+                              initialValue: selectedUserId != null && areaPicOptions.any((u) => u.id == selectedUserId) ? selectedUserId : null,
+                              dropdownColor: colors.bgElevated,
+                              isExpanded: true,
+                              style: TextStyle(color: colors.textPrimary, fontSize: 13.5),
+                              decoration: InputDecoration(
+                                prefixIcon: Icon(LucideIcons.userCheck, size: 17, color: context.semantic.warning),
+                                prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                filled: true,
+                                fillColor: colors.bgElevated,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
                               ),
-                            ],
-                          ),
+                              items: [
+                                const DropdownMenuItem<int?>(
+                                  value: null,
+                                  child: Text('Otomatis mengikuti assignment aktif', overflow: TextOverflow.ellipsis),
+                                ),
+                                ...areaPicOptions.map((u) => DropdownMenuItem<int?>(
+                                      value: u.id,
+                                      child: Text(
+                                        '${u.name} (@${u.username})${u.position != null ? ' • ${u.position!.code}' : ''}',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    )),
+                              ],
+                              onChanged: (val) => setDialogState(() => selectedUserId = val),
+                            );
+                          },
                         ),
                         const SizedBox(height: 14),
                         Row(
@@ -1215,6 +1333,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                         controller: periodCtrl,
                         keyboardType: TextInputType.number,
                         style: TextStyle(color: colors.textPrimary, fontSize: 14),
+                        onChanged: (_) => setDialogState(() {}),
                         decoration: InputDecoration(
                           hintText: 'Contoh: 202610',
                           prefixIcon: const Icon(LucideIcons.calendar, size: 18),
@@ -1292,7 +1411,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                             if (so > 0 || ao > 0) {
                               areaPayloadList.add({
                                 'area_id': area.id,
-                                'user_id': detectSpvForArea(area.id)?.id,
+                                'user_id': isFullYearMode ? null : detectSpvForArea(area.id, period)?.id,
                                 'sell_out': so,
                                 'ao': ao,
                               });
@@ -1316,7 +1435,7 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                                 period: period,
                                 isFullYear: isFullYearMode,
                                 year: year,
-                                asmUserId: detectedAsm?.id,
+                                asmUserId: isFullYearMode ? null : detectedAsm?.id,
                                 depoSellInQuota: quotaVal > 0 ? quotaVal : null,
                                 areaTargets: areaPayloadList,
                               );
@@ -1351,8 +1470,8 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                             ? await ref.read(masterTargetProvider.notifier).updateTarget(
                                   id: targetToEdit.id,
                                   userId: isTargetDepo
-                                      ? (detectedAsm?.id ?? targetToEdit.userId)
-                                      : (isTargetArea ? (detectedSpv?.id ?? targetToEdit.userId) : selectedUserId),
+                                      ? (selectedUserId ?? detectedAsm?.id)
+                                      : (isTargetArea ? (selectedUserId ?? detectedSpv?.id) : selectedUserId),
                                   distributorId: isDistributor ? selectedDistributorId : null,
                                   depoId: isDistributor ? selectedDepoId : null,
                                   areaId: isTargetArea ? selectedAreaId : null,
@@ -1456,16 +1575,19 @@ class _MasterTargetScreenState extends ConsumerState<MasterTargetScreen> with Si
                 ),
                 onPressed: () {
                   final activePeriod = ref.read(masterTargetProvider).selectedPeriod;
-                  final activeDistId = _hierarchyKey.currentState?.activeDistributorId;
-                  final activeDepoId = _hierarchyKey.currentState?.activeDepoId;
-                  final activeBrandId = _hierarchyKey.currentState?.activeBrandId;
+                  final entity = switch (_activeTabIndex) {
+                    2 => 'master_target_industri',
+                    3 => 'master_target_surabaya',
+                    _ => 'master_target_distributor',
+                  };
+                  final isDistTab = _activeTabIndex <= 1;
                   ref.read(bulkUploadProvider.notifier).downloadTemplate(
-                    entity: 'master_target_distributor',
+                    entity: entity,
                     withData: true,
                     period: activePeriod,
-                    distributorId: activeDistId,
-                    depoId: activeDepoId,
-                    brandId: activeBrandId,
+                    distributorId: isDistTab ? _hierarchyKey.currentState?.activeDistributorId : null,
+                    depoId: isDistTab ? _hierarchyKey.currentState?.activeDepoId : null,
+                    brandId: isDistTab ? _hierarchyKey.currentState?.activeBrandId : null,
                   );
                 },
               );

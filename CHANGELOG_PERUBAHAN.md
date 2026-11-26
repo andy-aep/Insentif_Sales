@@ -136,3 +136,71 @@ Menghilangkan kebutuhan klik tombol **Sync SAP** manual setiap kali ingin meliha
 ### 10. Infrastruktur Deploy
 - [`deploy_cpanel/deploy_ke_cpanel.ps1`](deploy_cpanel/deploy_ke_cpanel.ps1): Menambahkan `-timeout=60` pada koneksi SFTP WinSCP untuk mengurangi timeout pada jaringan dengan latensi tinggi.
 - Semua perubahan BE & FE di atas telah di-deploy ke produksi (`api-prod.garamonline.com` & `insentif-dev.susantimegah.com`).
+
+---
+
+## 2026-11-25
+
+### 11. Fix Bug Loncat Area & Perubahan PIC pada Dialog Edit Target Kuota (+ Pemulihan Data Trenggalek)
+Mengatasi bug saat membuka dialog **Ubah Target Area** (kasus `UNICHELL MAKMUR INDONESIA, PT` $\rightarrow$ `Depo PONOROGO C110001919` $\rightarrow$ `Area TRENGGALEK AR00217`), di mana pilihan Area otomatis loncat ke `PONOROGO (AR00216)` dan PIC berubah dari `Bayu Samodra` ke `Saturda Hasan Srihardino (@ass_dino)`.
+
+- **Akar Masalah**:
+  - `loadAreasForDepo()` di [`master_target_screen.dart`](FE/lib/features/master_data/presentation/master_target_screen.dart) mereset `selectedAreaId = null` dan memilih area abjad pertama ketika daftar area selesai dimuat.
+  - `detectSpvForArea()` mengambil assignment aktif pertama tanpa mencocokkan `period` (`YYYYMM`) maupun mempertahankan `targetToEdit.userId`, lalu menimpanya saat simpan.
+- **Frontend**:
+  - [`FE/lib/features/master_data/presentation/master_target_screen.dart`](FE/lib/features/master_data/presentation/master_target_screen.dart):
+    - Menambahkan parameter `preserveSelection` pada `loadAreasForDepo()` (diteruskan dari `loadDeposForDistributor()`) agar Area awal tetap terkunci saat dialog Edit terbuka.
+    - Menjadikan `detectAsmForDistributor()` dan `detectSpvForArea()` sadar periode (`period`), mempertahankan `targetToEdit.userId`, serta mengganti banner read-only ASM/SPV dengan dropdown pemilihan PIC (`DropdownButtonFormField<int?>`) di mode **Ubah Target Depo** maupun **Ubah Target Area** (+ mode tahunan terpadu membiarkan backend me-resolve PIC per bulan).
+- **Backend**:
+  - [`BE/app/Http/Controllers/MasterTargetController.php`](BE/app/Http/Controllers/MasterTargetController.php):
+    - Memperbaiki `hierarchy()` dan `store()` (`$resolveAsm`, `$resolveSpv`) agar resolusi assignment mendahulukan kecocokan `period` yang tepat (`CASE WHEN period = ? THEN 0 ELSE 1 END`, urut `id DESC`).
+- **Pemulihan Data Produksi (`susantimegah_sales_insentif`)**:
+  - Memindahkan kembali 3 baris `master_targets` `KAPAL` (`id=12091` `202606`, `id=12106` `202607`, `id=12121` `202608`) dari `AR00216 (PONOROGO)` ke `AR00217 (TRENGGALEK)` dengan PIC `Bayu Samodra` (`user_id=11`).
+  - Memulihkan baris `202609` `KAPAL` (`id=12184`, `qty=26000`, `ao=130`, `user_id=11`) pada `AR00217 (TRENGGALEK)`.
+  - Verifikasi DB: `AR00216` memiliki tepat `12` baris `JEMPOL` (`202601`–`202612`) dan `AR00217` memiliki tepat `12` baris `KAPAL` (`202601`–`202612`).
+- Perubahan BE & FE telah di-build dan di-deploy ke produksi (`api-prod.garamonline.com` & `insentif-dev.susantimegah.com`).
+
+---
+
+### 12. Audit Menyeluruh & Test Aplikasi (Cascading Dropdown, Resolusi PIC per Periode, & Konsistensi DB)
+Menindaklanjuti pengujian menyeluruh di seluruh modul FE, BE, dan database produksi untuk mencegah terulangnya bug loncat pilihan dropdown, resolusi PIC lintas periode/posisi, maupun hilangnya anak relasi saat edit.
+
+- **Frontend (`FE/lib/features/...`)**:
+  - [`master_target_screen.dart`](FE/lib/features/master_data/presentation/master_target_screen.dart): `detectAsmForDistributor()` kini menerima `depoId` + `period` (mengutamakan assignment depo/target depo di periode terkait sebelum fallback distributor) untuk mendukung distributor multi-ASM (misal `SAKTI SETIA SANTOSA, PT`); menambah `ValueKey` pada dropdown Distributor dan Brand.
+  - [`master_distributor_screen.dart`](FE/lib/features/master_data/presentation/master_distributor_screen.dart): `_showDepoDialog()` kini mengambil fallback `state.areas.where((a) => a.depoId == depo.id)` saat `depo.areas` kosong agar edit Depo tidak mengosongkan area; menambah guard `initialValue` pada dropdown Distributor & Depo.
+  - [`distributor_assignment_hierarchy_view.dart`](FE/lib/features/master_data/presentation/widgets/distributor_assignment_hierarchy_view.dart): `_showBulkMapDialog()` kini mempertahankan user ter-assign pada daftar pilihan, sinkron ulang pilihan ASM & SPV saat input `Periode (YYYYMM)` berubah (`syncForPeriod`), serta menambah `ValueKey` per periode.
+  - [`master_surabaya_screen.dart`](FE/lib/features/master_data/presentation/master_surabaya_screen.dart): `_showAssignDistributorDialog()` kini mendukung posisi `ASC` setara `SPV` pada form bertingkat (ASM $\rightarrow$ Distributor $\rightarrow$ Depo $\rightarrow$ Area), menambah fallback Depo/Area dari `masterState`, auto-pilih ASM berdasarkan Distributor/periode, dan guard `initialValue`.
+  - [`user_management_screen.dart`](FE/lib/features/users_management/presentation/user_management_screen.dart): `_showUserFormDialog()` menambah guard `initialValue` pada dropdown `Role Akses`, `Posisi Sales`, serta `ValueKey` pada `Kode Sales SAP`.
+- **Backend (`BE/app/...`)**:
+  - [`IncentiveCalculationController.php`](BE/app/Http/Controllers/IncentiveCalculationController.php): `buildDistributorBreakdownPayload()` kini memetakan ASM (per `depo_id:period` / `distributor_id:period`) dan SPV/ASC (per `area_id:period`) secara sadar periode.
+  - [`DashboardController.php`](BE/app/Http/Controllers/DashboardController.php): Filter periode pada query `SalesDistributorAssignment` di `summary()` & `getSalesDashboard()`, serta dukungan posisi `ASC` setara `SPV`.
+  - [`SalesAssignmentController.php`](BE/app/Http/Controllers/SalesAssignmentController.php) & [`BatchImportService.php`](BE/app/Services/BatchImportService.php): Mendukung `ASC` setara `SPV` dan menggantikan assignment SPV/ASC lama pada kombinasi `(area_id, period)` yang sama agar tidak terjadi duplikat PIC aktif.
+- **Pembersihan Data Produksi (`susantimegah_sales_insentif`)**:
+  - Menghapus duplikat assignment `id=1457` (`area_id=674 SANGGAU`, periode `202610`) dan `12` baris sisa `SPV`/`ASC` dengan `area_id IS NULL & depo_id IS NULL` (`id=343..354`). Verifikasi akhir: `dupAreaPeriodAssign = 0`, `badDepoDist = 0`, `badAreaDepo = 0`.
+- **Verifikasi & Uji Live Produksi**:
+  - `php -l` (4 file BE): lolos tanpa error; `flutter analyze` (seluruh `FE/`): `No issues found!`.
+  - Build Flutter Web & deploy BE/FE ke produksi (`api-prod.garamonline.com` & `insentif-dev.susantimegah.com`) selesai.
+  - Smoke test BE pada periode `202605`, `202610`, `202611`: `200 OK`, PIC `TRENGGALEK (AR00217)` sesuai (`Bayu Samodra` di `202605`, `Saturda Hasan Srihardino` di `202610`–`202611`).
+  - Uji live browser pada `insentif-dev.susantimegah.com`: **Dashboard**, **Master Target Kuota** (Edit `202605` & `202611` `TRENGGALEK` tetap mengunci `AR00217` dengan PIC sesuai periode), **Master Distributor** (Edit Depo menampilkan area tercover), **Insentif Distributor** (`200 OK`), dan **Tim & Area Sales** (`Atur PIC` periode `202610` otomatis tampilkan `Saturda Hasan Srihardino`, dihentikan sebelum tes pindah ke `202605` atas permintaan user).
+
+---
+
+### 13. Fix Bug Tampilan Palsu "Akses Penuh" Hak Akses RBAC (`Admin Sales`)
+Mengatasi ketidaksinkronan antara tampilan matriks **Pengguna & Akses ➔ Hak Akses** dengan menu sidebar pada role non-superadmin yang mengandung kata `admin` (contoh: `Admin Sales` / `Administrator Sales & Data`, di mana `#11 Pengguna & Akses` belum tersimpan di `role_menu_permissions` namun ditampilkan seolah-olah `Akses Penuh`).
+
+- **Frontend**:
+  - [`FE/lib/features/users_management/presentation/user_management_screen.dart`](FE/lib/features/users_management/presentation/user_management_screen.dart):
+    - Memperketat fallback `_syncWorkingPermissions()` dari `role.name.toLowerCase().contains('admin')` menjadi exact match superadmin (`administrator` / `superadmin` / `admin`) agar selaras 1-to-1 dengan `dashboard_layout.dart`.
+    - Reset `_lastSyncedRoleId` setelah simpan berhasil dan memanggil `authProvider.checkAuth()` bila role yang diubah adalah role user yang sedang login.
+  - [`FE/lib/features/users_management/providers/user_management_provider.dart`](FE/lib/features/users_management/providers/user_management_provider.dart):
+    - `updateRolePermissions()` kini mengembalikan `false` + pesan error ketika server merespons 4xx/5xx, tidak lagi menelan error sebagai sukses lokal.
+- Verifikasi `flutter analyze` (`No issues found!`), build web, dan deploy ke produksi (`insentif-dev.susantimegah.com`) selesai.
+
+## #14 - Template & Bulk Upload Master Target Sales Industri & Sales Surabaya (2026-11-25)
+- **Backend**:
+  - `BE/app/Http/Controllers/BatchUploadController.php`: Daftarkan entitas `master_target_industri` dan `master_target_surabaya` di `$allowedEntities`.
+  - `BE/app/Exports/BulkUploadTemplateExport.php`: Tambah template kosong, export data eksisting (`getMasterTargetSalesData()`), serta panduan kolom Sheet 2 untuk `master_target_industri` (`SELL_IN` Kg & `NOO` Toko) dan `master_target_surabaya` (`SELL_OUT` Kg & `AO` Toko).
+  - `BE/app/Services/BatchImportService.php`: Tambah normalisasi entitas, auto-detect guard, importer `processMasterTargetSalesBulk()` (mendukung ekspansi periode 4 digit `YYYY` ke 12 bulan, auto-create PIC sales jika belum terdaftar, serta upsert `master_targets`), dan dukungan rollback batch.
+- **Frontend**:
+  - `FE/lib/features/bulk_upload/presentation/bulk_upload_screen.dart`: Tambah opsi `Master: Target Sales Industri (Sell-In & NOO)` dan `Master: Target Sales Surabaya (Sell-Out & AO)` beserta panduan kolomnya pada dropdown Bulk Upload Center (tanpa `Sell-Out Surabaya` karena realisasi Sell-Out Surabaya berasal dari SAP).
+  - `FE/lib/features/master_data/presentation/master_target_screen.dart`: Tombol **Tarik Excel Template** kini otomatis memilih entitas sesuai tab aktif (`master_target_distributor`, `master_target_industri`, atau `master_target_surabaya`).

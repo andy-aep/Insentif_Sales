@@ -60,21 +60,45 @@ class _DistributorAssignmentHierarchyViewState
   }) {
     final colors = context.colors;
     final userState = ref.read(userManagementProvider);
+    final allAssignments = ref.read(salesAssignmentProvider).distributorAssignments;
 
     final allUsers = List<UserModel>.from(userState.users)
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+    final Set<int> distAreaIds = {
+      for (final dp in depos)
+        for (final ar in (areasByDepo[dp.id] ?? const <AreaModel>[])) ar.id,
+    };
 
     final asmCandidates = allUsers.where((u) {
       final pos = (u.position?.code ?? '').toUpperCase();
       return pos == 'ASM' || (u.isEligibleKonsumsi && pos.isEmpty);
     }).toList();
-    final asmList = asmCandidates.isNotEmpty ? asmCandidates : allUsers;
+    final Map<int, UserModel> asmById = {
+      for (final u in asmCandidates) u.id: u,
+    };
+    for (final a in allAssignments) {
+      if (a.distributorId == distributor.id && a.areaId == null && a.user != null) {
+        asmById.putIfAbsent(a.user!.id, () => a.user!);
+      }
+    }
+    final asmList = (asmById.isNotEmpty ? asmById.values.toList() : allUsers)
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
     final spvCandidates = allUsers.where((u) {
       final pos = (u.position?.code ?? '').toUpperCase();
       return pos == 'SPV' || pos == 'ASC' || (u.isEligibleKonsumsi && pos.isEmpty);
     }).toList();
-    final spvList = spvCandidates.isNotEmpty ? spvCandidates : allUsers;
+    final Map<int, UserModel> spvById = {
+      for (final u in spvCandidates) u.id: u,
+    };
+    for (final a in allAssignments) {
+      if (a.areaId != null && distAreaIds.contains(a.areaId) && a.user != null) {
+        spvById.putIfAbsent(a.user!.id, () => a.user!);
+      }
+    }
+    final spvList = (spvById.isNotEmpty ? spvById.values.toList() : allUsers)
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
     int? selectedAsmId = asmList.any((u) => u.id == initialAsmUserId) ? initialAsmUserId : null;
     final Map<int, int?> selectedSpvByArea = {};
@@ -86,6 +110,34 @@ class _DistributorAssignmentHierarchyViewState
     }
 
     final cleanPeriod = (defaultPeriod.isNotEmpty && defaultPeriod != 'ALL') ? defaultPeriod : '202610';
+    String lastSyncedPeriod = cleanPeriod;
+
+    void syncForPeriod(String p) {
+      SalesDistributorAssignmentModel? asmMatch;
+      for (final a in allAssignments) {
+        if (!a.isActive || a.period != p || a.distributorId != distributor.id || a.areaId != null) continue;
+        final pos = (a.user?.position?.code ?? '').toUpperCase();
+        if (pos == 'ASM' || pos.isEmpty) {
+          asmMatch = a;
+          break;
+        }
+      }
+      selectedAsmId = asmMatch != null && asmList.any((u) => u.id == asmMatch!.userId) ? asmMatch.userId : null;
+      for (final depo in depos) {
+        for (final area in (areasByDepo[depo.id] ?? const <AreaModel>[])) {
+          SalesDistributorAssignmentModel? areaMatch;
+          for (final a in allAssignments) {
+            if (a.isActive && a.period == p && a.areaId == area.id) {
+              areaMatch = a;
+              break;
+            }
+          }
+          selectedSpvByArea[area.id] =
+              areaMatch != null && spvList.any((u) => u.id == areaMatch!.userId) ? areaMatch.userId : null;
+        }
+      }
+    }
+
     final periodCtrl = TextEditingController(text: cleanPeriod);
     final yearCtrl = TextEditingController(
       text: cleanPeriod.length >= 4 ? cleanPeriod.substring(0, 4) : '2026',
@@ -212,6 +264,17 @@ class _DistributorAssignmentHierarchyViewState
                             keyboardType: TextInputType.number,
                             maxLength: isFullYear ? 4 : 6,
                             style: TextStyle(color: colors.textPrimary, fontSize: 13, fontWeight: FontWeight.bold),
+                            onChanged: (val) {
+                              if (!isFullYear) {
+                                final p = val.trim();
+                                if (p.length == 6 && p != lastSyncedPeriod) {
+                                  setDialogState(() {
+                                    lastSyncedPeriod = p;
+                                    syncForPeriod(p);
+                                  });
+                                }
+                              }
+                            },
                             decoration: InputDecoration(
                               counterText: '',
                               labelText: isFullYear ? 'Tahun' : 'Periode',
@@ -250,7 +313,8 @@ class _DistributorAssignmentHierarchyViewState
                           ),
                           const SizedBox(height: 10),
                           DropdownButtonFormField<int?>(
-                            initialValue: selectedAsmId,
+                            key: ValueKey('bulk_asm_${lastSyncedPeriod}_$selectedAsmId'),
+                            initialValue: asmList.any((u) => u.id == selectedAsmId) ? selectedAsmId : null,
                             isExpanded: true,
                             dropdownColor: colors.bgCard,
                             style: TextStyle(color: colors.textPrimary, fontSize: 13),
@@ -366,7 +430,8 @@ class _DistributorAssignmentHierarchyViewState
                                               Expanded(
                                                 flex: 6,
                                                 child: DropdownButtonFormField<int?>(
-                                                  initialValue: selectedSpvByArea[area.id],
+                                                  key: ValueKey('bulk_spv_${area.id}_${lastSyncedPeriod}_${selectedSpvByArea[area.id]}'),
+                                                  initialValue: spvList.any((u) => u.id == selectedSpvByArea[area.id]) ? selectedSpvByArea[area.id] : null,
                                                   isExpanded: true,
                                                   dropdownColor: colors.bgCard,
                                                   style: TextStyle(color: colors.textPrimary, fontSize: 12),

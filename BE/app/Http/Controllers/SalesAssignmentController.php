@@ -387,7 +387,7 @@ class SalesAssignmentController extends Controller
                     'message' => "ASM {$user->name} sudah di-assign ke distributor ini untuk periode {$period}.",
                 ], 422);
             }
-        } elseif ($posCode === 'SPV') {
+        } elseif (in_array($posCode, ['SPV', 'ASC'], true)) {
             // Posisi SPV: wajib memiliki ASM penanggung jawab, Depo, dan Area
             if (empty($distributorId)) {
                 return response()->json([
@@ -453,6 +453,12 @@ class SalesAssignmentController extends Controller
             }
         }
 
+        if (in_array($posCode, ['SPV', 'ASC'], true) && $areaId) {
+            SalesDistributorAssignment::where('area_id', $areaId)
+                ->where('period', $period)
+                ->delete();
+        }
+
         $assignment = SalesDistributorAssignment::create([
             'user_id' => $user->id,
             'nsm_id' => $nsmId,
@@ -474,7 +480,7 @@ class SalesAssignmentController extends Controller
                 ->where('kategori_skema', 'KONSUMSI')
                 ->when($period, fn ($q) => $q->where('period', $period))
                 ->update(['user_id' => $user->id]);
-        } elseif ($posCode === 'SPV' && $areaId) {
+        } elseif (in_array($posCode, ['SPV', 'ASC'], true) && $areaId) {
             MasterTarget::where('area_id', $areaId)
                 ->where('level', 'AREA')
                 ->where('kategori_skema', 'KONSUMSI')
@@ -628,7 +634,7 @@ class SalesAssignmentController extends Controller
         if ($areaId) {
             $otherSpv = SalesDistributorAssignment::where('area_id', $areaId)
                 ->where('is_active', true)
-                ->whereHas('user.position', fn ($q) => $q->where('code', 'SPV'))
+                ->whereHas('user.position', fn ($q) => $q->whereIn('code', ['SPV', 'ASC']))
                 ->when($period, fn ($q) => $q->where('period', $period))
                 ->first();
 

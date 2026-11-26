@@ -43,6 +43,8 @@ class BatchImportService
             'master_target_depo', 'target_depo' => 'master_target_depo',
             'master_target_area', 'target_area' => 'master_target_area',
             'master_target_distributor', 'master_targets', 'target_distributor' => 'master_target_distributor',
+            'master_target_industri', 'target_industri', 'target_sales_industri' => 'master_target_industri',
+            'master_target_surabaya', 'target_surabaya', 'target_sales_surabaya' => 'master_target_surabaya',
             'depos', 'depo' => 'depo',
             'areas', 'area' => 'area',
             default => strtolower(trim($entity)),
@@ -127,6 +129,8 @@ class BatchImportService
                 'master_target_depo' => $this->processMasterTargetDistributorBulk($generator, $header, 'DEPO', $batch->id),
                 'master_target_area' => $this->processMasterTargetDistributorBulk($generator, $header, 'AREA', $batch->id),
                 'master_target_distributor' => $this->processMasterTargetDistributorBulk($generator, $header, null, $batch->id),
+                'master_target_industri' => $this->processMasterTargetSalesBulk($generator, $header, 'INDUSTRI', $batch->id),
+                'master_target_surabaya' => $this->processMasterTargetSalesBulk($generator, $header, 'SURABAYA', $batch->id),
                 'sellin_distributor' => $this->processSellinDistributorBulk($generator, $header, $batch->id),
                 'sellin_industri' => $this->processSellinIndustriBulk($generator, $header, $batch->id),
                 'industri_customer' => $this->processIndustriCustomerBulk($generator, $header, $batch->id),
@@ -160,8 +164,18 @@ class BatchImportService
         $cols = array_values($header);
 
         if (in_array('metrik_target', $cols, true) || in_array('target_quota', $cols, true)) {
-            if (in_array($currentEntity, ['master_target_depo', 'master_target_area', 'master_target_distributor'], true)) {
+            if (in_array($currentEntity, [
+                'master_target_depo',
+                'master_target_area',
+                'master_target_distributor',
+                'master_target_industri',
+                'master_target_surabaya',
+            ], true)) {
                 return $currentEntity;
+            }
+
+            if (! in_array('distributor_code', $cols, true) && ! in_array('depo_code', $cols, true)) {
+                return self::normalizeEntity($currentEntity);
             }
 
             return 'master_target_distributor';
@@ -1437,6 +1451,11 @@ class BatchImportService
                         ]
                     );
                 } elseif ($lvl === 'AREA' && $aId) {
+                    SalesDistributorAssignment::where('area_id', (int) $aId)
+                        ->where('period', $p)
+                        ->where('user_id', '!=', $uId)
+                        ->delete();
+
                     SalesDistributorAssignment::updateOrCreate(
                         [
                             'user_id' => $uId,
@@ -1844,6 +1863,214 @@ class BatchImportService
         return [$totalRows, $successCount, $failedCount];
     }
 
+    protected function processMasterTargetSalesBulk(Generator $generator, array $header, string $kategoriSkema, ?string $batchId = null): array
+    {
+        $totalRows = 0;
+        $successCount = 0;
+        $failedCount = 0;
+
+        $userMap = [];
+        $emailMap = [];
+        foreach (DB::table('users')->get(['id', 'username', 'email']) as $u) {
+            if (! empty($u->username)) {
+                $userMap[strtolower(trim((string) $u->username))] = (int) $u->id;
+            }
+            if (! empty($u->email)) {
+                $emailMap[strtolower(trim((string) $u->email))] = (int) $u->id;
+            }
+        }
+
+        $salesRoleId = DB::table('roles')->where('name', 'like', '%Sales%')->value('id') ?? 2;
+        $defaultPosId = $kategoriSkema === 'SURABAYA'
+            ? (DB::table('positions')->whereIn('code', ['SALES_TO', 'TO', 'SPV'])->value('id') ?? 2)
+            : (DB::table('positions')->whereIn('code', ['SPV', 'ASC', 'ASM'])->value('id') ?? 2);
+
+        $allowedMetrics = $kategoriSkema === 'INDUSTRI' ? ['SELL_IN', 'NOO'] : ['SELL_OUT', 'AO'];
+        $now = now()->format('Y-m-d H:i:s');
+        $dedupTargets = [];
+        $affectedPeriods = [];
+
+        while ($generator->valid()) {
+            $rawRow = $generator->current();
+            $generator->next();
+            $row = $this->mapRow($header, $rawRow);
+            if ($row === null) {
+                continue;
+            }
+            $totalRows++;
+
+            $rawPeriod = preg_replace('/[^0-9]/', '', (string) ($row['period'] ?? ''));
+            $periods = [];
+            if (strlen($rawPeriod) === 4) {
+                for ($m = 1; $m <= 12; $m++) {
+                    $periods[] = $rawPeriod . str_pad((string) $m, 2, '0', STR_PAD_LEFT);
+                }
+            } elseif (strlen($rawPeriod) >= 6) {
+                $periods[] = substr($rawPeriod, 0, 6);
+            } else {
+                $failedCount++;
+                continue;
+            }
+
+            $userId = isset($row['user_id']) && $row['user_id'] !== '' ? (int) $row['user_id'] : null;
+            $username = $row['username'] ?? $row['sales_username'] ?? null;
+            if (! $userId && ! empty($username)) {
+                $cleanUname = strtolower(trim((string) $username));
+                if ($cleanUname === 'sulistyo') {
+                    $cleanUname = 'sulis';
+                }
+                if ($cleanUname !== '' && $cleanUname !== 'vacant') {
+                    $candidateEmail = $cleanUname . '@company.com';
+                    $userId = $userMap[$cleanUname] ?? $emailMap[$candidateEmail] ?? null;
+
+                    if (! $userId) {
+                        $existingUserId = DB::table('users')
+                            ->whereRaw('LOWER(TRIM(username)) = ?', [$cleanUname])
+                            ->orWhereRaw('LOWER(TRIM(email)) = ?', [$candidateEmail])
+                            ->value('id');
+
+                        if ($existingUserId) {
+                            $userId = (int) $existingUserId;
+                            $userMap[$cleanUname] = $userId;
+                            $emailMap[$candidateEmail] = $userId;
+                        } else {
+                            $emailToSave = $candidateEmail;
+                            if (isset($emailMap[$emailToSave]) || DB::table('users')->whereRaw('LOWER(TRIM(email)) = ?', [$emailToSave])->exists()) {
+                                $emailToSave = $cleanUname . '+' . substr(md5($cleanUname . microtime(true)), 0, 5) . '@company.com';
+                            }
+
+                            $newUserId = DB::table('users')->insertGetId([
+                                'name' => ucwords(str_replace(['.', '_', '-'], ' ', $cleanUname)),
+                                'username' => $cleanUname,
+                                'email' => $emailToSave,
+                                'password' => bcrypt('password123'),
+                                'role_id' => $salesRoleId,
+                                'position_id' => $defaultPosId,
+                                'aktif_from' => '2024-01-01',
+                                'is_eligible_konsumsi' => 0,
+                                'is_eligible_industri' => $kategoriSkema === 'INDUSTRI' ? 1 : 0,
+                                'is_eligible_surabaya' => $kategoriSkema === 'SURABAYA' ? 1 : 0,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                            $userMap[$cleanUname] = $newUserId;
+                            $emailMap[$emailToSave] = $newUserId;
+                            $userId = $newUserId;
+                        }
+                    }
+                }
+            }
+
+            if (! $userId) {
+                $failedCount++;
+                continue;
+            }
+
+            $rawQuota = isset($row['target_quota']) && $row['target_quota'] !== ''
+                ? (float) str_replace(',', '', (string) $row['target_quota'])
+                : 0.0;
+            $rawOutlet = isset($row['target_outlet']) && $row['target_outlet'] !== ''
+                ? (int) round((float) str_replace(',', '', (string) $row['target_outlet']))
+                : null;
+
+            $rawMetrik = strtoupper(trim((string) ($row['metrik_target'] ?? '')));
+            $rawMetrik = str_replace([' ', '-'], '_', $rawMetrik);
+            $metrik = match ($rawMetrik) {
+                'SELLIN', 'SELL_IN' => 'SELL_IN',
+                'SELLOUT', 'SELL_OUT' => 'SELL_OUT',
+                'ACTIVE_OUTLET', 'AO' => 'AO',
+                'NOO', 'NEW_OPEN_OUTLET' => 'NOO',
+                '' => ($rawOutlet !== null && $rawOutlet > 0 && $rawQuota <= 0)
+                    ? ($kategoriSkema === 'INDUSTRI' ? 'NOO' : 'AO')
+                    : ($kategoriSkema === 'INDUSTRI' ? 'SELL_IN' : 'SELL_OUT'),
+                default => $rawMetrik,
+            };
+
+            if (! in_array($metrik, $allowedMetrics, true)) {
+                $failedCount++;
+                continue;
+            }
+
+            if (in_array($metrik, ['NOO', 'AO'], true)) {
+                $targetOutlet = $rawOutlet !== null && $rawOutlet > 0
+                    ? $rawOutlet
+                    : (int) round($rawQuota);
+                $targetQuota = (float) $targetOutlet;
+            } else {
+                $targetQuota = $rawQuota;
+                $targetOutlet = null;
+            }
+
+            foreach ($periods as $p) {
+                $affectedPeriods[$p] = true;
+                $compKey = "{$p}|{$metrik}|{$userId}";
+                $dedupTargets[$compKey] = [
+                    'batch_id' => $batchId,
+                    'period' => $p,
+                    'kategori_skema' => $kategoriSkema,
+                    'metrik_target' => $metrik,
+                    'distributor_id' => null,
+                    'depo_id' => null,
+                    'area_id' => null,
+                    'brand_id' => null,
+                    'level' => 'SALES',
+                    'target_quota' => $targetQuota,
+                    'target_outlet' => $targetOutlet,
+                    'user_id' => $userId,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            $successCount++;
+        }
+
+        if (! empty($dedupTargets)) {
+            $existingMap = [];
+            foreach (array_chunk(array_keys($affectedPeriods), 50) as $pChunk) {
+                $existingRows = DB::table('master_targets')
+                    ->where('kategori_skema', $kategoriSkema)
+                    ->whereNull('distributor_id')
+                    ->whereNull('depo_id')
+                    ->whereNull('area_id')
+                    ->whereNull('brand_id')
+                    ->whereIn('period', $pChunk)
+                    ->get(['id', 'period', 'metrik_target', 'user_id']);
+
+                foreach ($existingRows as $er) {
+                    $k = "{$er->period}|{$er->metrik_target}|{$er->user_id}";
+                    $existingMap[$k] = $er->id;
+                }
+            }
+
+            $toInsert = [];
+            $toUpdate = [];
+            foreach ($dedupTargets as $k => $item) {
+                if (isset($existingMap[$k])) {
+                    $item['id'] = $existingMap[$k];
+                    $toUpdate[] = $item;
+                } else {
+                    $toInsert[] = $item;
+                }
+            }
+
+            DB::transaction(function () use ($toInsert, $toUpdate) {
+                foreach (array_chunk($toInsert, 1500) as $chunk) {
+                    DB::table('master_targets')->insert($chunk);
+                }
+                foreach (array_chunk($toUpdate, 1500) as $chunk) {
+                    DB::table('master_targets')->upsert(
+                        $chunk,
+                        ['id'],
+                        ['batch_id', 'level', 'target_quota', 'target_outlet', 'user_id', 'updated_at']
+                    );
+                }
+            });
+        }
+
+        return [$totalRows, $successCount, $failedCount];
+    }
+
     public function rollback(string $batchId): bool
     {
         return DB::transaction(function () use ($batchId) {
@@ -1859,7 +2086,7 @@ class BatchImportService
                 'sellin_industri' => SellinIndustri::where('batch_id', $batchId)->delete(),
                 'industri_customer' => IndustriCustomer::where('batch_id', $batchId)->delete(),
                 'sellout_sales_surabaya' => SelloutSalesSurabaya::where('batch_id', $batchId)->delete(),
-                'master_target_depo', 'master_target_area', 'master_target_distributor' => MasterTarget::where('batch_id', $batchId)->delete(),
+                'master_target_depo', 'master_target_area', 'master_target_distributor', 'master_target_industri', 'master_target_surabaya' => MasterTarget::where('batch_id', $batchId)->delete(),
                 'distributor' => $this->rollbackDistributorBatch($batchId),
                 'depo' => Depo::where('batch_id', $batchId)->delete(),
                 'area' => Area::where('batch_id', $batchId)->delete(),
